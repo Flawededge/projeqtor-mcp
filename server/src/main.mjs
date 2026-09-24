@@ -4,6 +4,7 @@ import { serve } from '@hono/node-server';
 import { createMcpHonoApp } from '@modelcontextprotocol/hono';
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { DomainError, cleanApiMessage } from './domain.mjs';
+import { SERVER_VERSION, LIMITS } from './contracts.mjs';
 import { createProjeqtorServer } from './tools.mjs';
 
 const port = Number.parseInt(process.env.PORT ?? '3000', 10);
@@ -100,11 +101,17 @@ async function apiRequest(path, username, method = 'GET', body, options = {}) {
   } catch {
     throw new DomainError('invalid_api_response', 'ProjeQtOr API returned invalid JSON', { httpStatus: response.status });
   }
+  if (data.error) {
+    const bridgeError = typeof data.error === 'object' && data.error !== null ? data.error : {};
+    const { code, message, ...details } = bridgeError;
+    throw new DomainError(
+      typeof code === 'string' ? code : 'api_error',
+      cleanApiMessage(typeof message === 'string' ? message : (data.message ?? String(data.error))),
+      { httpStatus: response.status, ...details }
+    );
+  }
   if (!response.ok) {
     throw new DomainError('api_http_error', `ProjeQtOr API returned HTTP ${response.status}`, { httpStatus: response.status });
-  }
-  if (data.error) {
-    throw new DomainError('api_error', cleanApiMessage(data.message ?? data.error), { apiError: data.error });
   }
   if (!options.allowItemErrors && Array.isArray(data.items)) {
     const failed = data.items.find(item => item?.apiResult && item.apiResult !== 'OK');
@@ -124,10 +131,10 @@ const app = createMcpHonoApp({
   host: '0.0.0.0',
   allowedHosts,
   allowedOrigins,
-  maxRequestBodySize: 1_048_576
+  maxRequestBodySize: LIMITS.requestBytes
 });
 
-app.get('/health', context => context.json({ status: 'ok', mode: 'read-write', version: '2.0.0-beta.1' }));
+app.get('/health', context => context.json({ status: 'ok', mode: 'full-control', version: SERVER_VERSION }));
 app.all('/mcp', context => {
   const principal = authenticate(context.req.header('authorization'));
   if (!principal) return unauthorized();

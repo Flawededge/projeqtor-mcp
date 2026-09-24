@@ -6,7 +6,7 @@ function tool(server, name) {
   return server._registeredTools[name].handler;
 }
 
-test('registers the complete v2 import-foundation tool surface', () => {
+test('registers the compatibility and full-control v2 tool surface', () => {
   const server = createProjeqtorServer({ username: 'tester', apiRequest: async () => ({ items: [] }) });
   assert.deepEqual(Object.keys(server._registeredTools), [
     'projeqtor_get_capabilities',
@@ -21,7 +21,23 @@ test('registers the complete v2 import-foundation tool surface', () => {
     'projeqtor_delete_dependency',
     'projeqtor_create_item',
     'projeqtor_update_item',
-    'projeqtor_batch_upsert'
+    'projeqtor_batch_upsert',
+    'projeqtor_whoami',
+    'projeqtor_list_object_classes',
+    'projeqtor_query_items',
+    'projeqtor_get_changes',
+    'projeqtor_validate_operations',
+    'projeqtor_execute_operations',
+    'projeqtor_prepare_change',
+    'projeqtor_commit_change',
+    'projeqtor_list_actions',
+    'projeqtor_get_action_schema',
+    'projeqtor_execute_action',
+    'projeqtor_prepare_action',
+    'projeqtor_commit_action',
+    'projeqtor_list_jobs',
+    'projeqtor_get_job',
+    'projeqtor_cancel_job'
   ]);
 });
 
@@ -29,11 +45,9 @@ test('list_items applies exact filters and cursor pagination while retaining req
   const calls = [];
   const apiRequest = async (...args) => {
     calls.push(args);
-    return { items: [
-      { id: 3, idProject: 2, name: 'Third' },
-      { id: 1, idProject: 2, name: 'First' },
-      { id: 2, idProject: 7, name: 'Other' }
-    ] };
+    return args[3].cursor
+      ? { total: 2, returned: 1, pageSize: 1, hasMore: false, nextCursor: null, items: [{ id: 3, name: 'Third' }] }
+      : { total: 2, returned: 1, pageSize: 1, hasMore: true, nextCursor: 'signed-page-2', items: [{ id: 1, name: 'First' }] };
   };
   const server = createProjeqtorServer({ username: 'tester', apiRequest });
   const first = await tool(server, 'projeqtor_list_items')({
@@ -41,7 +55,9 @@ test('list_items applies exact filters and cursor pagination while retaining req
   });
   assert.equal(first.structuredContent.total, 2);
   assert.deepEqual(first.structuredContent.items, [{ id: 1, name: 'First' }]);
-  assert.match(calls[0][0], /select=id,name,idProject$/);
+  assert.equal(calls[0][0], '__mcp/v2/query');
+  assert.equal(calls[0][2], 'POST');
+  assert.deepEqual(calls[0][3].filter, { field: 'idProject', operator: 'eq', value: 2 });
   const second = await tool(server, 'projeqtor_list_items')({
     objectClass: 'Activity', fields: ['name'], filters: { idProject: 2 },
     pageSize: 1, cursor: first.structuredContent.nextCursor
@@ -50,19 +66,21 @@ test('list_items applies exact filters and cursor pagination while retaining req
 });
 
 test('reference lookup filters inactive values and searches names', async () => {
+  const calls = [];
   const server = createProjeqtorServer({
     username: 'tester',
-    apiRequest: async () => ({ items: [
-      { id: 1, name: 'Default', idle: 0 },
-      { id: 2, name: 'Night shift', idle: 0 },
-      { id: 3, name: 'Default old', idle: 1 }
-    ] })
+    apiRequest: async (...args) => {
+      calls.push(args);
+      return { total: 1, returned: 1, hasMore: false, items: [{ id: 1, name: 'Default', idle: 0 }] };
+    }
   });
   const response = await tool(server, 'projeqtor_list_reference_values')({
     kind: 'calendar', activeOnly: true, search: 'default', filters: {}, pageSize: 20
   });
   assert.equal(response.structuredContent.objectClass, 'CalendarDefinition');
   assert.deepEqual(response.structuredContent.items, [{ id: 1, name: 'Default', idle: 0 }]);
+  assert.equal(calls[0][0], '__mcp/v2/query');
+  assert.deepEqual(calls[0][3].filter.all.map(node => node.operator), ['eq', 'contains']);
 });
 
 test('dependency creation maps friendly relationship names and lag days', async () => {
@@ -138,10 +156,10 @@ test('batch upsert returns an existing migration-key match without writing', asy
     { name: 'externalReference', type: 'string', required: false, writable: true }
   ] };
   const apiRequest = async (path, username, method = 'GET') => {
-    if (method !== 'GET') writes += 1;
+    if (method !== 'GET' && path !== '__mcp/v2/query') writes += 1;
     if (path === '__mcp/schema/Activity') return schema;
     if (path === 'Project/2/select=id') return { items: [{ id: 2 }] };
-    if (path === 'Activity/all') return { items: [{ id: 77, idProject: 2, externalReference: 'xml:existing' }] };
+    if (path === '__mcp/v2/query') return { items: [{ id: 77, idProject: 2, externalReference: 'xml:existing' }] };
     throw new Error(`Unexpected API call ${path}`);
   };
   const server = createProjeqtorServer({ username: 'tester', apiRequest });

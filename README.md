@@ -19,23 +19,19 @@ ProjeQtOr
 
 The bearer token is stored only as a SHA-256 digest. The MCP server and bridge share a separate signing key through mounted secret files. The bridge also accepts requests from one explicitly configured MCP container address.
 
-## Current tools
+## Current interface
 
-- `projeqtor_get_capabilities`
-- `projeqtor_get_object_schema`
-- `projeqtor_get_item`
-- `projeqtor_list_items`
-- `projeqtor_list_reference_values`
-- `projeqtor_list_resource_choices`
-- `projeqtor_list_dependencies`
-- `projeqtor_create_dependency`
-- `projeqtor_update_dependency`
-- `projeqtor_delete_dependency`
-- `projeqtor_create_item`
-- `projeqtor_update_item`
-- `projeqtor_batch_upsert`
+Version `2.0.0-beta.2` provides a policy-controlled object engine for ProjeQtOr 13.1 plus semantic actions for workflows that generic `save()` cannot safely reproduce.
 
-Version 2.0.0-beta.1 adds installed-version schema discovery, filtered cursor pagination, reference-data lookup, dependency CRUD, structured errors, and validation-only/idempotent batch upserts. Existing v1 tool names and inputs remain available; write responses now use the structured v2 result format. There is intentionally no generic delete tool.
+- Discovery: identity, capabilities, installed class policy, exact schemas, and reference values.
+- Query: database-filtered keyset pagination and History-aware changes with tombstones.
+- Mutation: validation and atomic or best-effort operation batches of up to 200 records.
+- Guarded changes: actor-bound, expiring previews for deletion, security, configuration, Cron, mail, and comparable side effects.
+- Actions: 20 registered workflows covering copy, transitions, snapshots, planning, baselines, import/export/report, attachments, reset mail, cleanup, and Cron.
+- Jobs: durable per-user queue, progress, cooperative cancellation, and expiring result artifacts.
+- Resources: permission-checked attachments, document versions, and job results.
+
+All 13 beta.1 tools remain as compatibility wrappers, for a total of 29 tools. Every one of the 640 installed `SqlElement` subclasses is classified; unknown classes fail startup, and the caller's native ProjeQtOr rights are applied above the repository policy.
 
 See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagination behavior.
 
@@ -68,7 +64,7 @@ Generate a strong bearer token with a cryptographically secure password manager,
 
 ## Bridge configuration
 
-Copy `bridge/index.php`, `bridge/schema.php`, and `bridge/.htaccess` into a dedicated `mcp-api` path inside the ProjeQtOr web root.
+Copy the complete `bridge/` directory into a dedicated `mcp-api` path inside the ProjeQtOr web root. Install `worker/` in the application image when queued actions are enabled.
 
 | Setting | Required | Purpose |
 | --- | --- | --- |
@@ -76,6 +72,8 @@ Copy `bridge/index.php`, `bridge/schema.php`, and `bridge/.htaccess` into a dedi
 | `PROJEQTOR_MCP_SIGNING_KEY_FILE` | No | Signing-key path; defaults to `/run/secrets/projeqtor-mcp-signing-key`. |
 
 Keep the bridge private: do not publish its path or port outside the application network.
+
+The worker must have only the private database network, no published port, the same application/data view as ProjeQtOr, and a non-root runtime identity. It stores sanitized operation metadata in the additive `McpOperation` table; result artifacts default to seven-day retention and audit rows to 30 days.
 
 ## Development
 

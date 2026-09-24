@@ -1,31 +1,33 @@
 # Tool contract
 
-This document describes the `2.0.0-beta.1` import-foundation interface.
+This document describes the `2.0.0-beta.2` full-control beta interface for ProjeQtOr 13.1.
 
 ## Discovery
 
-- `projeqtor_get_capabilities` returns supported classes, operations, limits, relationship codes, and units.
-- `projeqtor_get_object_schema` reads the installed ProjeQtOr model metadata. It reports root and nested planning fields, types, formats, native required flags, defaults, writability, references, and the source model.
-- `projeqtor_list_reference_values` exposes calendars, main functions, teams, profiles, milestone/activity/project/ticket types, statuses, and planning modes.
+- `projeqtor_whoami` returns the mapped ProjeQtOr identity and native access context without returning credentials.
+- `projeqtor_get_capabilities` returns versions, limits, policy/action inventory, resources, units, and compatibility information.
+- `projeqtor_list_object_classes` pages through the installed policy manifest and reports effective per-user operations or a precise denial reason.
+- `projeqtor_get_object_schema` returns exact database types, length/precision, nullability, defaults, references, units, sensitivity, field ownership, effective operations, and object concurrency versions.
+- `projeqtor_list_reference_values` exposes permitted reference/type records through the canonical query engine.
 
-Schema metadata is user-contextual and version-specific. Call it before constructing migration payloads; do not copy required-field assumptions between ProjeQtOr versions.
+All 640 installed `SqlElement` subclasses are classified at startup. The policy denies secrets and internal persistence models, then applies the caller's native rights. Schema metadata is user-contextual and version-specific; call it before constructing writes.
 
 ## Filtered pagination
 
-`projeqtor_list_items` accepts exact-match `filters`, an ISO-8601 `modifiedSince`, `pageSize` from 1 to 200, and an opaque `cursor`. It returns `total`, `returned`, `hasMore`, and `nextCursor`.
+`projeqtor_query_items` accepts a validated filter tree (`eq`, `ne`, comparisons, `in`, string matching, null tests, and boolean groups), selected fields, one validated sort, `pageSize` from 1 to 200, optional totals, saved-filter IDs, and an opaque signed keyset cursor. The compatibility `projeqtor_list_items` wrapper maps exact filters into this engine.
 
 ```json
 {
   "objectClass": "Activity",
   "fields": ["name", "idProject", "externalReference"],
-  "filters": { "idProject": 2 },
+  "filter": { "field": "idProject", "operator": "eq", "value": 2 },
   "pageSize": 100
 }
 ```
 
-A cursor is bound to its class, filters, and modified-since value. Reusing it with a different query returns `invalid_cursor`.
+A cursor is signed and bound to its class, filter, fields, and sort. Reusing or tampering with it returns `invalid_cursor`.
 
-ProjeQtOr 13.1 does not provide native limit/offset parameters in its REST list API. The MCP therefore retrieves the authenticated user's accessible list, filters and sorts by numeric ID, then emits stable pages. This removes the old 200-object MCP ceiling, but it is application-level pagination rather than database-level pagination.
+Filtering, access restrictions, sorting, and keyset pagination execute in PHP/database queries; the MCP never downloads a complete class merely to page it. `projeqtor_get_changes` uses History-aware time windows and includes deletion tombstones without exposing inaccessible classes.
 
 ## Dependencies
 
@@ -37,11 +39,11 @@ Dedicated tools list, create, update, and delete dependency links between activi
 | `finish_to_finish` | `E-E` |
 | `start_to_start` | `S-S` |
 
-`lagDays` is an integer from -999 to 999 and is measured in working days. Dependency deletion removes only the link; it never deletes either endpoint.
+`lagDays` is an integer from -999 to 999 and is measured in working days. Dependency deletion removes only the link; it never deletes either endpoint, and now requires an expiring guarded preview token.
 
-## Idempotent batch upsert
+## Validated operation batches
 
-`projeqtor_batch_upsert` accepts up to 50 items. Every item needs a unique `localKey` and either a `migrationKey` or explicit `match` fields. A migration key is written to `externalReference`; when `idProject` is present, matching is automatically scoped to that project.
+`projeqtor_validate_operations` and `projeqtor_execute_operations` accept up to 200 create, update, or delete operations. Atomic mode is the default; best-effort mode returns an independent result per item. Generalized idempotency keys, migration keys, local references, and `expectedVersion` concurrency checks are supported. The compatibility `projeqtor_batch_upsert` wrapper remains available.
 
 Use `{ "$ref": "localKey" }` as a field value to reference the numeric ID returned for an earlier item in the same batch.
 
@@ -69,10 +71,26 @@ Use `{ "$ref": "localKey" }` as a field value to reference the numeric ID return
 }
 ```
 
-Validation-only mode performs no create or update calls. It reports `missingFields`, `invalidFields`, `referenceErrors`, and references that cannot be independently verified. A non-validation batch returns `created`, `updated`, `existing`, `invalid`, or `error` for every item; successful earlier items are not rolled back when a later item fails.
+Validation performs no writes and reports `missingFields`, `invalidFields`, and `referenceErrors`. Execution reports created, updated, existing, deleted, invalid, or error per item, plus applied, recalculated, rejected, ignored, and saved fields. Atomic failure rolls back the batch; best-effort preserves successful items.
 
 ## Write results and errors
 
-Write results include the object ID, requested/applied fields, and the refreshed saved object. Errors use a stable `code` and plain-text `message`; ProjeQtOr's UI-oriented HTML is removed. Schema validation separately reports missing, invalid, and inaccessible reference fields.
+Reads include `_version`. Canonical updates should send `expectedVersion`; a mismatch returns `version_conflict` and current metadata without overwriting. Compatibility updates remain accepted but report `concurrencyUnchecked` when no version is supplied. Errors use stable codes and plain text rather than UI HTML.
 
-There is no generic delete tool. The only destructive operation in this beta is the explicitly annotated dependency-link deletion tool.
+Deletion, cleanup, security/configuration changes, Cron control, outbound mail, and similar side effects use `projeqtor_prepare_change`/`projeqtor_commit_change` or `projeqtor_prepare_action`/`projeqtor_commit_action`. Tokens expire after five minutes, bind actor/action/arguments/versions, are revalidated at commit, and cannot be replayed.
+
+## Semantic actions
+
+Use `projeqtor_list_actions` and `projeqtor_get_action_schema` before calling an action. Beta.2 registers 20 workflows covering object copy, workflow transition, project snapshot, planning calculation/diagnostics, baseline create/delete, import and previewed cleanup, export/report, chunked attachment upload/abort/commit, user reset mail, and Cron check/start/stop/restart. Generic CRUD covers other policy-permitted classes; secret setting/disclosure, plugin installation, raw SQL, and host/container/database administration are excluded.
+
+Planning, imports, exports, reports, and large snapshots run as durable jobs under the originating user's identity. Use `projeqtor_list_jobs`, `projeqtor_get_job`, and `projeqtor_cancel_job`. Queued jobs cancel immediately; running calculations cooperate at safe phase boundaries.
+
+## Resources and retention
+
+Permission-checked bytes are available at:
+
+- `projeqtor://attachments/{id}`
+- `projeqtor://document-versions/{id}`
+- `projeqtor://jobs/{id}/result`
+
+Uploads use bounded 512 KiB chunks, a one-hour session expiry, the configured attachment limit, filename checks, and ProjeQtOr's evil-file validation. Job artifacts default to seven-day retention; sanitized operation metadata defaults to 30 days. Large snapshots are NDJSON with a History watermark.
