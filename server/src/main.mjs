@@ -1,0 +1,147 @@
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { serve } from '@hono/node-server';
+import { createMcpHonoApp } from '@modelcontextprotocol/hono';
+import { createMcpHandler } from '@modelcontextprotocol/server';
+import { DomainError, cleanApiMessage } from './domain.mjs';
+import { createProjeqtorServer } from './tools.mjs';
+
+const port = Number.parseInt(process.env.PORT ?? '3000', 10);
+const apiBase = (process.env.PROJEQTOR_API_URL ?? 'http://app/mcp-api').replace(/\/$/, '');
+const signingKey = readSecret('PROJEQTOR_SIGNING_KEY_FILE');
+const principals = readPrincipals('MCP_USERS_FILE');
+const allowedHosts = readList('MCP_ALLOWED_HOSTS', ['projeqtor', 'mcp', 'localhost', '127.0.0.1']);
+const allowedOrigins = readList('MCP_ALLOWED_ORIGINS', ['projeqtor', 'mcp', 'localhost', '127.0.0.1']);
+
+function readSecret(variable) {
+  const path = process.env[variable];
+  if (!path) throw new Error(`${variable} is required`);
+  const value = readFileSync(path, 'utf8').trim();
+  if (!value) throw new Error(`${variable} points to an empty file`);
+  return value;
+}
+
+function readList(variable, fallback) {
+  const value = process.env[variable];
+  if (!value) return fallback;
+  const entries = [...new Set(value.split(',').map(entry => entry.trim()).filter(Boolean))];
+  if (entries.length === 0) throw new Error(`${variable} must contain at least one value`);
+  return entries;
+}
+
+function readPrincipals(variable) {
+  const path = process.env[variable];
+  if (!path) throw new Error(`${variable} is required`);
+  const document = JSON.parse(readFileSync(path, 'utf8'));
+  if (document?.version !== 1 || !Array.isArray(document.users) || document.users.length === 0) {
+    throw new Error(`${variable} has an unsupported or empty format`);
+  }
+
+  const usernames = new Set();
+  return document.users.map(entry => {
+    if (!entry || typeof entry.username !== 'string' ||
+        !/^[A-Za-z0-9_.@-]{1,100}$/.test(entry.username) ||
+        typeof entry.tokenSha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(entry.tokenSha256) ||
+        usernames.has(entry.username)) {
+      throw new Error(`${variable} contains an invalid or duplicate user entry`);
+    }
+    usernames.add(entry.username);
+    return { username: entry.username, tokenSha256: Buffer.from(entry.tokenSha256, 'hex') };
+  });
+}
+
+function authenticate(authorization) {
+  if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) return null;
+  const token = authorization.slice(7);
+  if (!token || token.length > 4096) return null;
+  const digest = createHash('sha256').update(token, 'utf8').digest();
+  const principal = principals.find(entry => timingSafeEqual(digest, entry.tokenSha256));
+  if (!principal) return null;
+  return { username: principal.username, digest: digest.toString('hex') };
+}
+
+function unauthorized() {
+  return new Response(JSON.stringify({ error: 'A valid ProjeQtOr MCP bearer token is required' }), {
+    status: 401,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'WWW-Authenticate': 'Bearer realm="projeqtor-mcp"',
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+async function apiRequest(path, username, method = 'GET', body, options = {}) {
+  const payload = body === undefined ? '' : JSON.stringify(body);
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const bodyDigest = createHash('sha256').update(payload, 'utf8').digest('hex');
+  const signature = createHmac('sha256', signingKey)
+    .update(`${timestamp}\n${username}\n${method}\n${path}\n${bodyDigest}`, 'utf8')
+    .digest('hex');
+  const headers = {
+    Accept: 'application/json',
+    'X-Projeqtor-User': username,
+    'X-Projeqtor-Timestamp': timestamp,
+    'X-Projeqtor-Signature': signature
+  };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+  const response = await fetch(`${apiBase}/${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : payload,
+    signal: AbortSignal.timeout(30_000)
+  });
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new DomainError('invalid_api_response', 'ProjeQtOr API returned invalid JSON', { httpStatus: response.status });
+  }
+  if (!response.ok) {
+    throw new DomainError('api_http_error', `ProjeQtOr API returned HTTP ${response.status}`, { httpStatus: response.status });
+  }
+  if (data.error) {
+    throw new DomainError('api_error', cleanApiMessage(data.message ?? data.error), { apiError: data.error });
+  }
+  if (!options.allowItemErrors && Array.isArray(data.items)) {
+    const failed = data.items.find(item => item?.apiResult && item.apiResult !== 'OK');
+    if (failed) throw new DomainError('validation_failed', cleanApiMessage(failed.apiResultMessage));
+  }
+  return data;
+}
+
+function buildServer(context) {
+  const username = context.authInfo?.extra?.projeqtorUsername;
+  if (typeof username !== 'string') throw new Error('Authenticated ProjeQtOr identity is missing');
+  return createProjeqtorServer({ username, apiRequest });
+}
+
+const handler = createMcpHandler(buildServer, { responseMode: 'json' });
+const app = createMcpHonoApp({
+  host: '0.0.0.0',
+  allowedHosts,
+  allowedOrigins,
+  maxRequestBodySize: 1_048_576
+});
+
+app.get('/health', context => context.json({ status: 'ok', mode: 'read-write', version: '2.0.0-beta.1' }));
+app.all('/mcp', context => {
+  const principal = authenticate(context.req.header('authorization'));
+  if (!principal) return unauthorized();
+  return handler.fetch(context.req.raw, {
+    parsedBody: context.get('parsedBody'),
+    authInfo: {
+      token: principal.digest,
+      clientId: principal.username,
+      scopes: ['projeqtor:read', 'projeqtor:write'],
+      extra: { projeqtorUsername: principal.username }
+    }
+  });
+});
+
+serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, () => {
+  console.error(`ProjeQtOr MCP listening on port ${port} in per-user read-write mode`);
+});

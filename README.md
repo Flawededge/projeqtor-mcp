@@ -21,13 +21,23 @@ The bearer token is stored only as a SHA-256 digest. The MCP server and bridge s
 
 ## Current tools
 
+- `projeqtor_get_capabilities`
+- `projeqtor_get_object_schema`
 - `projeqtor_get_item`
 - `projeqtor_list_items`
+- `projeqtor_list_reference_values`
 - `projeqtor_list_resource_choices`
+- `projeqtor_list_dependencies`
+- `projeqtor_create_dependency`
+- `projeqtor_update_dependency`
+- `projeqtor_delete_dependency`
 - `projeqtor_create_item`
 - `projeqtor_update_item`
+- `projeqtor_batch_upsert`
 
-Version 1.2.0 supports per-user read/write access for an allow-listed set of ProjeQtOr object classes. There is intentionally no generic delete tool.
+Version 2.0.0-beta.1 adds installed-version schema discovery, filtered cursor pagination, reference-data lookup, dependency CRUD, structured errors, and validation-only/idempotent batch upserts. Existing v1 tool names and inputs remain available; write responses now use the structured v2 result format. There is intentionally no generic delete tool.
+
+See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagination behavior.
 
 ## Server configuration
 
@@ -58,7 +68,7 @@ Generate a strong bearer token with a cryptographically secure password manager,
 
 ## Bridge configuration
 
-Copy `bridge/index.php` and `bridge/.htaccess` into a dedicated `mcp-api` path inside the ProjeQtOr web root.
+Copy `bridge/index.php`, `bridge/schema.php`, and `bridge/.htaccess` into a dedicated `mcp-api` path inside the ProjeQtOr web root.
 
 | Setting | Required | Purpose |
 | --- | --- | --- |
@@ -73,9 +83,10 @@ Keep the bridge private: do not publish its path or port outside the application
 cd server
 npm ci
 npm run check
+npm test
 ```
 
-Releases are cut from `main` using semantic-version tags. New capabilities are developed on focused branches and merged only after validation. See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
+Releases are cut from `main` using semantic-version tags. New capabilities are developed on focused branches and merged only after validation. See [CONTRIBUTING.md](CONTRIBUTING.md), [docs/TOOLS.md](docs/TOOLS.md), and [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Security
 
