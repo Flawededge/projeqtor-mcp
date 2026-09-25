@@ -87,6 +87,19 @@ export function registerFullControlTools(server, { username, apiRequest }) {
     annotations: { readOnlyHint: true, destructiveHint: false }
   }, guarded(args => post(apiRequest, '__mcp/v2/classes', username, args)));
 
+  server.registerTool('projeqtor_list_ui_handlers', {
+    description: 'List every installed ProjeQtOr tool/view entrypoint with module, mutation kinds, source hash, coverage classification, mappings, availability, risk, and Beta 4 issue.',
+    inputSchema: z.object({
+      module: z.enum(['planning_followup_environment', 'ticketing_scrum', 'steering_reports', 'financial_products', 'hr_tools_configuration']).optional(),
+      classification: z.enum(['generic_crud', 'registered_action', 'read_only', 'intentional_exclusion', 'deferred_beta4']).optional(),
+      mutationType: z.string().max(100).optional(),
+      search: z.string().max(200).optional(),
+      cursor: z.string().max(2000).optional(),
+      pageSize: z.number().int().min(1).max(LIMITS.pageSize).default(100)
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false }
+  }, guarded(args => post(apiRequest, '__mcp/v2/ui-handlers', username, args)));
+
   server.registerTool('projeqtor_query_items', {
     description: 'Query a permitted ProjeQtOr class with database-side structured filters, saved filters, selected fields, stable keyset pagination and optional total count.',
     inputSchema: z.object({
@@ -126,6 +139,7 @@ export function registerFullControlTools(server, { username, apiRequest }) {
     inputSchema: z.object({
       transactionMode: z.enum(TRANSACTION_MODES).default('atomic'),
       importRunId: z.string().regex(/^[A-Za-z0-9_.:-]{1,150}$/).optional(),
+      requestIdempotencyKey: z.string().regex(/^[A-Za-z0-9_.:-]{1,255}$/).optional(),
       operations: z.array(operation.omit({ action: true }).extend({ action: z.enum(['create', 'update']) })).min(1).max(LIMITS.batchItems)
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true }
@@ -160,7 +174,7 @@ export function registerFullControlTools(server, { username, apiRequest }) {
     inputSchema: z.object({
       action: z.string().regex(/^[a-z][a-z0-9_.-]{2,100}$/),
       arguments: jsonObject.default({}),
-      idempotencyKey: z.string().min(1).max(255).optional()
+      idempotencyKey: z.string().regex(/^[A-Za-z0-9_.:-]{1,255}$/).optional()
     }),
     annotations: { readOnlyHint: false, destructiveHint: false }
   }, guarded(args => post(apiRequest, '__mcp/v2/actions/execute', username, args)));
@@ -179,9 +193,15 @@ export function registerFullControlTools(server, { username, apiRequest }) {
 
   server.registerTool('projeqtor_list_jobs', {
     description: 'List durable MCP operations owned by the authenticated user, with status and progress.',
-    inputSchema: z.object({ status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancel_requested', 'cancelled', 'expired']).optional(), pageSize: z.number().int().min(1).max(200).default(50) }),
+    inputSchema: z.object({ status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancel_requested', 'cancelled', 'expired', 'recovery_required']).optional(), cursor: z.string().max(2000).optional(), pageSize: z.number().int().min(1).max(200).default(50) }),
     annotations: { readOnlyHint: true, destructiveHint: false }
   }, guarded(args => post(apiRequest, '__mcp/v2/jobs', username, args)));
+
+  server.registerTool('projeqtor_retry_job', {
+    description: 'Retry a failed or cancelled job only when its registered retry policy is safe, the caller owns it, permissions still pass, and attempts remain.',
+    inputSchema: z.object({ id: z.number().int().positive() }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true }
+  }, guarded(args => post(apiRequest, '__mcp/v2/jobs/retry', username, args)));
 
   server.registerTool('projeqtor_get_job', {
     description: 'Get one durable MCP operation, progress, structured result metadata and result resource URI.',

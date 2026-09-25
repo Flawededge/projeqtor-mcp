@@ -26,9 +26,25 @@ jobs:
       - name: Run server tests
         working-directory: server
         run: npm test
+      - name: Fetch checksum-pinned ProjeQtOr 13.1 source
+        run: |
+          curl -fL --retry 3 -o /tmp/projeqtor.zip https://sourceforge.net/projects/projectorria/files/projeqtorV13.1.0.zip/download
+          echo "221c2a0b2facbdfc0b5af9878e030cdd7ded6e3f989b1da9cd609eccebaa0a69  /tmp/projeqtor.zip" | sha256sum -c -
+          unzip -q /tmp/projeqtor.zip -d /tmp/projeqtor-source
+      - name: Regenerate and verify complete policies
+        run: |
+          php scripts/generate-handler-policy.php /tmp/projeqtor-source/projeqtor /tmp/ui-handler-policy-v3.json
+          php scripts/generate-class-policy.php /tmp/projeqtor-source/projeqtor bridge/class-policy-v2.json bridge/active-menu-classes-v3.json /tmp/class-policy-v3.json
+          cmp bridge/ui-handler-policy-v3.json /tmp/ui-handler-policy-v3.json
+          cmp bridge/class-policy-v3.json /tmp/class-policy-v3.json
       - name: Build server image
         run: docker build --pull=false --tag projeqtor-mcp:ci server
-      - name: Validate bridge syntax
+      - name: Build application integration image
+        run: docker build --pull=false --file deployment/app/Dockerfile --tag projeqtor-app:ci .
+      - name: Validate every bridge and worker PHP file
         run: |
-          php -l bridge/index.php
-          php -l bridge/schema.php
+          find bridge worker scripts -type f -name '*.php' -print0 | sort -z | xargs -0 -n1 php -l
+          test "$(jq '.entrypointCount' bridge/ui-handler-policy-v3.json)" -eq 797
+          test "$(jq '.mutationCandidateCount' bridge/ui-handler-policy-v3.json)" -eq 331
+          test "$(jq '.expectedInstalledClassCount' bridge/class-policy-v3.json)" -eq 640
+          test "$(jq '.activeUserFacingCount' bridge/active-menu-classes-v3.json)" -eq 229

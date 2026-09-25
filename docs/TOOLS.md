@@ -1,6 +1,6 @@
 # Tool contract
 
-This document describes the `2.0.0-beta.2` full-control beta interface for ProjeQtOr 13.1.
+This document describes the `2.0.0-beta.3` full-control beta interface for ProjeQtOr 13.1.
 
 ## Discovery
 
@@ -8,9 +8,10 @@ This document describes the `2.0.0-beta.2` full-control beta interface for Proje
 - `projeqtor_get_capabilities` returns versions, limits, policy/action inventory, resources, units, and compatibility information.
 - `projeqtor_list_object_classes` pages through the installed policy manifest and reports effective per-user operations or a precise denial reason.
 - `projeqtor_get_object_schema` returns exact database types, length/precision, nullability, defaults, references, units, sensitivity, field ownership, effective operations, and object concurrency versions.
+- `projeqtor_list_ui_handlers` exposes the complete source-hashed handler inventory, coverage classification, mapped action/class, availability, and Beta 4 issue.
 - `projeqtor_list_reference_values` exposes permitted reference/type records through the canonical query engine.
 
-All 640 installed `SqlElement` subclasses are classified at startup. The policy denies secrets and internal persistence models, then applies the caller's native rights. Schema metadata is user-contextual and version-specific; call it before constructing writes.
+All 640 installed `SqlElement` subclasses and 797 installed UI entrypoints are classified at startup. Readiness fails if a class or handler is unknown, missing, or source-changed. The policy denies secrets and internal persistence models, then applies the caller's native rights. Schema metadata is user-contextual and version-specific; call it before constructing writes.
 
 ## Filtered pagination
 
@@ -25,9 +26,9 @@ All 640 installed `SqlElement` subclasses are classified at startup. The policy 
 }
 ```
 
-A cursor is signed and bound to its class, filter, fields, and sort. Reusing or tampering with it returns `invalid_cursor`.
+A cursor is signed and bound to its class, filter, fields, and sort. Reusing it for another query returns `cursor_query_mismatch`; tampering returns `invalid_cursor`. Class, handler, change-stream, and job lists use the same signed, query-bound behavior.
 
-Filtering, access restrictions, sorting, and keyset pagination execute in PHP/database queries; the MCP never downloads a complete class merely to page it. `projeqtor_get_changes` uses History-aware time windows and includes deletion tombstones without exposing inaccessible classes.
+Filtering, access restrictions, sorting, and keyset pagination execute in PHP/database queries; the MCP never downloads a complete class merely to page it. `projeqtor_get_changes` uses History-aware time windows, fixes `watermarkUntil` on the first page, binds later cursors to that watermark, and includes deletion tombstones without exposing inaccessible classes.
 
 ## Dependencies
 
@@ -43,7 +44,7 @@ Dedicated tools list, create, update, and delete dependency links between activi
 
 ## Validated operation batches
 
-`projeqtor_validate_operations` and `projeqtor_execute_operations` accept up to 200 create, update, or delete operations. Atomic mode is the default; best-effort mode returns an independent result per item. Generalized idempotency keys, migration keys, local references, and `expectedVersion` concurrency checks are supported. The compatibility `projeqtor_batch_upsert` wrapper remains available.
+`projeqtor_validate_operations` and `projeqtor_execute_operations` accept up to 200 create, update, or delete operations. Atomic mode is the default; best-effort mode returns an independent result per item. `requestIdempotencyKey` binds one complete canonical batch per actor; a replay returns the original result, while changed arguments return `idempotency_key_conflict`. Per-operation migration keys, local references, and `expectedVersion` concurrency checks remain supported. The compatibility `projeqtor_batch_upsert` wrapper remains available.
 
 Use `{ "$ref": "localKey" }` as a field value to reference the numeric ID returned for an earlier item in the same batch.
 
@@ -83,7 +84,7 @@ Deletion, cleanup, security/configuration changes, Cron control, outbound mail, 
 
 Use `projeqtor_list_actions` and `projeqtor_get_action_schema` before calling an action. Beta.2 registers 20 workflows covering object copy, workflow transition, project snapshot, planning calculation/diagnostics, baseline create/delete, import and previewed cleanup, export/report, chunked attachment upload/abort/commit, user reset mail, and Cron check/start/stop/restart. Generic CRUD covers other policy-permitted classes; secret setting/disclosure, plugin installation, raw SQL, and host/container/database administration are excluded.
 
-Planning, imports, exports, reports, and large snapshots run as durable jobs under the originating user's identity. Use `projeqtor_list_jobs`, `projeqtor_get_job`, and `projeqtor_cancel_job`. Queued jobs cancel immediately; running calculations cooperate at safe phase boundaries.
+Planning, imports, exports, reports, and large snapshots run as durable jobs under the originating user's identity. Use `projeqtor_list_jobs`, `projeqtor_get_job`, `projeqtor_cancel_job`, and `projeqtor_retry_job`. Leases and heartbeats allow read-only snapshot/export/report jobs and safe Cron operations to retry up to three attempts. Interrupted planning, baseline, and import work becomes `recovery_required` and is never replayed automatically. Explicit retry rechecks ownership, current permissions, safe policy, and attempt limits.
 
 ## Resources and retention
 

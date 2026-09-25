@@ -1,0 +1,9 @@
+<?php
+declare(strict_types=1);
+$path='/var/lib/projeqtor/mcp-worker-heartbeat';
+if(!is_file($path))exit(1);
+$value=trim((string)file_get_contents($path));
+if(!preg_match('/^[0-9]{10}$/D',$value))exit(1);
+$age=time()-(int)$value;
+if($age<0||$age>45)exit(1);
+exit(0);

@@ -21,7 +21,7 @@ The bearer token is stored only as a SHA-256 digest. The MCP server and bridge s
 
 ## Current interface
 
-Version `2.0.0-beta.2` provides a policy-controlled object engine for ProjeQtOr 13.1 plus semantic actions for workflows that generic `save()` cannot safely reproduce.
+Version `2.0.0-beta.3` hardens the policy-controlled ProjeQtOr 13.1 object engine with reproducible coverage inventories, consistent cursors, durable idempotency, and recoverable worker jobs.
 
 - Discovery: identity, capabilities, installed class policy, exact schemas, and reference values.
 - Query: database-filtered keyset pagination and History-aware changes with tombstones.
@@ -31,7 +31,7 @@ Version `2.0.0-beta.2` provides a policy-controlled object engine for ProjeQtOr 
 - Jobs: durable per-user queue, progress, cooperative cancellation, and expiring result artifacts.
 - Resources: permission-checked attachments, document versions, and job results.
 
-All 13 beta.1 tools remain as compatibility wrappers, for a total of 29 tools. Every one of the 640 installed `SqlElement` subclasses is classified; unknown classes fail startup, and the caller's native ProjeQtOr rights are applied above the repository policy.
+All 13 beta.1 tools remain as compatibility wrappers, for a total of 31 tools. Every one of the 640 installed `SqlElement` subclasses and all 797 installed PHP entrypoints are classified; unknown or source-changed classes/handlers fail readiness, and the caller's native ProjeQtOr rights are applied above repository policy. The 310 module handlers deferred to Beta 4 are visible through `projeqtor_list_ui_handlers` and linked to milestone issues.
 
 See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagination behavior.
 
@@ -73,7 +73,7 @@ Copy the complete `bridge/` directory into a dedicated `mcp-api` path inside the
 
 Keep the bridge private: do not publish its path or port outside the application network.
 
-The worker must have only the private database network, no published port, the same application/data view as ProjeQtOr, and a non-root runtime identity. It stores sanitized operation metadata in the additive `McpOperation` table; result artifacts default to seven-day retention and audit rows to 30 days.
+The worker must have only the private database network, no published port, the same application/data view as ProjeQtOr, and a non-root runtime identity. It stores sanitized operation metadata in the additive `McpOperation` table; leases and heartbeats recover safe jobs without replaying mutating jobs, result artifacts default to seven-day retention, and audit rows to 30 days.
 
 ## Development
 

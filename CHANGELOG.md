@@ -2,6 +2,33 @@
 
 All notable changes are documented here. Versions follow Semantic Versioning.
 
+## [2.0.0-beta.3] - 2026-09-24
+
+### Added
+
+- Token-aware coverage scanning for all 797 pinned ProjeQtOr 13.1 `tool/` and `view/` PHP entrypoints, including 331 mutation candidates.
+- Explicit generated manifests for all 640 installed `SqlElement` subclasses and all UI handlers, with source hashes and fail-closed readiness checks.
+- `projeqtor_list_ui_handlers` with module, classification, mutation, and text filters plus signed cursor pagination.
+- Beta 4 issue ownership for every deferred module handler across planning, ticketing/Scrum, steering/reports, financial/products, and HR/tools/configuration.
+- Top-level operation-batch idempotency and actor-scoped action idempotency with body-conflict detection.
+- Worker leases, heartbeats, attempt limits, recovery states, safe-job retry, atomic artifact publication, and structured error codes.
+- `projeqtor_retry_job` with ownership, current-permission, retry-policy, and attempt-limit enforcement.
+
+### Changed
+
+- Class, UI-handler, query, change-stream, and job cursors are signed and bound to their originating query.
+- Change streams retain one fixed upper watermark across every page.
+- Action discovery now publishes module ownership, mapped handlers, result schema, side-effect classification, retry policy, and idempotency behavior.
+- Worker health checks validate a fresh heartbeat file instead of only checking the process command line.
+- Safe read/export/report/Cron jobs may retry up to three times after an expired lease; interrupted planning, baseline, and import jobs become `recovery_required`.
+- Operation logs contain only operation ID, actor, action, duration, and outcome.
+
+### Security
+
+- Readiness fails on unknown, missing, or source-changed installed classes and handlers.
+- Idempotency keys are isolated per actor and never permit the same key to bind a different request body.
+- Worker artifacts are written to temporary files and atomically renamed; failed and cancelled partial artifacts are removed.
+
 ## [2.0.0-beta.2] - 2026-09-24
 
 ### Added

@@ -74,6 +74,7 @@ function unauthorized() {
 }
 
 async function apiRequest(path, username, method = 'GET', body, options = {}) {
+  const timeoutMs = options.timeoutMs ?? (path === '__mcp/v2/actions/commit' ? 900_000 : (['__mcp/v2/operations/execute', '__mcp/v2/changes/commit'].includes(path) ? 300_000 : 30_000));
   const payload = body === undefined ? '' : JSON.stringify(body);
   const timestamp = String(Math.floor(Date.now() / 1000));
   const bodyDigest = createHash('sha256').update(payload, 'utf8').digest('hex');
@@ -92,7 +93,7 @@ async function apiRequest(path, username, method = 'GET', body, options = {}) {
     method,
     headers,
     body: body === undefined ? undefined : payload,
-    signal: AbortSignal.timeout(30_000)
+    signal: AbortSignal.timeout(timeoutMs)
   });
   const text = await response.text();
   let data;

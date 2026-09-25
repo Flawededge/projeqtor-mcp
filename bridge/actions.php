@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 function mcpActionRegistry(): array {
   $objectRef = array('type'=>'object','required'=>array('objectClass','id'),'properties'=>array('objectClass'=>array('type'=>'string'),'id'=>array('type'=>'integer')));
-  return array(
+  $registry=array(
     'object.copy'=>array('domain'=>'core','risk'=>'write','async'=>false,'schema'=>array('type'=>'object','required'=>array('objectClass','id'),'properties'=>$objectRef['properties'])),
     'workflow.transition'=>array('domain'=>'workflow','risk'=>'write','async'=>false,'schema'=>array('type'=>'object','required'=>array('objectClass','id','idStatus'),'properties'=>array('objectClass'=>array('type'=>'string'),'id'=>array('type'=>'integer'),'idStatus'=>array('type'=>'integer'),'expectedVersion'=>array('type'=>'string')))),
     'project.snapshot'=>array('domain'=>'project','risk'=>'read','async'=>true,'schema'=>array('type'=>'object','required'=>array('idProject'),'properties'=>array('idProject'=>array('type'=>'integer'),'sections'=>array('type'=>'array')))),
@@ -25,6 +25,16 @@ function mcpActionRegistry(): array {
     'cron.stop'=>array('domain'=>'administration','risk'=>'administrative','async'=>false,'schema'=>array('type'=>'object','properties'=>array())),
     'cron.restart'=>array('domain'=>'administration','risk'=>'administrative','async'=>true,'schema'=>array('type'=>'object','properties'=>array()))
   );
+  $handlerManifest=function_exists('mcpHandlerPolicyManifest')?mcpHandlerPolicyManifest():array('handlers'=>array());
+  foreach($registry as $id=>&$metadata){
+    $mapped=array();foreach($handlerManifest['handlers']??array() as $handler)if(in_array($id,$handler['mappedActions']??array(),true))$mapped[]=$handler['id'];
+    $domain=$metadata['domain'];$metadata['module']=in_array($domain,array('planning','project'),true)?'planning_followup_environment':($domain==='report'?'steering_reports':'hr_tools_configuration');
+    $metadata['mappedHandlers']=$mapped;$metadata['resultSchema']=array('type'=>'object','required'=>array('ok'));
+    $metadata['retryPolicy']=in_array($id,array('project.snapshot','export.start','report.start','cron.start','cron.restart'),true)?'safe':(in_array($id,array('planning.calculate','planning.baseline.create','import.start'),true)?'recovery_required':'never');
+    $metadata['maxAttempts']=$metadata['retryPolicy']==='safe'?3:1;$metadata['idempotency']=array('supported'=>true,'scope'=>'actor','sameBodyReturnsOriginal'=>true,'conflictOnDifferentBody'=>true);
+    $metadata['sideEffectClassification']=$metadata['risk'];
+  }unset($metadata);
+  return $registry;
 }
 
 function mcpActionAvailable(string $action): bool {
@@ -40,7 +50,7 @@ function mcpHandleListActions(array $input): never {
     if($domain && $action['domain']!==$domain)continue;
     $available=mcpActionAvailable($id);
     if($availableOnly&&!$available)continue;
-    $items[]=array('action'=>$id,'domain'=>$action['domain'],'risk'=>$action['risk'],'async'=>$action['async'],'available'=>$available,'requiresConfirmation'=>in_array($action['risk'],array('destructive','administrative','external'),true));
+    $items[]=array('action'=>$id,'domain'=>$action['domain'],'module'=>$action['module'],'risk'=>$action['risk'],'sideEffectClassification'=>$action['sideEffectClassification'],'async'=>$action['async'],'available'=>$available,'requiresConfirmation'=>in_array($action['risk'],array('destructive','administrative','external'),true),'mappedHandlers'=>$action['mappedHandlers'],'resultSchema'=>$action['resultSchema'],'retryPolicy'=>$action['retryPolicy'],'maxAttempts'=>$action['maxAttempts'],'idempotency'=>$action['idempotency']);
   }
   mcpJsonResponse(array('returned'=>count($items),'items'=>$items));
 }
@@ -50,8 +60,8 @@ function mcpHandleActionSchema(string $action): never {
   mcpJsonResponse(array_merge(array('action'=>$action),$registry[$action]));
 }
 
-function mcpQueueJob(string $username,string $action,array $arguments): array {
-  $id=mcpOperationInsert($username,$action,'queued',array('action'=>$action,'arguments'=>$arguments),null,date('Y-m-d H:i:s',time()+30*86400));
+function mcpQueueJob(string $username,string $action,array $arguments,?string $idempotencyKey=null,?string $requestHash=null): array {
+  $meta=mcpActionRegistry()[$action];$id=mcpOperationInsert($username,$action,'queued',array('action'=>$action,'arguments'=>$arguments),null,date('Y-m-d H:i:s',time()+30*86400),$idempotencyKey,$requestHash,$meta['retryPolicy'],$meta['maxAttempts']);
   return array('ok'=>true,'queued'=>true,'job'=>array('id'=>$id,'type'=>$action,'status'=>'queued','progress'=>0,'resultResource'=>'projeqtor://jobs/'.$id.'/result'));
 }
 
@@ -142,11 +152,11 @@ function mcpCleanupImportRun(string $username,array $arguments): array {
   return array('ok'=>true,'importRunId'=>$runId,'journalOperationId'=>(int)$journal['row']['id'],'force'=>$force,'items'=>$results,'counts'=>array('deleted'=>count(array_filter($results,fn($item)=>$item['status']==='deleted')),'missing'=>count(array_filter($results,fn($item)=>$item['status']==='missing'))));
 }
 
-function mcpExecuteActionValue(string $action,array $arguments,string $username,bool $allowGuarded=false): array {
+function mcpExecuteActionValue(string $action,array $arguments,string $username,bool $allowGuarded=false,?string $idempotencyKey=null,?string $requestHash=null): array {
   $registry=mcpActionRegistry(); if(!isset($registry[$action]))mcpJsonError(404,'action_not_found',"Action '$action' is not registered"); if(!mcpActionAvailable($action))mcpJsonError(403,'forbidden','Action is unavailable');
   $risk=$registry[$action]['risk']; if(in_array($risk,array('destructive','administrative','external'),true)&&!$allowGuarded)mcpJsonError(409,'guarded_action_required','This action requires prepare_action and commit_action');
   if(str_starts_with($action,'attachment.upload.'))return mcpExecuteUploadAction($action,$arguments,$username);
-  if($registry[$action]['async'])return mcpQueueJob($username,$action,$arguments);
+  if($registry[$action]['async'])return mcpQueueJob($username,$action,$arguments,$idempotencyKey,$requestHash);
   if($action==='cron.check')return array('ok'=>true,'cronStatus'=>Cron::check());
   if($action==='cron.stop'){Cron::setStopFlag();return array('ok'=>true,'cronStatus'=>'stopping');}
   if($action==='planning.diagnostics')return mcpPlanningDiagnostics((int)($arguments['idProject']??0));
@@ -158,7 +168,37 @@ function mcpExecuteActionValue(string $action,array $arguments,string $username,
   mcpJsonError(501,'action_not_implemented',"Action '$action' is registered but has no executor");
 }
 
-function mcpHandleExecuteAction(array $input,string $username): never { mcpRequireKeys($input,array('action')); mcpJsonResponse(mcpExecuteActionValue((string)$input['action'],is_array($input['arguments']??null)?$input['arguments']:array(),$username,false)); }
+function mcpHandleExecuteAction(array $input,string $username): never {
+  mcpRequireKeys($input,array('action'));
+  $action=(string)$input['action'];$arguments=is_array($input['arguments']??null)?$input['arguments']:array();$idempotencyKey=isset($input['idempotencyKey'])?(string)$input['idempotencyKey']:null;
+  $requestHash=null;
+  if($idempotencyKey!==null){
+    if(!preg_match('/^[A-Za-z0-9_.:-]{1,255}$/D',$idempotencyKey))mcpJsonError(400,'invalid_idempotency_key','idempotencyKey must contain 1 to 255 safe characters');
+    $requestHash=mcpRequestHash(array('action'=>$action,'arguments'=>$arguments));mcpEnsureOperationTable();
+    $query=Sql::query('SELECT * FROM mcpoperation WHERE username='.Sql::str($username).' AND idempotency_key='.Sql::str($idempotencyKey));$existing=Sql::fetchLine($query);
+    if($existing){if(!hash_equals((string)$existing['request_hash'],$requestHash))mcpJsonError(409,'idempotency_key_conflict','The idempotency key was already used with different arguments');$saved=json_decode((string)$existing['result_json'],true);$response=is_array($saved)?$saved:array('ok'=>true,'queued'=>true,'job'=>mcpJobRow($existing));$response['idempotencyReplay']=true;mcpJsonResponse($response);}
+  }
+  $registry=mcpActionRegistry();if(!isset($registry[$action]))mcpJsonError(404,'action_not_found','Action is not registered');
+  if($registry[$action]['async'])mcpJsonResponse(mcpExecuteActionValue($action,$arguments,$username,false,$idempotencyKey,$requestHash));
+  $operationId=$idempotencyKey?mcpOperationInsert($username,$action,'running',array('action'=>$action),null,null,$idempotencyKey,$requestHash,'never',1):null;
+  if($operationId)$GLOBALS['mcpCaptureErrors']=true;
+  try{
+    $result=mcpExecuteActionValue($action,$arguments,$username,false,$idempotencyKey,$requestHash);
+  }catch(Throwable $error){
+    if($operationId){
+      $code=$error instanceof McpBridgeException?$error->errorCode:'action_failed';
+      $failure=array('ok'=>false,'error'=>array('code'=>$code,'message'=>cleanApiMessage($error->getMessage())),'operationId'=>$operationId);
+      Sql::query("UPDATE mcpoperation SET status='failed',progress=100,error_code=".Sql::str($code).',result_json='.Sql::str(json_encode($failure)).',completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($operationId));
+      $GLOBALS['mcpCaptureErrors']=false;
+    }
+    if($error instanceof McpBridgeException)mcpJsonError($error->httpStatus,$error->errorCode,$error->getMessage(),$error->details);
+    throw $error;
+  }finally{
+    if($operationId)$GLOBALS['mcpCaptureErrors']=false;
+  }
+  if($operationId){$result['operationId']=$operationId;Sql::query("UPDATE mcpoperation SET status='succeeded',progress=100,result_json=".Sql::str(json_encode($result)).',completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($operationId));}
+  mcpJsonResponse($result);
+}
 function mcpHandlePrepareAction(array $input,string $username): never {
   mcpRequireKeys($input,array('action'));
   $action=(string)$input['action'];$args=is_array($input['arguments']??null)?$input['arguments']:array();
@@ -172,4 +212,4 @@ function mcpHandlePrepareAction(array $input,string $username): never {
   $token=mcpSignConfirmation($username,'action',array('operationId'=>$id,'action'=>$action,'arguments'=>$args),$nonce,$expires);
   mcpJsonResponse(array('ok'=>true,'operationId'=>$id,'action'=>$action,'risk'=>$registry[$action]['risk'],'arguments'=>$args,'preview'=>$preview,'expiresAt'=>date(DATE_ATOM,$expires),'confirmationToken'=>$token));
 }
-function mcpHandleCommitAction(array $input,string $username): never { mcpRequireKeys($input,array('confirmationToken'));$verified=mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'action');$payload=$verified['document']['payload'];$result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);Sql::query('UPDATE mcpoperation SET status=' . Sql::str('succeeded') . ', result_json=' . Sql::str(json_encode($result)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' . $verified['operationId'] . " AND status='prepared'");mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId']))); }
+function mcpHandleCommitAction(array $input,string $username): never { @set_time_limit(900);mcpRequireKeys($input,array('confirmationToken'));$verified=mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'action');$payload=$verified['document']['payload'];$result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);Sql::query('UPDATE mcpoperation SET status=' . Sql::str('succeeded') . ', progress=100, result_json=' . Sql::str(json_encode($result)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' . $verified['operationId'] . " AND status='running'");mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId']))); }
