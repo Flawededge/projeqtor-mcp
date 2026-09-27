@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { chmod, mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, chown, mkdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -30,6 +30,11 @@ async function prepare() {
   const artifactRoot = resolve(testRoot, '.runtime', runId, 'artifacts');
   await mkdir(secretRoot, { recursive: true, mode: 0o700 });
   await mkdir(artifactRoot, { recursive: true, mode: 0o700 });
+  const hostUid = typeof process.getuid === 'function' ? process.getuid() : 1000;
+  const hostGid = typeof process.getgid === 'function' ? process.getgid() : 1000;
+  const testUid = hostUid === 0 ? 1000 : hostUid;
+  const testGid = hostUid === 0 ? 1000 : hostGid;
+  if (hostUid === 0) await chown(artifactRoot, testUid, testGid);
 
   const dbPassword = secret(30);
   const signingKey = secret(48);
@@ -69,6 +74,8 @@ async function prepare() {
     BETA4_USERS_FILE: paths.users,
     BETA4_ADMIN_TOKEN_FILE: paths.token,
     BETA4_ARTIFACT_DIR: artifactRoot,
+    BETA4_TEST_UID: String(testUid),
+    BETA4_TEST_GID: String(testGid),
     BETA4_SEED_MODE: seedMode,
     BETA4_SEED_DUMP: seedDump
   };

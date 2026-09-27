@@ -160,6 +160,7 @@ services:
 
   test-runner:
     image: node:22-alpine
+    user: "${BETA4_TEST_UID:?generated test UID required}:${BETA4_TEST_GID:?generated test GID required}"
     depends_on:
       gateway: {condition: service_started}
       worker: {condition: service_healthy}

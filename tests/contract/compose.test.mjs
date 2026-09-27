@@ -21,6 +21,13 @@ test('worker remains backend-only, unprivileged, and capability-free', () => {
   assert.match(worker, /no-new-privileges:true/);
 });
 
+test('test runner uses the preparing actor and writes only to its artifact mount', () => {
+  const runner = compose.slice(compose.indexOf('  test-runner:'), compose.indexOf('\nnetworks:'));
+  assert.match(runner, /user: "\$\{BETA4_TEST_UID:[^}]+\}:\$\{BETA4_TEST_GID:[^}]+\}"/);
+  assert.match(runner, /BETA4_ARTIFACT_DIR[^\n]+:\/artifacts/);
+  assert.match(runner, /\.\.:\/workspace:ro/);
+});
+
 test('restore seed is explicit, read-only, and isolated from fresh mode', () => {
   const restore = compose.slice(compose.indexOf('  restore-seed:'), compose.indexOf('\n  app:'));
   assert.match(restore, /profiles: \[restore\]/);
