@@ -1,3 +1,6 @@
 <?php
 declare(strict_types=1);
-return array('id'=>'follow_up','version'=>'4.0.0','dependencies'=>array('core','planning','environment'),'actions'=>array());
+require_once __DIR__.'/actions.php';
+require_once __DIR__.'/worker.php';
+require_once __DIR__.'/descriptor.php';
+return mcpFollowUpModuleDescriptor();
