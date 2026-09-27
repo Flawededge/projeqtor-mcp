@@ -24,7 +24,7 @@ export const TOOLS_HANDLERS = Object.freeze([
   'tool:saveAttachment', 'tool:saveDataCloning', 'tool:saveDocumentRight',
   'tool:saveDocumentVersion', 'tool:saveLink', 'tool:saveNote', 'tool:saveNoteStream',
   'tool:saveObjectLinkedByIdToMainObject', 'tool:saveSubscription',
-  'tool:saveWorkflowProfileParameter', 'tool:sendMail', 'tool:sendMailTest', 'tool:uploadImage',
+  'tool:sendMail', 'tool:sendMailTest', 'tool:uploadImage',
   'view:menuNotificationRead'
 ]);
 
