@@ -107,7 +107,10 @@ function workerImport(array $arguments,string $username): array {
 
 function workerExecute(array $row): array {
   $payload=json_decode((string)$row['payload'],true);if(!is_array($payload))throw new RuntimeException('Invalid job payload');$action=(string)($payload['action']??$row['operation_type']);$arguments=is_array($payload['arguments']??null)?$payload['arguments']:array();$id=(int)$row['id'];
-  $registry=mcpWorkerActionRegistry();if(!isset($registry[$action]))throw new RuntimeException("Unsupported job action '$action'");$executor=$registry[$action];return $executor($id,$arguments,(string)$row['username']);
+  mcpValidateActionArguments($action,$arguments);
+  $registry=mcpWorkerActionRegistry();if(!isset($registry[$action]))throw new RuntimeException("Unsupported job action '$action'");$executor=$registry[$action];$result=$executor($id,$arguments,(string)$row['username']);
+  if(!is_array($result))throw new RuntimeException("Worker action '$action' returned an invalid result");
+  return mcpValidateActionResult($action,$result);
 }
 
 mcpAssertPolicyComplete();

@@ -153,4 +153,13 @@ function mcpHandlePrepareAction(array $input,string $username): never {
   $token=mcpSignConfirmation($username,'action',array('operationId'=>$id,'action'=>$action,'arguments'=>$args),$nonce,$expires);
   mcpJsonResponse(array('ok'=>true,'operationId'=>$id,'action'=>$action,'risk'=>$registry[$action]['risk'],'arguments'=>$args,'preview'=>$preview,'expiresAt'=>date(DATE_ATOM,$expires),'confirmationToken'=>$token));
 }
-function mcpHandleCommitAction(array $input,string $username): never { @set_time_limit(900);mcpRequireKeys($input,array('confirmationToken'));$verified=mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'action');$payload=$verified['document']['payload'];$result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);Sql::query('UPDATE mcpoperation SET status=' . Sql::str('succeeded') . ', progress=100, result_json=' . Sql::str(json_encode($result)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' . $verified['operationId'] . " AND status='running'");mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId']))); }
+function mcpHandleCommitAction(array $input,string $username): never {
+  @set_time_limit(900);mcpRequireKeys($input,array('confirmationToken'));
+  $verified=mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'action');$payload=$verified['document']['payload'];
+  $result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);
+  $effects=$result['effects']??array();
+  Sql::query('UPDATE mcpoperation SET status=' . Sql::str('succeeded') . ', progress=100, result_json=' . Sql::str(json_encode($result)) .
+    ', effects_json=' . Sql::str(json_encode($effects)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' .
+    $verified['operationId'] . " AND status='running'");
+  mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId'])));
+}
