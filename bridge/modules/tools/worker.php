@@ -10,6 +10,7 @@ function mcpToolsExportWorker(int $jobId,array $arguments,string $username): arr
 
 function mcpToolsDocumentVersionWorker(int $jobId,array $arguments,string $username): array {
   $uploadId=(string)$arguments['uploadId'];$meta=mcpReadUpload($uploadId,$username);
+  if(workerCancelled($jobId))throw new RuntimeException('cancelled');
   $document=new Document((int)$arguments['idDocument']);
   mcpRequireClassOperation('DocumentVersion','create');
   if(!$document->id||!Security::checkValidAccessForUser($document,'update',null,null,false))throw new RuntimeException('Document update access is denied');
@@ -25,6 +26,7 @@ function mcpToolsDocumentVersionWorker(int $jobId,array $arguments,string $usern
   $version->description=(string)($arguments['description']??'');$version->isRef=!empty($arguments['isRef'])?1:0;
   $version->fileName=(string)$meta['fileName'];$version->mimeType=(string)$meta['mimeType'];
   $version->fileSize=$received;$version->importFile=$source;
+  if(workerCancelled($jobId))throw new RuntimeException('cancelled');
   Sql::beginTransaction();$raw=$version->save();if(getLastOperationStatus($raw)!=='OK'){Sql::rollbackTransaction();throw new RuntimeException(cleanApiMessage($raw));}
   Sql::commitTransaction();@unlink(mcpUploadMetaPath($uploadId));if(is_file($source))@unlink($source);
   $saved=new DocumentVersion($version->id);return array(

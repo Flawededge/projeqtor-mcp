@@ -76,6 +76,10 @@ expect(str_contains($actionsSource,'Generic CRUD remains denied'),'semantic path
 $policy=json_decode(file_get_contents(dirname(__DIR__,3).'/class-policy-v3.json'),true);foreach(array('DataCloning','EventForMail','LocalizationTranslatorLanguage') as $class)expect(($policy['classes'][$class]['operations']??null)===array(),"$class remains denied through generic CRUD policy");
 expect(str_contains($workerSource,"mcpRequireClassOperation('Note','create')"),'saveAsNote checks Note create policy');
 expect(str_contains($workerSource,"Security::checkValidAccessForUser(\$probe,'create'"),'saveAsNote checks native Note create permission');
+expect(str_contains($actionsSource,"Security::checkValidAccessForUser(\$object,'delete'"),'delete previews enforce object-level delete permission before metadata');
+expect(str_contains($actionsSource,"Security::checkValidAccessForUser(\$target,'update'"),'mail previews enforce referenced-target update permission');
+expect(str_contains($actionsSource,"mcpToolsRequireParentRead('User'"),'notification previews validate recipient visibility');
+expect(substr_count($workerSource,'workerCancelled($jobId)')>=5,'asynchronous Tools workers cooperatively check cancellation');
 foreach(array('MCP_TOOLS_IMAGE_HARD_MAX_BYTES','workerCancelled','FILEINFO_MIME_TYPE','getimagesize','MCP_TOOLS_IMAGE_MAX_PIXELS','is_link','rawurlencode','mcpToolsRequireImageUploadPermission') as $guard)expect(str_contains($imageSource,$guard),"image upload includes $guard guard");
 expect(!str_contains($imageSource,"'svg'"),'active SVG uploads are not accepted');
 

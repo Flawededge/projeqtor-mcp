@@ -153,9 +153,10 @@ function mcpToolsPreviewDeletes(array $arguments,string $username,string $action
   foreach($arguments['items']??array() as $entry){
     $id=(int)($entry['id']??0);$object=new $class($id);
     if(!$object->id){$missing++;$items[]=array('id'=>$id,'status'=>'missing');continue;}
+    if(!Security::checkValidAccessForUser($object,'delete',null,null,false))mcpJsonError(403,'forbidden',"$class #$id is unavailable");
     $version=mcpObjectVersion($object);$conflict=!empty($entry['expectedVersion'])&&!hash_equals((string)$entry['expectedVersion'],$version);
-    $canDelete=Security::checkValidAccessForUser($object,'delete',null,null,false);if($canDelete)$allowed++;if($conflict)$conflicts++;
-    $items[]=array('id'=>$id,'objectClass'=>$class,'name'=>$object->name??null,'version'=>$version,'versionConflict'=>$conflict,'deleteAllowed'=>$canDelete);
+    $allowed++;if($conflict)$conflicts++;
+    $items[]=array('id'=>$id,'objectClass'=>$class,'name'=>$object->name??null,'version'=>$version,'versionConflict'=>$conflict,'deleteAllowed'=>true);
   }
   return array('objectClass'=>$class,'counts'=>array('requested'=>count($arguments['items']??array()),'allowed'=>$allowed,'missing'=>$missing,'versionConflicts'=>$conflicts),'items'=>$items);
 }
@@ -193,8 +194,9 @@ function mcpToolsSubscriptions(array $arguments,bool $delete): array {
     if(!$found->id){$items[]=array('index'=>$index,'status'=>'missing','objectClass'=>'Subscription','id'=>null);continue;}
     if(empty($item['expectedVersion']))mcpJsonError(400,'expected_version_required',"Subscription item $index requires expectedVersion");
     if(!hash_equals(mcpObjectVersion($found),(string)$item['expectedVersion']))mcpJsonError(409,'version_conflict','Subscription has changed');
+    if(!Security::checkValidAccessForUser($found,'delete',null,null,false))mcpJsonError(403,'forbidden','Subscription is unavailable');
     $operations[]=array('action'=>'delete','objectClass'=>'Subscription','id'=>(int)$found->id,'expectedVersion'=>(string)$item['expectedVersion']);
-    $items[]=array('index'=>$index,'status'=>'present','objectClass'=>'Subscription','id'=>(int)$found->id,'deleteAllowed'=>Security::checkValidAccessForUser($found,'delete',null,null,false));
+    $items[]=array('index'=>$index,'status'=>'present','objectClass'=>'Subscription','id'=>(int)$found->id,'deleteAllowed'=>true);
   }
   if(!$delete)return array('counts'=>array('requested'=>count($arguments['items']??array()),'present'=>count($operations)),'items'=>$items);
   $result=$operations?mcpExecuteOperationsArray($operations,'atomic',true):array('ok'=>true,'rolledBack'=>false,'transactionMode'=>'atomic','items'=>array());return mcpToolsNormalizeBatchResult($result);
@@ -203,10 +205,25 @@ function mcpToolsPreviewSubscriptions(array $arguments,string $username,string $
 function mcpToolsUnsubscribe(array $arguments,string $username,string $action): array { return mcpToolsSubscriptions($arguments,true); }
 
 function mcpToolsPreviewNotifications(array $arguments,string $username,string $action): array {
+  mcpRequireClassOperation('Notification','create');$probe=new Notification();
+  if(!Security::checkValidAccessForUser($probe,'create',null,null,false))mcpJsonError(403,'forbidden','Notification creation access is denied');
+  foreach($arguments['items']??array() as $entry)mcpToolsRequireParentRead('User',(int)$entry['idUser'],'Notification recipient');
   return array('count'=>count($arguments['items']??array()),'emailCount'=>count(array_filter($arguments['items']??array(),fn($item)=>!empty($item['sendEmail']))),'delivery'=>'guarded_external','contentRedacted'=>true);
 }
 function mcpToolsPreviewMail(array $arguments,string $username,string $action): array {
-  if((!empty($arguments['refType'])||!empty($arguments['refId']))&&empty($arguments['expectedVersion']))mcpJsonError(400,'expected_version_required','expectedVersion is required with a mail reference target');
+  $refType=(string)($arguments['refType']??'');$refId=(int)($arguments['refId']??0);$target=null;
+  if($refType||$refId){
+    if(!$refType||!$refId)mcpJsonError(400,'invalid_reference','refType and refId must be supplied together');
+    Security::checkValidClass($refType);mcpRequireClassOperation($refType,'update');$target=new $refType($refId);
+    if(!$target->id||!Security::checkValidAccessForUser($target,'update',null,null,false))mcpJsonError(403,'forbidden','Mail reference target is unavailable');
+    if(empty($arguments['expectedVersion']))mcpJsonError(400,'expected_version_required','expectedVersion is required with a mail reference target');
+    if(!hash_equals(mcpObjectVersion($target),(string)$arguments['expectedVersion']))mcpJsonError(409,'version_conflict','Mail reference target has changed');
+  }elseif(securityGetAccessRightYesNo('menuAdmin','read')!=='YES')mcpJsonError(403,'forbidden','Direct mail without a reference target requires administration access');
+  if(!empty($arguments['saveAsNote'])){
+    if(!$target)mcpJsonError(400,'invalid_reference','saveAsNote requires a reference target');
+    mcpRequireClassOperation('Note','create');$note=new Note();
+    if(!Security::checkValidAccessForUser($note,'create',null,null,false))mcpJsonError(403,'forbidden','Note creation access is denied');
+  }
   $domains=array();foreach($arguments['recipients']??array() as $recipient){$parts=explode('@',(string)$recipient);if(count($parts)===2)$domains[strtolower($parts[1])]=true;}
   return array('recipientCount'=>count($arguments['recipients']??array()),'recipientDomains'=>array_keys($domains),'subjectLength'=>mb_strlen((string)($arguments['subject']??'')),'bodyBytes'=>strlen((string)($arguments['body']??'')),'delivery'=>'guarded_external','payloadRedacted'=>true);
 }

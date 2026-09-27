@@ -28,8 +28,9 @@ function mcpToolsPreviewRelationshipUnlink(array $arguments,string $username,str
     $class=(string)$entry['objectClass'];Security::checkValidClass($class);$field=mcpToolsRelationshipField((string)$entry['parentClass']);$object=new $class((int)$entry['id']);
     if(!$object->id){$items[]=array('objectClass'=>$class,'id'=>(int)$entry['id'],'status'=>'missing');continue;}
     if(!property_exists($object,$field))mcpJsonError(400,'invalid_relationship',"$class does not expose $field");
-    $version=mcpObjectVersion($object);$conflict=!empty($entry['expectedVersion'])&&!hash_equals((string)$entry['expectedVersion'],$version);$canUpdate=Security::checkValidAccessForUser($object,'update',null,null,false);if($canUpdate&&!$conflict)$allowed++;
-    $items[]=array('objectClass'=>$class,'id'=>(int)$object->id,'field'=>$field,'currentParentId'=>$object->$field===null?null:(int)$object->$field,'version'=>$version,'versionConflict'=>$conflict,'updateAllowed'=>$canUpdate);
+    if(!Security::checkValidAccessForUser($object,'update',null,null,false))mcpJsonError(403,'forbidden','Linked object is unavailable');
+    $version=mcpObjectVersion($object);$conflict=!empty($entry['expectedVersion'])&&!hash_equals((string)$entry['expectedVersion'],$version);if(!$conflict)$allowed++;
+    $items[]=array('objectClass'=>$class,'id'=>(int)$object->id,'field'=>$field,'currentParentId'=>$object->$field===null?null:(int)$object->$field,'version'=>$version,'versionConflict'=>$conflict,'updateAllowed'=>true);
   }
   return array('counts'=>array('requested'=>count($arguments['items']??array()),'allowed'=>$allowed),'items'=>$items,'effect'=>'clear_parent_relationship');
 }
