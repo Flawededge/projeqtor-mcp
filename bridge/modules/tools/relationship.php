@@ -7,14 +7,15 @@ function mcpToolsRelationshipField(string $parentClass): string {
 
 function mcpToolsRelationshipOperations(array $arguments,bool $unlink): array {
   $operations=array();
-  foreach($arguments['items']??array() as $entry){
+  foreach($arguments['items']??array() as $index=>$entry){
+    if(empty($entry['expectedVersion']))mcpJsonError(400,'expected_version_required',"Relationship item $index requires expectedVersion");
     $class=(string)$entry['objectClass'];Security::checkValidClass($class);$field=mcpToolsRelationshipField((string)$entry['parentClass']);
     $target=new $class((int)$entry['id']);if(!$target->id||!Security::checkValidAccessForUser($target,'update',null,null,false))mcpJsonError(403,'forbidden','Linked object update access is denied');
     if(!property_exists($target,$field))mcpJsonError(400,'invalid_relationship',"$class does not expose $field");
     $value=null;if(!$unlink){$parentClass=(string)$entry['parentClass'];$parent=new $parentClass((int)$entry['parentId']);if(!$parent->id||!Security::checkValidAccessForUser($parent,'read',null,null,false))mcpJsonError(403,'forbidden','Relationship parent is unavailable');$value=(int)$parent->id;}
     $operations[]=array_filter(array('action'=>'update','objectClass'=>$class,'id'=>(int)$target->id,'expectedVersion'=>$entry['expectedVersion']??null,'data'=>array($field=>$value)),fn($item)=>$item!==null);
   }
-  $result=mcpExecuteOperationsArray($operations,$unlink?'atomic':mcpToolsMode($arguments),$unlink);$result['effects']=mcpToolsEffects($result);return $result;
+  return mcpToolsNormalizeBatchResult(mcpExecuteOperationsArray($operations,$unlink?'atomic':mcpToolsMode($arguments),$unlink));
 }
 
 function mcpToolsRelationshipLink(array $arguments,string $username,string $action): array { return mcpToolsRelationshipOperations($arguments,false); }
@@ -22,7 +23,8 @@ function mcpToolsRelationshipUnlink(array $arguments,string $username,string $ac
 
 function mcpToolsPreviewRelationshipUnlink(array $arguments,string $username,string $action): array {
   $items=array();$allowed=0;
-  foreach($arguments['items']??array() as $entry){
+  foreach($arguments['items']??array() as $index=>$entry){
+    if(empty($entry['expectedVersion']))mcpJsonError(400,'expected_version_required',"Relationship item $index requires expectedVersion");
     $class=(string)$entry['objectClass'];Security::checkValidClass($class);$field=mcpToolsRelationshipField((string)$entry['parentClass']);$object=new $class((int)$entry['id']);
     if(!$object->id){$items[]=array('objectClass'=>$class,'id'=>(int)$entry['id'],'status'=>'missing');continue;}
     if(!property_exists($object,$field))mcpJsonError(400,'invalid_relationship',"$class does not expose $field");

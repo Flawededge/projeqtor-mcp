@@ -42,10 +42,50 @@ function mcpToolsEffects(array $result): array {
   return $effects;
 }
 
+/** Keep semantic action results closed and smaller than native SqlElement dumps. */
+function mcpToolsNormalizeItem(array $item): array {
+  $saved=is_array($item['saved']??null)?$item['saved']:array();
+  $allowed=array('index','localKey','status','objectClass','id','sourceId','requestedFields','appliedFields','recalculatedFields','ignoredFields','rejectedFields','concurrencyUnchecked','error','relatedDocumentVersionIds','emailSent','recipientHash','fileName','mimeType','fileSize','archiveName','bytes','deleteAllowed');
+  $result=array();foreach($allowed as $field)if(array_key_exists($field,$item))$result[$field]=$item[$field];
+  if(is_array($result['error']??null)){$source=$result['error'];$result['error']=array('code'=>(string)($source['code']??'operation_failed'),'message'=>(string)($source['message']??'Operation failed'));foreach(array('expectedVersion','actualVersion') as $field)if(isset($source[$field]))$result['error'][$field]=(string)$source[$field];}
+  $version=$saved['_version']??($item['version']??null);if(is_string($version)&&$version!=='')$result['version']=$version;
+  return $result;
+}
+function mcpToolsNormalizeBatchResult(array $result): array { $result['items']=array_map('mcpToolsNormalizeItem',$result['items']??array());$result['effects']=mcpToolsEffects($result);return $result; }
+function mcpToolsRequireExpectedVersion(array $operation,int $index): void { if(($operation['operation']??'')==='update'&&empty($operation['expectedVersion']))mcpJsonError(400,'expected_version_required',"Operation $index requires expectedVersion for an existing record"); }
+function mcpToolsRequireParentRead(string $class,int $id,string $label='Parent'): object { Security::checkValidClass($class);$parent=new $class($id);if(!$parent->id||!Security::checkValidAccessForUser($parent,'read',null,null,false))mcpJsonError(403,'forbidden',"$label is unavailable");return $parent; }
+function mcpToolsValidateSemanticParents(string $class,array $data): void {
+  if(in_array($class,array('Document','DocumentDirectory'),true)){if(!empty($data['idProject']))mcpToolsRequireParentRead('Project',(int)$data['idProject'],'Document project');if(!empty($data['idDocumentDirectory']))mcpToolsRequireParentRead('DocumentDirectory',(int)$data['idDocumentDirectory'],'Document directory');if(!empty($data['idDocumentType']))mcpToolsRequireParentRead('DocumentType',(int)$data['idDocumentType'],'Document type');}
+  if($class==='DocumentRight'){
+    if(!empty($data['idDocument']))mcpToolsRequireParentRead('Document',(int)$data['idDocument'],'Document right target');
+    if(!empty($data['idDocumentDirectory']))mcpToolsRequireParentRead('DocumentDirectory',(int)$data['idDocumentDirectory'],'Document right directory');
+  }
+  if($class==='Note'&&!empty($data['refType'])&&!empty($data['refId']))mcpToolsRequireParentRead((string)$data['refType'],(int)$data['refId'],'Note target');
+  if($class==='Link')foreach(array(1,2) as $side)if(!empty($data['ref'.$side.'Type'])&&!empty($data['ref'.$side.'Id']))mcpToolsRequireParentRead((string)$data['ref'.$side.'Type'],(int)$data['ref'.$side.'Id'],'Link endpoint');
+  foreach(array('idProject'=>'Project','idResource'=>'Resource','idUser'=>'User','idContact'=>'Contact','idTeam'=>'Team','idProduct'=>'Product','idProductVersion'=>'ProductVersion','idComponent'=>'Component','idComponentVersion'=>'ComponentVersion') as $field=>$parent)if(!empty($data[$field]))mcpToolsRequireParentRead($parent,(int)$data[$field],"$class $field reference");
+}
+function mcpToolsSemanticOnlyClasses(): array { return array('DataCloning','EventForMail','LocalizationTranslatorLanguage'); }
+function mcpToolsApplyNamedSemanticOperation(array $operation,bool $allowGuarded): array {
+  $class=(string)$operation['objectClass'];$verb=(string)$operation['action'];if(!in_array($class,mcpToolsSemanticOnlyClasses(),true))return mcpApplyOperation($operation,$allowGuarded);
+  // Generic CRUD remains denied. Only a named guarded Tools action may reach these models.
+  if(!$allowGuarded||securityGetAccessRightYesNo('menuAdmin','read')!=='YES')mcpJsonError(403,'forbidden',"Administrative access is required for $class");
+  if(!in_array($verb,array('create','update'),true))mcpJsonError(400,'invalid_operation','Semantic-only Tools records support create or update');
+  $id=(int)($operation['id']??0);if($verb==='update'&&$id<1)mcpJsonError(400,'id_required','update requires a positive id');$object=$id?new $class($id):new $class();if($id&&!$object->id)mcpJsonError(404,'not_found',"$class #$id was not found");
+  if(!Security::checkValidAccessForUser($object,$verb,null,null,false))mcpJsonError(403,'forbidden',"$verb access is denied for $class");if($id&&!hash_equals(mcpObjectVersion($object),(string)$operation['expectedVersion']))mcpJsonError(409,'version_conflict',"$class #$id has changed");
+  $data=is_array($operation['data']??null)?$operation['data']:array();mcpToolsValidateSemanticParents($class,$data);mcpFillObject($object,$data);$control=method_exists($object,'control')?cleanApiMessage($object->control()):'OK';if($control!==''&&strtoupper($control)!=='OK')return array('status'=>'invalid','objectClass'=>$class,'id'=>$id?:null,'error'=>array('code'=>'validation_failed','message'=>$control));
+  $raw=$object->save();if(getLastOperationStatus($raw)!=='OK')return array('status'=>'error','objectClass'=>$class,'id'=>$object->id?:null,'error'=>array('code'=>'save_failed','message'=>cleanApiMessage($raw)));return mcpOperationResult($verb==='create'?'created':'updated',$class,$object,$data);
+}
+function mcpToolsExecuteNamedOperations(array $operations,string $mode,bool $allowGuarded): array {
+  if(!$operations||count($operations)>200)mcpJsonError(400,'invalid_batch','operations must contain 1 to 200 items');$results=array();if($mode==='atomic')Sql::beginTransaction();
+  foreach($operations as $index=>$operation){if($mode==='best_effort')Sql::beginTransaction();$GLOBALS['mcpCaptureErrors']=true;try{$item=mcpToolsApplyNamedSemanticOperation($operation,$allowGuarded);$item['index']=$index;$item['localKey']=$operation['localKey']??null;$failed=in_array($item['status'],array('invalid','error'),true);if($mode==='best_effort')$failed?Sql::rollbackTransaction():Sql::commitTransaction();$results[]=$item;if($failed&&$mode==='atomic'){Sql::rollbackTransaction();return mcpToolsNormalizeBatchResult(array('ok'=>false,'rolledBack'=>true,'transactionMode'=>$mode,'items'=>$results));}}catch(Throwable $error){if($mode==='best_effort')Sql::rollbackTransaction();$details=$error instanceof McpBridgeException?array_merge(array('code'=>$error->errorCode,'message'=>$error->getMessage()),$error->details):array('code'=>'operation_failed','message'=>cleanApiMessage($error->getMessage()));$results[]=array('index'=>$index,'localKey'=>$operation['localKey']??null,'objectClass'=>$operation['objectClass']??null,'status'=>'error','error'=>$details);if($mode==='atomic'){Sql::rollbackTransaction();return mcpToolsNormalizeBatchResult(array('ok'=>false,'rolledBack'=>true,'transactionMode'=>$mode,'items'=>$results));}}finally{$GLOBALS['mcpCaptureErrors']=false;}}
+  if($mode==='atomic')Sql::commitTransaction();return mcpToolsNormalizeBatchResult(array('ok'=>!count(array_filter($results,fn($item)=>in_array($item['status'],array('invalid','error'),true))),'rolledBack'=>false,'transactionMode'=>$mode,'items'=>$results));
+}
+
 function mcpToolsBatchForClass(array $arguments,string $class,array $allowedClasses=array(),bool $allowGuarded=false): array {
   $allowed=$allowedClasses?:array($class);$operations=array();
   foreach($arguments['operations']??array() as $index=>$operation){
     if(!is_array($operation))mcpJsonError(400,'invalid_operation',"Operation $index must be an object");
+    mcpToolsRequireExpectedVersion($operation,$index);
     $selected=(string)($operation['objectClass']??$class);
     if(!in_array($selected,$allowed,true))mcpJsonError(400,'invalid_object_class',"$selected is not owned by this Tools action");
     $canonical=array(
@@ -53,11 +93,9 @@ function mcpToolsBatchForClass(array $arguments,string $class,array $allowedClas
       'data'=>is_array($operation['data']??null)?$operation['data']:array()
     );
     foreach(array('id','expectedVersion','localKey') as $field)if(array_key_exists($field,$operation))$canonical[$field]=$operation[$field];
-    $operations[]=$canonical;
+    mcpToolsValidateSemanticParents($selected,$canonical['data']);$operations[]=$canonical;
   }
-  $result=mcpExecuteOperationsArray($operations,mcpToolsMode($arguments),$allowGuarded);
-  $result['effects']=mcpToolsEffects($result);
-  return $result;
+  return mcpToolsExecuteNamedOperations($operations,mcpToolsMode($arguments),$allowGuarded);
 }
 
 function mcpToolsDocumentManage(array $arguments,string $username,string $action): array {
@@ -84,18 +122,19 @@ function mcpToolsAutomationManage(array $arguments,string $username,string $acti
   return mcpToolsBatchForClass($arguments,'NotificationDefinition',array('NotificationDefinition','EventForMail','StatusMail','StatusMailPerProject','EmailTemplate'),true);
 }
 function mcpToolsLocalizationManage(array $arguments,string $username,string $action): array {
-  return mcpToolsBatchForClass($arguments,'LocalizationItem',array('LocalizationItem','LocalizationRequest','LocalizationTranslator','LocalizationTranslatorLanguage'));
+  return mcpToolsBatchForClass($arguments,'LocalizationItem',array('LocalizationItem','LocalizationRequest','LocalizationTranslator','LocalizationTranslatorLanguage'),true);
 }
 function mcpToolsAssetManage(array $arguments,string $username,string $action): array {
   return mcpToolsBatchForClass($arguments,'Asset',array('Asset','AssetCategory','AssetType'));
 }
 
 function mcpToolsDeleteClass(array $arguments,string $class): array {
+  foreach($arguments['items']??array() as $index=>$item)if(empty($item['expectedVersion']))mcpJsonError(400,'expected_version_required',"Delete item $index requires expectedVersion");
   $operations=array_map(fn($item)=>array_filter(array(
     'action'=>'delete','objectClass'=>$class,'id'=>(int)($item['id']??0),
     'expectedVersion'=>$item['expectedVersion']??null
   ),fn($value)=>$value!==null),$arguments['items']??array());
-  $result=mcpExecuteOperationsArray($operations,'atomic',true);$result['effects']=mcpToolsEffects($result);return $result;
+  return mcpToolsNormalizeBatchResult(mcpExecuteOperationsArray($operations,'atomic',true));
 }
 function mcpToolsDeleteVersions(array $arguments,string $username,string $action): array { return mcpToolsDeleteClass($arguments,'DocumentVersion'); }
 function mcpToolsDeleteAttachments(array $arguments,string $username,string $action): array { return mcpToolsDeleteClass($arguments,'Attachment'); }
@@ -122,40 +161,43 @@ function mcpToolsPreviewDeletes(array $arguments,string $username,string $action
 }
 
 function mcpToolsNotificationStatus(array $arguments,string $username,string $action): array {
-  $operations=array();foreach($arguments['items']??array() as $item){$data=array();if(isset($item['statusId']))$data['idStatusNotification']=(int)$item['statusId'];if(array_key_exists('idle',$item))$data['idle']=$item['idle']?1:0;
+  $operations=array();foreach($arguments['items']??array() as $index=>$item){if(empty($item['expectedVersion']))mcpJsonError(400,'expected_version_required',"Notification item $index requires expectedVersion");$data=array();if(isset($item['statusId']))$data['idStatusNotification']=(int)$item['statusId'];if(array_key_exists('idle',$item))$data['idle']=$item['idle']?1:0;
     if(!$data)$data['idStatusNotification']=2;
     $operations[]=array_filter(array('action'=>'update','objectClass'=>'Notification','id'=>(int)$item['id'],'expectedVersion'=>$item['expectedVersion']??null,'data'=>$data),fn($value)=>$value!==null);
   }
-  $result=mcpExecuteOperationsArray($operations,mcpToolsMode($arguments),false);$result['effects']=mcpToolsEffects($result);return $result;
+  return mcpToolsNormalizeBatchResult(mcpExecuteOperationsArray($operations,mcpToolsMode($arguments),false));
 }
 
 function mcpToolsSubscribe(array $arguments,string $username,string $action): array {
   $operations=array();$existing=array();
   foreach($arguments['items']??array() as $index=>$item){
     if((int)$item['idAffectable']!==(int)getSessionUser()->id && securityGetAccessRightYesNo('menuAdmin','read')!=='YES')mcpJsonError(403,'forbidden','Subscribing another user requires administration access');
-    Security::checkValidClass((string)$item['refType']);$target=new $item['refType']((int)$item['refId']);
-    if(!$target->id||!Security::checkValidAccessForUser($target,'read',null,null,false))mcpJsonError(403,'forbidden','Subscription target is unavailable');
+    $target=mcpToolsRequireParentRead((string)$item['refType'],(int)$item['refId'],'Subscription target');
+    if(empty($item['expectedTargetVersion'])||!hash_equals(mcpObjectVersion($target),(string)$item['expectedTargetVersion']))mcpJsonError(409,'version_conflict','Subscription target has changed');
     $criteria=array('refType'=>$item['refType'],'refId'=>(int)$item['refId'],'idAffectable'=>(int)$item['idAffectable']);
     $found=SqlElement::getSingleSqlElementFromCriteria('Subscription',$criteria);
-    if($found->id){$existing[$index]=array('index'=>$index,'status'=>'existing','objectClass'=>'Subscription','id'=>(int)$found->id,'saved'=>mcpObjectArray($found));continue;}
+    if($found->id){$existing[$index]=array('index'=>$index,'status'=>'existing','objectClass'=>'Subscription','id'=>(int)$found->id,'version'=>mcpObjectVersion($found));continue;}
     $operations[]=array('action'=>'create','objectClass'=>'Subscription','data'=>array_merge($criteria,array('idUser'=>(int)getSessionUser()->id,'creationDateTime'=>date('Y-m-d H:i:s'))));
   }
   $result=$operations?mcpExecuteOperationsArray($operations,mcpToolsMode($arguments),false):array('ok'=>true,'rolledBack'=>false,'transactionMode'=>mcpToolsMode($arguments),'items'=>array());
-  foreach($existing as $item)$result['items'][]=$item;$result['effects']=mcpToolsEffects($result);return $result;
+  foreach($existing as $item)$result['items'][]=$item;return mcpToolsNormalizeBatchResult($result);
 }
 
 function mcpToolsSubscriptions(array $arguments,bool $delete): array {
   $operations=array();$items=array();
   foreach($arguments['items']??array() as $index=>$item){
     if((int)$item['idAffectable']!==(int)getSessionUser()->id && securityGetAccessRightYesNo('menuAdmin','read')!=='YES')mcpJsonError(403,'forbidden','Unsubscribing another user requires administration access');
+    mcpToolsRequireParentRead((string)$item['refType'],(int)$item['refId'],'Subscription target');
     $criteria=array('refType'=>$item['refType'],'refId'=>(int)$item['refId'],'idAffectable'=>(int)$item['idAffectable']);
     $found=SqlElement::getSingleSqlElementFromCriteria('Subscription',$criteria);
     if(!$found->id){$items[]=array('index'=>$index,'status'=>'missing','objectClass'=>'Subscription','id'=>null);continue;}
-    $operations[]=array('action'=>'delete','objectClass'=>'Subscription','id'=>(int)$found->id);
+    if(empty($item['expectedVersion']))mcpJsonError(400,'expected_version_required',"Subscription item $index requires expectedVersion");
+    if(!hash_equals(mcpObjectVersion($found),(string)$item['expectedVersion']))mcpJsonError(409,'version_conflict','Subscription has changed');
+    $operations[]=array('action'=>'delete','objectClass'=>'Subscription','id'=>(int)$found->id,'expectedVersion'=>(string)$item['expectedVersion']);
     $items[]=array('index'=>$index,'status'=>'present','objectClass'=>'Subscription','id'=>(int)$found->id,'deleteAllowed'=>Security::checkValidAccessForUser($found,'delete',null,null,false));
   }
   if(!$delete)return array('counts'=>array('requested'=>count($arguments['items']??array()),'present'=>count($operations)),'items'=>$items);
-  $result=$operations?mcpExecuteOperationsArray($operations,'atomic',true):array('ok'=>true,'rolledBack'=>false,'transactionMode'=>'atomic','items'=>array());$result['effects']=mcpToolsEffects($result);return $result;
+  $result=$operations?mcpExecuteOperationsArray($operations,'atomic',true):array('ok'=>true,'rolledBack'=>false,'transactionMode'=>'atomic','items'=>array());return mcpToolsNormalizeBatchResult($result);
 }
 function mcpToolsPreviewSubscriptions(array $arguments,string $username,string $action): array { return mcpToolsSubscriptions($arguments,false); }
 function mcpToolsUnsubscribe(array $arguments,string $username,string $action): array { return mcpToolsSubscriptions($arguments,true); }
@@ -164,11 +206,15 @@ function mcpToolsPreviewNotifications(array $arguments,string $username,string $
   return array('count'=>count($arguments['items']??array()),'emailCount'=>count(array_filter($arguments['items']??array(),fn($item)=>!empty($item['sendEmail']))),'delivery'=>'guarded_external','contentRedacted'=>true);
 }
 function mcpToolsPreviewMail(array $arguments,string $username,string $action): array {
+  if((!empty($arguments['refType'])||!empty($arguments['refId']))&&empty($arguments['expectedVersion']))mcpJsonError(400,'expected_version_required','expectedVersion is required with a mail reference target');
   $domains=array();foreach($arguments['recipients']??array() as $recipient){$parts=explode('@',(string)$recipient);if(count($parts)===2)$domains[strtolower($parts[1])]=true;}
   return array('recipientCount'=>count($arguments['recipients']??array()),'recipientDomains'=>array_keys($domains),'subjectLength'=>mb_strlen((string)($arguments['subject']??'')),'bodyBytes'=>strlen((string)($arguments['body']??'')),'delivery'=>'guarded_external','payloadRedacted'=>true);
 }
 
-function mcpToolsAttachmentAction(array $arguments,string $username,string $action): array { return mcpExecuteUploadAction($action,$arguments,$username); }
+function mcpToolsAttachmentAction(array $arguments,string $username,string $action): array {
+  $result=mcpExecuteUploadAction($action,$arguments,$username);if($action!=='attachment.upload.commit')return $result;
+  $allowed=array('id','refType','refId','fileName','description','type','idUser','creationDate','subDirectory','fileSize','mimeType','_version');$attachment=array();foreach($allowed as $field)if(array_key_exists($field,$result['attachment'])&&$result['attachment'][$field]!==null)$attachment[$field]=$result['attachment'][$field];$result['attachment']=$attachment;return $result;
+}
 function mcpToolsPreviewUploadAbort(array $arguments,string $username,string $action): array { $meta=mcpReadUpload((string)($arguments['uploadId']??''),$username); return array('uploadId'=>$meta['uploadId'],'fileName'=>$meta['fileName'],'receivedBytes'=>is_file(mcpUploadDataPath($meta['uploadId']))?filesize(mcpUploadDataPath($meta['uploadId'])):0,'effect'=>'discard_temporary_upload'); }
 function mcpToolsCleanupImport(array $arguments,string $username,string $action): array { return mcpCleanupImportRun($username,$arguments); }
 function mcpToolsPreviewImport(array $arguments,string $username,string $action): array { return mcpImportCleanupPreview($username,$arguments); }

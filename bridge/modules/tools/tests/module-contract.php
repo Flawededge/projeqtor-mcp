@@ -46,4 +46,37 @@ foreach(array('tools.document.manage','tools.note.manage','tools.link.manage','t
 $encoded=json_encode($module,JSON_UNESCAPED_SLASHES);
 foreach(array('password','apiKey','oauthSecret','smtpPassword','credential') as $secret)expect(stripos($encoded,$secret)===false,"secret field $secret is not accepted");
 
-echo "Tools module contract: 31 actions, ".count($handlers)." mapped handlers, all checks passed\n";
+function expectClosedObjects(array $schema,string $path): void {
+  $types=$schema['type']??null;$types=is_array($types)?$types:array($types);
+  if(in_array('object',$types,true))expect(($schema['additionalProperties']??null)===false,"$path is a closed object contract");
+  foreach($schema as $key=>$value)if(is_array($value)){
+    if(isset($value['type'])||isset($value['properties'])||isset($value['items']))expectClosedObjects($value,$path.'.'.$key);
+    elseif(array_is_list($value))foreach($value as $index=>$entry)if(is_array($entry))expectClosedObjects($entry,$path.'.'.$key.'['.$index.']');
+  }
+}
+foreach($module['actions'] as $id=>$action){expectClosedObjects($action['schema'],$id.'.input');expectClosedObjects($action['resultSchema'],$id.'.result');}
+foreach(array('tools.document.manage','tools.document.rights','tools.note.manage','tools.link.manage','tools.clone.schedule','tools.automation.manage','tools.localization.manage','tools.asset.manage') as $id){
+  $operation=$module['actions'][$id]['schema']['properties']['operations']['items'];
+  expect(($operation['properties']['data']['additionalProperties']??true)===false,"$id data contract is closed");
+  expect(isset($operation['allOf']),"$id publishes conditional update version requirements");
+}
+foreach(array('tools.document.version.delete','tools.attachment.delete','tools.note.delete','tools.link.delete') as $id)expect(in_array('expectedVersion',$module['actions'][$id]['schema']['properties']['items']['items']['required'],true),"$id requires expectedVersion");
+foreach(array('tools.relationship.link','tools.relationship.unlink','tools.notification.status') as $id)expect(in_array('expectedVersion',$module['actions'][$id]['schema']['properties']['items']['items']['required'],true),"$id requires expectedVersion");
+expect(in_array('expectedVersion',$module['actions']['tools.clone.start']['schema']['properties']['items']['items']['required'],true),'clone source requires expectedVersion');
+expect(in_array('expectedVersion',$module['actions']['tools.notification.unsubscribe']['schema']['properties']['items']['items']['required'],true),'unsubscribe requires Subscription expectedVersion');
+expect(in_array('expectedTargetVersion',$module['actions']['tools.notification.subscribe']['schema']['properties']['items']['items']['required'],true),'subscribe binds the target version');
+expect(in_array('expectedDocumentVersion',$module['actions']['tools.document.version']['schema']['required'],true),'document version creation binds the parent version');
+expect(isset($module['actions']['tools.mail.send']['schema']['allOf']),'mail publishes conditional referenced-target version requirement');
+expect($module['actions']['tools.image.upload.commit']['risk']==='administrative','image commit is guarded');
+expect(isset($module['actions']['tools.image.upload.commit']['preview']),'image commit has an actor-bound preview path');
+expect(($module['actions']['tools.image.upload.begin']['schema']['properties']['expectedBytes']['maximum']??0)===26214400,'image schema has a hard byte ceiling');
+$actionsSource=file_get_contents(dirname(__DIR__).'/actions.php');$workerSource=file_get_contents(dirname(__DIR__).'/worker.php');$imageSource=file_get_contents(dirname(__DIR__).'/image-upload.php');
+expect(str_contains($actionsSource,"mcpToolsSemanticOnlyClasses(): array { return array('DataCloning','EventForMail','LocalizationTranslatorLanguage'); }"),'semantic-only persistence classes use a named module path');
+expect(str_contains($actionsSource,'Generic CRUD remains denied'),'semantic path documents the generic CRUD boundary');
+$policy=json_decode(file_get_contents(dirname(__DIR__,3).'/class-policy-v3.json'),true);foreach(array('DataCloning','EventForMail','LocalizationTranslatorLanguage') as $class)expect(($policy['classes'][$class]['operations']??null)===array(),"$class remains denied through generic CRUD policy");
+expect(str_contains($workerSource,"mcpRequireClassOperation('Note','create')"),'saveAsNote checks Note create policy');
+expect(str_contains($workerSource,"Security::checkValidAccessForUser(\$probe,'create'"),'saveAsNote checks native Note create permission');
+foreach(array('MCP_TOOLS_IMAGE_HARD_MAX_BYTES','workerCancelled','FILEINFO_MIME_TYPE','getimagesize','MCP_TOOLS_IMAGE_MAX_PIXELS','is_link','rawurlencode','mcpToolsRequireImageUploadPermission') as $guard)expect(str_contains($imageSource,$guard),"image upload includes $guard guard");
+expect(!str_contains($imageSource,"'svg'"),'active SVG uploads are not accepted');
+
+echo "Tools module contract: 31 actions, ".count($handlers)." mapped handlers, closed schemas and hardening checks passed\n";
