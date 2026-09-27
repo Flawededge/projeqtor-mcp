@@ -20,8 +20,9 @@ function mcpEnvironmentRoleDefaultCostAction(array $arguments,string $username,s
       continue;
     }
     if (!$current->id) mcpJsonError(404,'environment_target_not_found','Current ResourceCost was not found',array('idResource'=>(int)$resource->id,'idRole'=>(int)$role->id));
+    if (empty($resourceInput['expectedVersion'])) mcpJsonError(409,'expected_version_required','ResourceCost update requires expectedVersion');
     $operations[]=array('action'=>'update','objectClass'=>'ResourceCost','id'=>(int)$current->id,
-      'expectedVersion'=>$resourceInput['expectedVersion']??mcpObjectVersion($current),'data'=>array('startDate'=>null,'cost'=>$cost));
+      'expectedVersion'=>(string)$resourceInput['expectedVersion'],'data'=>array('startDate'=>null,'cost'=>$cost));
     if ($mode==='replace_current_and_assignments') {
       $assignment=new Assignment();
       foreach ($assignment->getSqlElementsFromCriteria(array('idRole'=>(int)$role->id,'idResource'=>(int)$resource->id),false,null,'id asc') as $entry) {

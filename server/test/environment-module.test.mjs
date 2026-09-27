@@ -50,3 +50,15 @@ test('Environment schemas reject credentials and direct user provisioning fields
     assert.equal(text.includes(`"${forbidden}"`), false, forbidden);
   }
 });
+
+test('Environment mutations fail closed on concurrency and parent permissions', () => {
+  const root = new URL('../../bridge/modules/environment/', import.meta.url);
+  const actions = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('actions.php', root).pathname)});`], { encoding: 'utf8' });
+  const costs = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('cost-actions.php', root).pathname)});`], { encoding: 'utf8' });
+  const internal = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('internal-batch.php', root).pathname)});`], { encoding: 'utf8' });
+  assert.match(actions, /expected_version_required/);
+  assert.match(costs, /ResourceCost update requires expectedVersion/);
+  assert.doesNotMatch(costs, /\?\?mcpObjectVersion\(\$current\)/);
+  assert.match(internal, /Existing intervention target is unavailable/);
+  assert.match(internal, /\$resource,'update'/);
+});

@@ -45,9 +45,13 @@ function mcpEnvironmentInterventionCapacityBatchAction(array $arguments,string $
 function mcpEnvironmentInterventionScheduleBatchAction(array $arguments,string $username,string $action): array {
   return mcpEnvironmentExecuteInternalBatch($arguments['entries'],(string)($arguments['transactionMode']??'atomic'),function(array $entry): array {
     $resource=new Resource((int)$entry['idResource']);
-    if (!$resource->id||!Security::checkValidAccessForUser($resource,'read',null,null,false)) mcpJsonError(403,'forbidden','Resource is unavailable');
+    if (!$resource->id||!Security::checkValidAccessForUser($resource,'update',null,null,false)) mcpJsonError(403,'forbidden','Resource is unavailable');
     $object=SqlElement::getSingleSqlElementFromCriteria('PlannedWorkManual',array('workDate'=>$entry['workDate'],'idResource'=>(int)$entry['idResource'],'period'=>$entry['period']));
     if ($entry['operation']==='clear' && !$object->id) mcpJsonError(404,'environment_target_not_found','Intervention schedule entry was not found');
+    if ($object->id&&!empty($object->refType)&&!empty($object->refId)) {
+      $currentClass=(string)$object->refType;Security::checkValidClass($currentClass);$currentRef=new $currentClass((int)$object->refId);
+      if (!$currentRef->id||!Security::checkValidAccessForUser($currentRef,'update',null,null,false)) mcpJsonError(403,'forbidden','Existing intervention target is unavailable');
+    }
     if (!$object->id) {$object=new PlannedWorkManual();$object->setDates((string)$entry['workDate']);$object->idResource=(int)$entry['idResource'];$object->period=(string)$entry['period'];}
     if ($entry['operation']==='clear') {$object->refType=null;$object->refId=null;$object->idInterventionMode=null;$object->work=null;}
     else {

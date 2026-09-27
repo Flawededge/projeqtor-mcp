@@ -40,6 +40,9 @@ function mcpEnvironmentOperation(string $class,array $item,array $data,array $na
   if (in_array($verb,array('update','delete'),true) && !$id) {
     mcpJsonError(400,'environment_target_not_found',"$class target was not found",array('objectClass'=>$class,'criteria'=>$naturalCriteria));
   }
+  if (in_array($verb,array('update','delete'),true) && empty($item['expectedVersion'])) {
+    mcpJsonError(409,'expected_version_required',"$class #$id requires expectedVersion");
+  }
   $operation=array('action'=>$verb,'objectClass'=>$class);
   if ($id) $operation['id']=$id;
   if ($verb!=='delete') $operation['data']=$data;
@@ -176,6 +179,7 @@ function mcpEnvironmentOrganizationAction(array $arguments,string $username,stri
 
 function mcpEnvironmentInternalSave(object $object,string $operation,?string $expectedVersion=null): array {
   $class=get_class($object);$id=(int)($object->id??0);
+  if ($id && ($expectedVersion===null||$expectedVersion==='')) mcpJsonError(409,'expected_version_required',"$class #$id requires expectedVersion");
   if ($id && $expectedVersion && !hash_equals(mcpObjectVersion($object),$expectedVersion)) mcpJsonError(409,'version_conflict',"$class #$id has changed",array('actualVersion'=>mcpObjectVersion($object)));
   if ($operation==='delete') { SqlElement::setDeleteConfirmed();$raw=$object->delete();$status=getLastOperationStatus($raw);if($status!=='OK')mcpJsonError(400,'delete_failed',cleanApiMessage($raw));return array('status'=>'deleted','objectClass'=>$class,'id'=>$id); }
   $control=method_exists($object,'control')?cleanApiMessage($object->control()):'OK';if($control!==''&&strtoupper($control)!=='OK')mcpJsonError(400,'validation_failed',$control);
