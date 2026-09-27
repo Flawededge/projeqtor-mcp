@@ -107,3 +107,18 @@ test('HR implementation does not accept direct credentials and marks guarded lif
     'hr.leave.permissions.configure'
   ]) assert.ok(HR_ACTIONS.includes(action));
 });
+
+test('HR guarded previews enforce actor permissions and expected versions before returning metadata', async () => {
+  const [actions, destructive] = await Promise.all([
+    readFile(resolve(repositoryRoot, 'bridge/modules/hr/actions.php'), 'utf8'),
+    readFile(resolve(repositoryRoot, 'bridge/modules/hr/destructive.php'), 'utf8')
+  ]);
+  for (const preview of ['ManagerRemove', 'ContractClose', 'LeaveDecision', 'LeaveDelete', 'Entitlement', 'SkillRemove', 'LeavePermissions']) {
+    const block = actions.match(new RegExp(`function mcpHr${preview}Preview[\\s\\S]*?(?=\\nfunction |$)`))?.[0] ?? '';
+    assert.match(block, /mcpHrRequireExpected/, preview);
+    assert.match(block, /mcpHrRequireExisting|mcpHrRequireLeavesAdmin/, preview);
+  }
+  assert.match(destructive, /mcpHrRequireExisting\('Work'.*'delete'\)/s);
+  assert.match(destructive, /mcpHrRequireExpected/);
+  assert.match(destructive, /Project::isTheLeaveProject/);
+});

@@ -14,5 +14,8 @@ test('HR leave-calendar export publishes cancellable XLSX/CSV/JSON artifacts ato
   assert.match(source, /PhpSpreadsheet\\Writer\\Xlsx/);
   assert.match(source, /fputcsv/);
   assert.match(source, /JSON_UNESCAPED_SLASHES/);
+  assert.match(source, /MCP_JOB_ARTIFACT_MAX_BYTES/);
+  assert.match(source, /filesize\(\$temporary\)/);
+  assert.match(source, /exceeds the configured limit/);
   assert.doesNotMatch(source, /password|api[_-]?key|oauth|smtp|credential/i);
 });

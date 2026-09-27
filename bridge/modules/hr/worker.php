@@ -33,7 +33,9 @@ function mcpHrLeaveCalendarExportWorker(int $jobId,array $arguments,string $user
     else{$headers=count($rows)?array_keys($rows[0]):array('id','employeeId','employee','leaveTypeId','leaveType','startDate','startAMPM','endDate','endAMPM','nbDays','statusId','status','comment');fputcsv($handle,$headers);foreach($rows as $row)fputcsv($handle,array_map(fn($header)=>$row[$header]??null,$headers));}
     fflush($handle);fclose($handle);
   }
+  $bytes=is_file($temporary)?(int)filesize($temporary):0;$maxBytes=max(1048576,(int)(getenv('MCP_JOB_ARTIFACT_MAX_BYTES')?:536870912));
+  if($bytes>$maxBytes){@unlink($temporary);throw new RuntimeException('Leave calendar artifact exceeds the configured limit');}
   if(workerCancelled($jobId)){@unlink($temporary);throw new RuntimeException('cancelled');}
   if(!rename($temporary,$path)){@unlink($temporary);throw new RuntimeException('Atomic leave calendar publication failed');}
-  return array('ok'=>true,'format'=>$format,'count'=>count($rows),'period'=>array('startDate'=>$start,'endDate'=>$end),'resource'=>'projeqtor://jobs/'.$jobId.'/result','path'=>$path,'effects'=>array());
+  return array('ok'=>true,'format'=>$format,'count'=>count($rows),'bytes'=>$bytes,'maxBytes'=>$maxBytes,'period'=>array('startDate'=>$start,'endDate'=>$end),'resource'=>'projeqtor://jobs/'.$jobId.'/result','path'=>$path,'effects'=>array());
 }

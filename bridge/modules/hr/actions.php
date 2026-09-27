@@ -59,7 +59,7 @@ function mcpHrRequireExisting(string $class,int $id,string $operation='update'):
 }
 
 function mcpHrRequireExpected(object $object,?string $expectedVersion): void {
-  if(!$expectedVersion)mcpJsonError(400,'expected_version_required','expectedVersion is required when changing an existing HR record');
+  if(!$expectedVersion)mcpJsonError(409,'expected_version_required','expectedVersion is required when changing an existing HR record');
   $actual=mcpObjectVersion($object);
   if(!hash_equals($actual,$expectedVersion))mcpJsonError(409,'version_conflict',get_class($object).' has changed',array('expectedVersion'=>$expectedVersion,'actualVersion'=>$actual));
 }
@@ -98,7 +98,7 @@ function mcpHrEmployeeManage(array $arguments,string $username,string $action): 
     }
     if(!in_array($operation,array('update','deactivate','reactivate'),true))mcpJsonError(400,'invalid_employee_operation','Employee operation must be create, update, deactivate, or reactivate');
     if($id<1)mcpJsonError(400,'employee_id_required','employeeId is required');
-    if(empty($item['expectedVersion']))mcpJsonError(400,'expected_version_required','expectedVersion is required when changing an employee');
+    if(empty($item['expectedVersion']))mcpJsonError(409,'expected_version_required','expectedVersion is required when changing an employee');
     if($operation==='deactivate'){$data['idle']=1;if(!empty($item['endDate']))$data['endDate']=$item['endDate'];}
     if($operation==='reactivate'){$data['idle']=0;$data['endDate']=null;}
     return mcpHrGenericResult(array('action'=>'update','objectClass'=>'Employee','id'=>$id,'expectedVersion'=>$item['expectedVersion']??null,'data'=>$data),'Employee');
@@ -120,7 +120,12 @@ function mcpHrManagerAssign(array $arguments,string $username,string $action): a
 }
 
 function mcpHrManagerRemovePreview(array $arguments,string $username,string $action): array {
-  $items=array();foreach($arguments['assignments']??array() as $entry){$object=new EmployeesManaged((int)($entry['id']??0));$items[]=array('id'=>(int)($entry['id']??0),'exists'=>(bool)$object->id,'employeeId'=>$object->id?(int)$object->idEmployee:null,'managerId'=>$object->id?(int)$object->idEmployeeManager:null,'version'=>$object->id?mcpObjectVersion($object):null);}
+  $items=array();foreach($arguments['assignments']??array() as $entry){
+    $object=new EmployeesManaged((int)($entry['id']??0));if(!$object->id)mcpJsonError(404,'manager_assignment_not_found','Manager assignment was not found');
+    mcpHrRequireExisting('EmployeeManager',(int)$object->idEmployeeManager,'update');
+    mcpHrRequireExpected($object,$entry['expectedVersion']??null);
+    $items[]=array('id'=>(int)$object->id,'exists'=>true,'employeeId'=>(int)$object->idEmployee,'managerId'=>(int)$object->idEmployeeManager,'version'=>mcpObjectVersion($object));
+  }
   return array('count'=>count($items),'items'=>$items);
 }
 
@@ -138,14 +143,18 @@ function mcpHrContractManage(array $arguments,string $username,string $action): 
     $operation=(string)($item['operation']??'');$id=(int)($item['contractId']??0);$data=is_array($item['fields']??null)?$item['fields']:array();
     if($operation==='create')return mcpHrGenericResult(array('action'=>'create','objectClass'=>'EmploymentContract','data'=>$data),'EmploymentContract');
     if($operation!=='update'||$id<1)mcpJsonError(400,'invalid_contract_operation','Contract operation must be create or update with contractId');
-    if(empty($item['expectedVersion']))mcpJsonError(400,'expected_version_required','expectedVersion is required when changing a contract');
+    if(empty($item['expectedVersion']))mcpJsonError(409,'expected_version_required','expectedVersion is required when changing a contract');
     unset($data['idle'],$data['endDate'],$data['idEmploymentContractEndReason']);
     return mcpHrGenericResult(array('action'=>'update','objectClass'=>'EmploymentContract','id'=>$id,'expectedVersion'=>$item['expectedVersion']??null,'data'=>$data),'EmploymentContract');
   });
 }
 
 function mcpHrContractClosePreview(array $arguments,string $username,string $action): array {
-  $items=array();foreach($arguments['contracts']??array() as $entry){$contract=new EmploymentContract((int)($entry['contractId']??0));$items[]=array('id'=>(int)($entry['contractId']??0),'exists'=>(bool)$contract->id,'employeeId'=>$contract->id?(int)$contract->idEmployee:null,'version'=>$contract->id?mcpObjectVersion($contract):null,'willCloseLeaveRights'=>(bool)$contract->id);}
+  $items=array();foreach($arguments['contracts']??array() as $entry){
+    $contract=mcpHrRequireExisting('EmploymentContract',(int)($entry['contractId']??0),'update');
+    mcpHrRequireExpected($contract,$entry['expectedVersion']??null);
+    $items[]=array('id'=>(int)$contract->id,'exists'=>true,'employeeId'=>(int)$contract->idEmployee,'version'=>mcpObjectVersion($contract),'willCloseLeaveRights'=>true);
+  }
   return array('count'=>count($items),'items'=>$items);
 }
 
@@ -185,7 +194,11 @@ function mcpHrLeaveSubmit(array $arguments,string $username,string $action): arr
 }
 
 function mcpHrLeaveDecisionPreview(array $arguments,string $username,string $action): array {
-  $items=array();foreach($arguments['decisions']??array() as $entry){$leave=new Leave((int)($entry['leaveId']??0));$items[]=array('id'=>(int)($entry['leaveId']??0),'exists'=>(bool)$leave->id,'employeeId'=>$leave->id?(int)$leave->idEmployee:null,'currentStatusId'=>$leave->id?(int)$leave->idStatus:null,'targetStatusId'=>(int)($entry['statusId']??0),'version'=>$leave->id?mcpObjectVersion($leave):null);}
+  $items=array();foreach($arguments['decisions']??array() as $entry){
+    $leave=mcpHrRequireExisting('Leave',(int)($entry['leaveId']??0),'update');mcpHrRequireExpected($leave,$entry['expectedVersion']??null);
+    if(!(function_exists('isLeavesAdmin')&&isLeavesAdmin((int)getSessionUser()->id))&&!(function_exists('isManagerOfEmployee')&&isManagerOfEmployee((int)getSessionUser()->id,(int)$leave->idEmployee)))mcpJsonError(403,'forbidden','Only the employee manager or leave administrator may preview a leave decision');
+    $items[]=array('id'=>(int)$leave->id,'exists'=>true,'employeeId'=>(int)$leave->idEmployee,'currentStatusId'=>(int)$leave->idStatus,'targetStatusId'=>(int)($entry['statusId']??0),'version'=>mcpObjectVersion($leave));
+  }
   return array('count'=>count($items),'items'=>$items);
 }
 
@@ -200,7 +213,11 @@ function mcpHrLeaveDecide(array $arguments,string $username,string $action): arr
 }
 
 function mcpHrLeaveDeletePreview(array $arguments,string $username,string $action): array {
-  $items=array();foreach($arguments['leaves']??array() as $entry){$leave=new Leave((int)($entry['leaveId']??0));$items[]=array('id'=>(int)($entry['leaveId']??0),'exists'=>(bool)$leave->id,'employeeId'=>$leave->id?(int)$leave->idEmployee:null,'nbDays'=>$leave->id?(float)$leave->nbDays:null,'statusId'=>$leave->id?(int)$leave->idStatus:null,'version'=>$leave->id?mcpObjectVersion($leave):null);}
+  $items=array();foreach($arguments['leaves']??array() as $entry){
+    $leave=mcpHrRequireExisting('Leave',(int)($entry['leaveId']??0),'delete');mcpHrRequireExpected($leave,$entry['expectedVersion']??null);
+    if(!mcpHrMayManageEmployee((int)$leave->idEmployee))mcpJsonError(403,'forbidden','Leave deletion preview is outside the actor employee scope');
+    $items[]=array('id'=>(int)$leave->id,'exists'=>true,'employeeId'=>(int)$leave->idEmployee,'nbDays'=>(float)$leave->nbDays,'statusId'=>(int)$leave->idStatus,'version'=>mcpObjectVersion($leave));
+  }
   return array('count'=>count($items),'items'=>$items);
 }
 
@@ -214,7 +231,15 @@ function mcpHrLeaveDelete(array $arguments,string $username,string $action): arr
 }
 
 function mcpHrEntitlementPreview(array $arguments,string $username,string $action): array {
-  $items=array();foreach($arguments['entitlements']??array() as $entry){$id=(int)($entry['entitlementId']??0);$object=$id?new EmployeeLeaveEarned($id):null;$items[]=array('operation'=>$entry['operation']??null,'id'=>$id?:null,'exists'=>$object?(bool)$object->id:false,'employeeId'=>(int)($entry['employeeId']??($object->idEmployee??0)),'leaveTypeId'=>(int)($entry['leaveTypeId']??($object->idLeaveType??0)),'quantity'=>$entry['quantity']??null,'leftQuantity'=>$entry['leftQuantity']??null,'version'=>$object&&$object->id?mcpObjectVersion($object):null);}
+  mcpHrRequireLeavesAdmin();$items=array();foreach($arguments['entitlements']??array() as $entry){
+    $id=(int)($entry['entitlementId']??0);$operation=(string)($entry['operation']??'');
+    if($operation==='create'){
+      $object=new EmployeeLeaveEarned();if(!Security::checkValidAccessForUser($object,'create',null,null,false))mcpJsonError(403,'forbidden','Entitlement creation is denied');
+    }else{
+      $object=mcpHrRequireExisting('EmployeeLeaveEarned',$id,'update');mcpHrRequireExpected($object,$entry['expectedVersion']??null);
+    }
+    $items[]=array('operation'=>$operation,'id'=>$id?:null,'exists'=>(bool)$object->id,'employeeId'=>(int)($entry['employeeId']??($object->idEmployee??0)),'leaveTypeId'=>(int)($entry['leaveTypeId']??($object->idLeaveType??0)),'quantity'=>$entry['quantity']??null,'leftQuantity'=>$entry['leftQuantity']??null,'version'=>$object->id?mcpObjectVersion($object):null);
+  }
   return array('count'=>count($items),'items'=>$items);
 }
 
@@ -245,7 +270,10 @@ function mcpHrSkillAssign(array $arguments,string $username,string $action): arr
 }
 
 function mcpHrSkillRemovePreview(array $arguments,string $username,string $action): array {
-  $items=array();foreach($arguments['assignments']??array() as $entry){$object=new ResourceSkill((int)($entry['id']??0));$items[]=array('id'=>(int)($entry['id']??0),'exists'=>(bool)$object->id,'resourceId'=>$object->id?(int)$object->idResource:null,'skillId'=>$object->id?(int)$object->idSkill:null,'version'=>$object->id?mcpObjectVersion($object):null);}
+  $items=array();foreach($arguments['assignments']??array() as $entry){
+    $object=mcpHrRequireExisting('ResourceSkill',(int)($entry['id']??0),'delete');mcpHrRequireExpected($object,$entry['expectedVersion']??null);
+    $items[]=array('id'=>(int)$object->id,'exists'=>true,'resourceId'=>(int)$object->idResource,'skillId'=>(int)$object->idSkill,'version'=>mcpObjectVersion($object));
+  }
   return array('count'=>count($items),'items'=>$items);
 }
 
@@ -275,7 +303,11 @@ function mcpHrLeaveCalendarExport(array $arguments,string $username,string $acti
 }
 
 function mcpHrLeavePermissionsPreview(array $arguments,string $username,string $action): array {
-  $items=array();foreach($arguments["rules"]??array() as $entry){$rule=SqlElement::getSingleSqlElementFromCriteria("LeavesSystemHabilitation",array("menuName"=>(string)($entry["menuName"]??"")));$items[]=array("menuName"=>$entry["menuName"]??null,"exists"=>(bool)$rule->id,"id"=>$rule->id?(int)$rule->id:null,"version"=>$rule->id?mcpObjectVersion($rule):null,"requested"=>$entry);}
+  mcpHrRequireLeavesAdmin();if(securityGetAccessRightYesNo("menuLeavesSystemHabilitation","update")!=="YES")mcpJsonError(403,"forbidden","Leave-system habilitation update access is required");
+  $items=array();foreach($arguments["rules"]??array() as $entry){
+    $rule=SqlElement::getSingleSqlElementFromCriteria("LeavesSystemHabilitation",array("menuName"=>(string)($entry["menuName"]??"")));if(!$rule->id)mcpJsonError(404,"leave_permission_not_found","Leave-system habilitation record was not found");mcpHrRequireExpected($rule,$entry["expectedVersion"]??null);
+    $items[]=array("menuName"=>$entry["menuName"]??null,"exists"=>true,"id"=>(int)$rule->id,"version"=>mcpObjectVersion($rule),"requested"=>$entry);
+  }
   return array("count"=>count($items),"items"=>$items);
 }
 
@@ -284,6 +316,7 @@ function mcpHrLeavePermissionsConfigure(array $arguments,string $username,string
   return mcpHrRunBatch($arguments["rules"]??array(),"atomic",function(array $item): array {
     $menuName=(string)$item["menuName"];$menuValid=false;foreach(getLeavesSystemMenu() as $menu)if($menu->name===$menuName&&$menu->type!=="menu"){$menuValid=true;break;}if(!$menuValid)mcpJsonError(400,"invalid_leave_menu","menuName is not an installed leave-system object menu");
     $rule=SqlElement::getSingleSqlElementFromCriteria("LeavesSystemHabilitation",array("menuName"=>$menuName));if(!$rule->id)mcpJsonError(404,"leave_permission_not_found","Leave-system habilitation record was not found");
+    mcpHrRequireExpected($rule,$item["expectedVersion"]??null);
     foreach(array("viewAccess","readAccess","createAccess","updateAccess","deleteAccess","seeAllAccess") as $field)if(array_key_exists($field,$item))$rule->$field=implode("",array_values(array_unique($item[$field])));
     $raw=$rule->save();if(!in_array(getLastOperationStatus($raw),array("OK","NO_CHANGE"),true))mcpJsonError(400,"leave_permission_save_failed",cleanApiMessage($raw));unsetSessionValue("leavesSystemHabilitation");
     return array("status"=>getLastOperationStatus($raw)==="NO_CHANGE"?"unchanged":"updated","objectClass"=>"LeavesSystemHabilitation","id"=>(int)$rule->id,"effects"=>array(array("action"=>"update","objectClass"=>"LeavesSystemHabilitation","id"=>(int)$rule->id)));

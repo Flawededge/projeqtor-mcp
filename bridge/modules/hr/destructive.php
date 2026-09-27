@@ -4,11 +4,12 @@ declare(strict_types=1);
 function mcpHrAbsenceRemovePreview(array $arguments,string $username,string $action): array {
   $items=array();
   foreach($arguments['entries']??array() as $entry){
-    $work=new Work((int)($entry['workId']??0));
+    $work=mcpHrRequireExisting('Work',(int)($entry['workId']??0),'delete');mcpHrRequireExpected($work,$entry['expectedVersion']??null);
+    if($work->refType!=='Activity'||!mcpHrMayManageEmployee((int)$work->idResource)||!Project::isTheLeaveProject((int)$work->idProject))mcpJsonError(403,'forbidden','Work is not an accessible leave-project absence');
     $items[]=array(
-      'id'=>(int)($entry['workId']??0),'exists'=>(bool)$work->id,
-      'resourceId'=>$work->id?(int)$work->idResource:null,'workDate'=>$work->id?(string)$work->workDate:null,
-      'work'=>$work->id?(float)$work->work:null,'version'=>$work->id?mcpObjectVersion($work):null
+      'id'=>(int)$work->id,'exists'=>true,
+      'resourceId'=>(int)$work->idResource,'workDate'=>(string)$work->workDate,
+      'work'=>(float)$work->work,'version'=>mcpObjectVersion($work)
     );
   }
   return array('count'=>count($items),'items'=>$items);
