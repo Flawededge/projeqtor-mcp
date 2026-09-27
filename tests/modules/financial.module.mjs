@@ -14,6 +14,8 @@ export default {
     'financial.work_command.manage',
     'financial.work_command.accept',
     'financial.work_command.bill',
+    'financial.work_token_contract.manage',
+    'financial.work_token_markup.manage',
     'financial.work_unit.manage',
     'financial.work_unit_phase.manage',
     'financial.abacus.manage',
@@ -22,6 +24,6 @@ export default {
   ],
   workflowFamilies: [
     'expenses', 'billing', 'provider-terms', 'procurement', 'tenders', 'budgets',
-    'work-commands', 'work-units', 'abacus', 'factur-x'
+    'work-commands', 'work-units', 'work-tokens', 'abacus', 'factur-x'
   ]
 };

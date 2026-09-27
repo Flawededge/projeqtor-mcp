@@ -14,21 +14,23 @@ test('Financial exposes every requested workflow family as an independent canoni
   assert.equal(financial.id, 'financial');
   assert.deepEqual(financial.dependencies, ['core', 'configuration', 'environment', 'products', 'follow_up', 'tools']);
   assert.deepEqual(financial.claims.actions, FINANCIAL_ACTIONS);
-  assert.equal(FINANCIAL_ACTIONS.length, 18);
-  for (const family of ['expense', 'billing', 'provider_term', 'tender', 'budget', 'work_command', 'work_unit', 'abacus', 'facturx']) {
+  assert.equal(FINANCIAL_ACTIONS.length, 20);
+  for (const family of ['expense', 'billing', 'provider_term', 'tender', 'budget', 'work_command', 'work_unit', 'work_token', 'abacus', 'facturx']) {
     assert.ok(FINANCIAL_ACTIONS.some(action => action.includes(family)), family);
   }
 });
 
-test('Financial maps its 34 real native handlers, including scanner misses', () => {
+test('Financial maps its 36 real native handlers, including scanner misses and Work Token writes', () => {
   const descriptor = phpDescriptor();
   const mapped = new Set(Object.values(descriptor.actions).flatMap(action => action.mappedHandlers));
   assert.deepEqual(mapped, new Set(FINANCIAL_HANDLERS));
-  assert.equal(mapped.size, 34);
+  assert.equal(mapped.size, 36);
   for (const scannerMiss of [
     'tool:saveOrganizationBudgetElement', 'tool:closeUncloseOrganizationBudgetElement',
     'tool:saveAbacusAffectations', 'tool:saveAbacusAssignments'
   ]) assert.ok(mapped.has(scannerMiss), scannerMiss);
+  assert.ok(mapped.has('tool:saveWorkTokenClientContract'));
+  assert.ok(mapped.has('tool:saveWorkTokenMarkup'));
 });
 
 test('Financial does not claim HR employment contracts or Planning activity work units', () => {

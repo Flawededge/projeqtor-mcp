@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-const MCP_FINANCIAL_INTERNAL_CLASSES=array('BillLine','BudgetElement','ExpenseDetail','TenderEvaluationCriteria','WorkCommandAccepted','WorkCommandBilled','WorkUnit','WorkUnitCatalogPhase','ComplexityValues','AbacusDefinition','AbacusLine','AbacusValue','AbacusProject','Abacusable','Phase');
+const MCP_FINANCIAL_INTERNAL_CLASSES=array('BillLine','BudgetElement','ExpenseDetail','TenderEvaluationCriteria','WorkCommandAccepted','WorkCommandBilled','WorkUnit','WorkUnitCatalogPhase','ComplexityValues','WorkTokenClientContract','WorkTokenMarkup','AbacusDefinition','AbacusLine','AbacusValue','AbacusProject','Abacusable','Phase');
 
 function mcpFinancialActionAvailable(array $action): bool {
   foreach($action['permissionClasses']??array() as $class){
@@ -100,7 +100,7 @@ function mcpFinancialBatch(array $entries,string $mode,callable $executor): arra
 }
 
 function mcpFinancialPreview(array $arguments,string $username,string $action): array {
-  $groups=array('expenses','details','documents','lines','terms','tenders','criteria','budgets','periods','moves','commands','acceptances','billings','units','phases','items');$targets=array();
+  $groups=array('expenses','details','documents','lines','terms','tenders','criteria','budgets','periods','moves','commands','acceptances','billings','units','phases','tokens','markups','items');$targets=array();
   foreach($groups as $group)foreach($arguments[$group]??array() as $index=>$entry)$targets[]=array('index'=>$index,'objectClass'=>$entry['objectClass']??$entry['expenseClass']??$group,'id'=>$entry['id']??null,'operation'=>$entry['operation']??'upsert');
   return array('action'=>$action,'count'=>count($targets),'targets'=>$targets,'transactionMode'=>$arguments['transactionMode']??'atomic');
 }
@@ -177,6 +177,22 @@ function mcpFinancialWorkUnitAction(array $arguments,string $username,string $ac
 
 function mcpFinancialWorkUnitPhaseAction(array $arguments,string $username,string $action): array {
   return mcpFinancialBatch($arguments['phases'],$arguments['transactionMode']??'atomic',function(array $entry):array{$catalog=mcpFinancialTarget('CatalogUO',(int)$entry['idCatalogUO'],'update');list($phase,$verb)=mcpFinancialResolve('WorkUnitCatalogPhase',$entry,array(),true);mcpFinancialRequireChildContext($phase,array('idCatalogUO'=>(int)$catalog->id));$data=mcpFinancialFields($entry,array('reference','ratioPct','idle'));$data['idCatalogUO']=(int)$catalog->id;return mcpFinancialSave($phase,$verb,$entry,$verb==='delete'?array():$data,true);});
+}
+
+function mcpFinancialWorkTokenConsumption(int $contractTokenId): float {
+  $usage=new WorkTokenClientContractWork();$where='idWorkTokenClientContract='.Sql::fmtId($contractTokenId).' and billable=1';return (float)$usage->sumSqlElementsFromCriteria('workTokenMarkupQuantity',null,$where);
+}
+
+function mcpFinancialWorkTokenContractAction(array $arguments,string $username,string $action): array {
+  return mcpFinancialBatch($arguments['tokens'],$arguments['transactionMode']??'atomic',function(array $entry):array{
+    $contract=mcpFinancialTarget('ClientContract',(int)$entry['idClientContract'],'update');$token=mcpFinancialTarget('TokenDefinition',(int)$entry['idWorkToken'],'read');list($record,$verb)=mcpFinancialResolve('WorkTokenClientContract',$entry,array(),true);mcpFinancialRequireChildContext($record,array('idClientContract'=>(int)$contract->id));
+    if($verb==='delete')return mcpFinancialSave($record,$verb,$entry,array(),true,array('contract token totals'));
+    $quantity=(float)($entry['quantity']??0);$data=mcpFinancialFields($entry,array('description','quantity','newQuantity','reportQuantity','idle'));$data['idClientContract']=(int)$contract->id;$data['idWorkToken']=(int)$token->id;$data['amount']=(float)$token->amount*$quantity;$data['duration']=(float)$token->duration*$quantity;$data['fullyConsumed']=!empty($entry['allowOverUse'])?2:($record->id&&mcpFinancialWorkTokenConsumption((int)$record->id)>=$quantity?1:0);$data['idleToken']=!empty($entry['allowIdleUse'])?1:0;return mcpFinancialSave($record,$verb,$entry,$data,true,array('amount','duration','fullyConsumed'));
+  });
+}
+
+function mcpFinancialWorkTokenMarkupAction(array $arguments,string $username,string $action): array {
+  return mcpFinancialBatch($arguments['markups'],$arguments['transactionMode']??'atomic',function(array $entry):array{$token=mcpFinancialTarget('TokenDefinition',(int)$entry['idWorkToken'],'update');list($record,$verb)=mcpFinancialResolve('WorkTokenMarkup',$entry,array(),true);mcpFinancialRequireChildContext($record,array('idWorkToken'=>(int)$token->id));$data=mcpFinancialFields($entry,array('name','coefficient','idle'));$data['idWorkToken']=(int)$token->id;return mcpFinancialSave($record,$verb,$entry,$verb==='delete'?array():$data,true);});
 }
 
 function mcpFinancialAbacusAction(array $arguments,string $username,string $action): array {

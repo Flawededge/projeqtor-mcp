@@ -3,17 +3,17 @@
   "version": "4.0.0",
   "dependsOn": ["core", "configuration", "environment", "products", "follow_up", "tools"],
   "legacyAliases": ["financial_products"],
-  "pathPatterns": ["#(?:^|/)[^/]*(?:expense|bill|budget|payment|tender|quotation|provider(?:order|term)|workcommand|workunit|abacus|factur|clientcontract|suppliercontract)#i"],
-  "classPatterns": ["/(?:Expense|Bill|Budget|Payment|Tender|Quotation|Provider(?:Order|Term)|WorkCommand|WorkUnit|Abacus|Factur|ClientContract|SupplierContract)/i"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:expense|bill|budget|payment|tender|quotation|provider(?:order|term)|workcommand|workunit|worktoken|abacus|factur|clientcontract|suppliercontract)#i"],
+  "classPatterns": ["/(?:Expense|Bill|Budget|Payment|Tender|Quotation|Provider(?:Order|Term)|WorkCommand|WorkUnit|WorkToken|Abacus|Factur|ClientContract|SupplierContract)/i"],
   "ownedClasses": [
     "AbacusDefinition", "AbacusLine", "AbacusValue", "Abacusable", "Bill", "BillLine",
     "Budget", "BudgetElement", "CallForTender", "ClientContract", "ExpenseDetail",
     "IndividualExpense", "Payment", "Phase", "ProjectExpense", "ProviderBill",
     "ProviderOrder", "ProviderPayment", "ProviderTerm", "Quotation", "SupplierContract",
     "Tender", "TenderEvaluationCriteria", "WorkCommand", "WorkCommandAccepted",
-    "WorkCommandBilled", "WorkUnit", "WorkUnitCatalogPhase"
+    "WorkCommandBilled", "WorkUnit", "WorkUnitCatalogPhase", "WorkTokenClientContract", "WorkTokenMarkup"
   ],
-  "secondaryClasses": ["AbacusProject", "ActivityExpense"],
+  "secondaryClasses": ["AbacusProject", "ActivityExpense", "TokenDefinition"],
   "ownedHandlers": [
     "tool:closeUncloseOrganizationBudgetElement",
     "tool:importFacturX",
@@ -48,7 +48,9 @@
     "tool:saveTenderSubmission",
     "tool:saveWorkCommand",
     "tool:saveWorkUnit",
-    "tool:saveWorkUnitCatalogPhase"
+    "tool:saveWorkUnitCatalogPhase",
+    "tool:saveWorkTokenClientContract",
+    "tool:saveWorkTokenMarkup"
   ],
   "contractTests": [
     "financial.expense.submit",
@@ -66,6 +68,8 @@
     "financial.work-command.bill",
     "financial.work-unit.manage",
     "financial.work-unit-phase.manage",
+    "financial.work-token-contract.manage",
+    "financial.work-token-markup.manage",
     "financial.abacus.manage",
     "financial.abacus.apply",
     "financial.factur-x.import"

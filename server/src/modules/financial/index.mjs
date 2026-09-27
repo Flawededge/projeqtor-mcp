@@ -16,6 +16,8 @@ export const FINANCIAL_ACTIONS = Object.freeze([
   'financial.work_command.bill',
   'financial.work_unit.manage',
   'financial.work_unit_phase.manage',
+  'financial.work_token_contract.manage',
+  'financial.work_token_markup.manage',
   'financial.abacus.manage',
   'financial.abacus.apply_to_project',
   'financial.facturx.import'
@@ -55,7 +57,9 @@ export const FINANCIAL_HANDLERS = Object.freeze([
   'tool:saveTenderSubmission',
   'tool:saveWorkCommand',
   'tool:saveWorkUnit',
-  'tool:saveWorkUnitCatalogPhase'
+  'tool:saveWorkUnitCatalogPhase',
+  'tool:saveWorkTokenClientContract',
+  'tool:saveWorkTokenMarkup'
 ]);
 
 export default defineModule({
@@ -69,7 +73,7 @@ export default defineModule({
       'Quotation', 'ClientContract', 'SupplierContract', 'BillLine', 'ProviderTerm',
       'CallForTender', 'Tender', 'TenderEvaluationCriteria', 'Budget', 'BudgetElement',
       'WorkCommand', 'WorkCommandAccepted', 'WorkCommandBilled', 'WorkUnit',
-      'WorkUnitCatalogPhase', 'AbacusDefinition', 'AbacusLine', 'AbacusValue',
+      'WorkUnitCatalogPhase', 'WorkTokenClientContract', 'WorkTokenMarkup', 'AbacusDefinition', 'AbacusLine', 'AbacusValue',
       'AbacusProject', 'Abacusable', 'Phase'
     ],
     actions: FINANCIAL_ACTIONS,
