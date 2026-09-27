@@ -15,7 +15,7 @@ import {
   validateData
 } from './domain.mjs';
 import { SERVER_VERSION, LIMITS } from './contracts.mjs';
-import { registerFullControlTools } from './full-control.mjs';
+import { registerModulePacks } from './modules/index.mjs';
 
 const fieldNameSchema = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/);
 const readClassSchema = z.enum(READ_CLASSES);
@@ -120,6 +120,7 @@ export function createProjeqtorServer({ username, apiRequest }) {
   const server = new McpServer({ name: 'projeqtor', version: SERVER_VERSION });
   const schemaCache = new Map();
   const referenceCache = new Map();
+  let moduleCatalog = [];
 
   async function getSchema(objectClass) {
     if (!schemaCache.has(objectClass)) {
@@ -172,7 +173,11 @@ export function createProjeqtorServer({ username, apiRequest }) {
       ]);
       return result({
     serverVersion: SERVER_VERSION,
-    schemaVersion: 3,
+    schemaVersion: 4,
+    modules: moduleCatalog.map(module => ({
+      ...module,
+      ...(catalog.inventory?.modules?.[module.id] ?? {})
+    })),
     policyVersion: catalog.policyVersion,
     identity,
     inventory: catalog.inventory,
@@ -581,6 +586,6 @@ export function createProjeqtorServer({ username, apiRequest }) {
     });
   });
 
-  registerFullControlTools(server, { username, apiRequest });
+  moduleCatalog = registerModulePacks(server, { username, apiRequest });
   return server;
 }

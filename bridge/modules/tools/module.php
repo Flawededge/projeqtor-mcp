@@ -1,0 +1,14 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__.'/actions.php';require_once __DIR__.'/worker.php';
+$ok=mcpObjectSchema(array('ok'=>array('type'=>'boolean')),array('ok'),true);
+$uploadId=array('type'=>'string','minLength'=>1,'maxLength'=>200);
+return array('id'=>'tools','version'=>'4.0.0','dependencies'=>array('core','configuration'),'actions'=>array(
+  'import.start'=>mcpActionSpec(mcpObjectSchema(array('uploadId'=>$uploadId,'objectClass'=>array('type'=>'string','minLength'=>1,'maxLength'=>100),'importRunId'=>array('type'=>'string','maxLength'=>150)),array('uploadId','objectClass')),$ok,'write',true,'mcpToolsImportWorker',array('tool:importData','tool:importDataFromFile','tool:import','view:importData'),'tools.import.start'),
+  'import.cleanup'=>mcpActionSpec(mcpObjectSchema(array('importRunId'=>array('type'=>'string','minLength'=>1,'maxLength'=>150),'force'=>array('type'=>'boolean')),array('importRunId')),$ok,'destructive',false,'mcpToolsCleanupImport',array(),'tools.import.cleanup',array('preview'=>'mcpToolsPreviewImport')),
+  'export.start'=>mcpActionSpec(mcpObjectSchema(array('objectClass'=>array('type'=>'string','minLength'=>1,'maxLength'=>100),'filter'=>array('type'=>'object'),'format'=>array('type'=>'string','enum'=>array('json','ndjson','csv'))),array('objectClass')),$ok,'read',true,'mcpToolsExportWorker',array('tool:exportData','tool:exportPlanning'),'tools.export.start',array('retryPolicy'=>'safe')),
+  'attachment.upload.begin'=>mcpActionSpec(mcpObjectSchema(array('refType'=>array('type'=>'string','minLength'=>1,'maxLength'=>100),'refId'=>array('type'=>'integer','minimum'=>1),'fileName'=>array('type'=>'string','minLength'=>1,'maxLength'=>255),'mimeType'=>array('type'=>'string','maxLength'=>200),'expectedBytes'=>array('type'=>'integer','minimum'=>0),'description'=>array('type'=>'string','maxLength'=>4000)),array('refType','refId','fileName','expectedBytes')),$ok,'write',false,'mcpToolsAttachmentAction',array(),'tools.attachment.begin',array('transaction'=>'none')),
+  'attachment.upload.chunk'=>mcpActionSpec(mcpObjectSchema(array('uploadId'=>$uploadId,'offset'=>array('type'=>'integer','minimum'=>0),'base64'=>array('type'=>'string','minLength'=>1)),array('uploadId','offset','base64')),$ok,'write',false,'mcpToolsAttachmentAction',array(),'tools.attachment.chunk',array('transaction'=>'none')),
+  'attachment.upload.commit'=>mcpActionSpec(mcpObjectSchema(array('uploadId'=>$uploadId),array('uploadId')),$ok,'write',false,'mcpToolsAttachmentAction',array('tool:saveAttachment'),'tools.attachment.commit'),
+  'attachment.upload.abort'=>mcpActionSpec(mcpObjectSchema(array('uploadId'=>$uploadId),array('uploadId')),$ok,'destructive',false,'mcpToolsAttachmentAction',array('tool:deleteAttachment','tool:removeAttachment'),'tools.attachment.abort',array('transaction'=>'none'))
+));

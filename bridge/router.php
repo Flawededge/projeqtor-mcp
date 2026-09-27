@@ -2,6 +2,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/compat.php';
+require_once __DIR__ . '/core/module-graph.php';
+require_once __DIR__ . '/core/action-domains.php';
+require_once __DIR__ . '/core/module-registry.php';
+require_once __DIR__ . '/core/action-discovery.php';
+require_once __DIR__ . '/core/action-metadata.php';
 require_once __DIR__ . '/full-control.php';
 require_once __DIR__ . '/operations.php';
 require_once __DIR__ . '/actions.php';

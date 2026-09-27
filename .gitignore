@@ -6,4 +6,6 @@ node_modules/
 *.pem
 *.key
 secrets/
+tests/.runtime/
+tests/artifacts/
 .DS_Store
