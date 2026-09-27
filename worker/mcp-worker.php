@@ -20,6 +20,7 @@ function workerUpdate(int $id,string $status,int $progress,?array $result=null,?
   if($status==='running')$sql.=', lease_expires_at=CURRENT_TIMESTAMP + INTERVAL \''.MCP_WORKER_LEASE_SECONDS.' seconds\'';
   if($terminal)$sql.=', completed_at=CURRENT_TIMESTAMP,lease_owner=NULL,lease_expires_at=NULL';
   if($result!==null)$sql.=', result_json='.Sql::str(json_encode($result));
+  if($result!==null)$sql.=', effects_json='.Sql::str(json_encode($result['effects']??array()));
   if($path!==null)$sql.=', result_path='.Sql::str($path);
   Sql::query($sql.' WHERE id='.Sql::fmtId($id));workerTouchHeartbeat();
 }
@@ -106,7 +107,7 @@ function workerImport(array $arguments,string $username): array {
 
 function workerExecute(array $row): array {
   $payload=json_decode((string)$row['payload'],true);if(!is_array($payload))throw new RuntimeException('Invalid job payload');$action=(string)($payload['action']??$row['operation_type']);$arguments=is_array($payload['arguments']??null)?$payload['arguments']:array();$id=(int)$row['id'];
-  return match($action){'project.snapshot'=>workerSnapshot($id,$arguments),'planning.calculate'=>workerPlanning($id,$arguments),'planning.baseline.create'=>workerBaseline($arguments),'export.start'=>workerExport($id,$arguments),'import.start'=>workerImport($arguments,(string)$row['username']),'report.start'=>workerExport($id,array('objectClass'=>'Report','format'=>'json')),'cron.start','cron.restart'=>workerCron($action),default=>throw new RuntimeException("Unsupported job action '$action'")};
+  $registry=mcpWorkerActionRegistry();if(!isset($registry[$action]))throw new RuntimeException("Unsupported job action '$action'");$executor=$registry[$action];return $executor($id,$arguments,(string)$row['username']);
 }
 
 mcpAssertPolicyComplete();

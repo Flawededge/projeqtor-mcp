@@ -189,6 +189,7 @@ function mcpHandleClassCatalog(array $input): never {
     'installedCount'=>count(mcpInstalledClasses()),
     'inventory'=>$inventory,
     'worker'=>function_exists('mcpWorkerCompatibility')?mcpWorkerCompatibility():array('compatible'=>false),
+    'modules'=>mcpModuleSummary(),
     'returned'=>count($items),
     'hasMore'=>$hasMore,
     'nextCursor'=>$hasMore ? mcpSignedCursorEncode(array('kind'=>'classes','fingerprint'=>$fingerprint,'after'=>end($items)['objectClass'])) : null,
