@@ -42,6 +42,7 @@ jobs:
           php scripts/generate-class-policy.php /tmp/projeqtor-source/projeqtor bridge/class-policy-v2.json bridge/active-menu-classes-v3.json /tmp/class-policy-v3.json
           cmp bridge/ui-handler-policy-v3.json /tmp/ui-handler-policy-v3.json
           cmp bridge/class-policy-v3.json /tmp/class-policy-v3.json
+          php scripts/verify-coverage-v4.php /tmp/projeqtor-source/projeqtor
       - name: Build server image
         run: docker build --pull=false --tag projeqtor-mcp:ci server
       - name: Build application integration image
