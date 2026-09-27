@@ -1,0 +1,8 @@
+{
+  "module": "products",
+  "version": "4.0.0",
+  "dependsOn": ["core"],
+  "legacyAliases": ["financial_products"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:product|component|versioncompatibility|versionproject|otherversion|businessfeature|assetcomposition)#i"],
+  "classPatterns": ["/(?:Product|Component|VersionCompatibility|VersionProject|OtherVersion|BusinessFeature|ProductAsset)/i"]
+}

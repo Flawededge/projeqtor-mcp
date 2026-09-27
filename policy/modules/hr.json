@@ -1,0 +1,8 @@
+{
+  "module": "hr",
+  "version": "4.0.0",
+  "dependsOn": ["core", "environment"],
+  "legacyAliases": ["hr_tools_configuration"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:employee|employment|leave|absence|skill|projeqtor-hr)#i"],
+  "classPatterns": ["/(?:Employee|Employment|Leave|Absence|Skill)/i"]
+}

@@ -1,0 +1,8 @@
+{
+  "module": "tools",
+  "version": "4.0.0",
+  "dependsOn": ["core"],
+  "legacyAliases": ["hr_tools_configuration"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:attachment|document|note|link|mail|notification|import|export|locali|clon|subscription|asset|file|uploadimage)#i"],
+  "classPatterns": ["/(?:Attachment|Document|Note|Link|Mail|Notification|Import|Localization|Cloning|Subscription|Asset)/i"]
+}

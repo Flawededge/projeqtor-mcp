@@ -1,0 +1,8 @@
+{
+  "module": "follow_up",
+  "version": "4.0.0",
+  "dependsOn": ["core", "planning", "environment"],
+  "legacyAliases": ["planning_followup_environment"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:imputation|timesheet|workperiod|startstopwork|workdetail|leftwork|plannedworkmanual|followup|submitwork|validatework)#i"],
+  "classPatterns": ["/(?:Imputation|WorkPeriod|WorkDetail|PlannedWorkManual|LockedImputation|^Work$|^WorkElement$|^WorkCategory$)/i"]
+}

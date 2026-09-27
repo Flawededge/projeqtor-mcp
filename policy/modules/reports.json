@@ -1,0 +1,8 @@
+{
+  "module": "reports",
+  "version": "4.0.0",
+  "dependsOn": ["core"],
+  "legacyAliases": ["steering_reports"],
+  "pathPatterns": ["#^report/#i", "#(?:^|/)[^/]*(?:report|dashboard|chart)#i"],
+  "classPatterns": ["/(?:Report|Dashboard)/i"]
+}

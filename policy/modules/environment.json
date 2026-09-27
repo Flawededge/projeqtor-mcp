@@ -1,0 +1,8 @@
+{
+  "module": "environment",
+  "version": "4.0.0",
+  "dependsOn": ["core"],
+  "legacyAliases": ["planning_followup_environment"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:calendar|resource|team|capacity|surbook|incompatible|support|contact|organization|intervention)#i"],
+  "classPatterns": ["/(?:Calendar|Resource|Team|Capacity|Surbooking|Incompatible|Support|Contact|Organization|Intervention)/i"]
+}
