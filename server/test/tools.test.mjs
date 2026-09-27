@@ -39,7 +39,12 @@ test('registers the compatibility and full-control v2 tool surface', () => {
     'projeqtor_list_jobs',
     'projeqtor_retry_job',
     'projeqtor_get_job',
-    'projeqtor_cancel_job'
+    'projeqtor_cancel_job',
+    'projeqtor_plan_projects',
+    'projeqtor_render_report',
+    'projeqtor_manage_sprint',
+    'projeqtor_manage_ticket',
+    'projeqtor_record_work'
   ]);
 });
 
