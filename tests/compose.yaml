@@ -1,0 +1,198 @@
+name: ${BETA4_PROJECT_NAME:?run tests/support/harness.mjs prepare first}
+
+x-app-environment: &app-environment
+  PROJEQTOR_DB_HOST: db
+  PROJEQTOR_DB_PORT: "5432"
+  PROJEQTOR_DB_USER: projeqtor
+  PROJEQTOR_DB_PASSWORD: ${BETA4_DB_PASSWORD:?generated runtime value required}
+  PROJEQTOR_DB_NAME: projeqtor
+  PROJEQTOR_DISPLAY_NAME: ProjeQtOr Beta 4 disposable tests
+  PROJEQTOR_TIMEZONE: UTC
+  PROJEQTOR_MCP_SIGNING_KEY_FILE: /run/secrets/projeqtor_signing_key
+  PROJEQTOR_MCP_CURSOR_KEY_FILE: /run/secrets/projeqtor_cursor_key
+  PROJEQTOR_MCP_ARTIFACT_DIR: /var/lib/projeqtor/mcp-jobs
+  PROJEQTOR_MCP_UPLOAD_DIR: /var/lib/projeqtor/mcp-uploads
+  PROJEQTOR_MCP_WORKER_HEARTBEAT_FILE: /var/lib/projeqtor/mcp-worker-heartbeat
+  PROJEQTOR_MCP_WORKER_ID: beta4-disposable-worker
+
+x-app-volumes: &app-volumes
+  - app-data:/var/lib/projeqtor
+  - app-cache:/var/www/html/cache
+  - ${BETA4_SIGNING_KEY_FILE:?generated secret file required}:/run/secrets/projeqtor_signing_key:ro
+  - ${BETA4_CURSOR_KEY_FILE:?generated secret file required}:/run/secrets/projeqtor_cursor_key:ro
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: projeqtor
+      POSTGRES_USER: projeqtor
+      POSTGRES_PASSWORD: ${BETA4_DB_PASSWORD:?generated runtime value required}
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U projeqtor -d projeqtor"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks: [backend]
+    volumes: [db-data:/var/lib/postgresql/data]
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+
+  restore-seed:
+    image: postgres:17-alpine
+    profiles: [restore]
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: projeqtor
+      PGPASSWORD: ${BETA4_DB_PASSWORD:?generated runtime value required}
+      PGDATABASE: projeqtor
+    command: [sh, -ceu, "pg_restore --exit-on-error --clean --if-exists --no-owner --no-privileges --dbname=projeqtor /seed/restore.dump"]
+    networks: [backend]
+    volumes:
+      - ${BETA4_SEED_DUMP:-./fixtures/NO_RESTORE_DUMP_SELECTED}:/seed/restore.dump:ro
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+
+  app:
+    build:
+      context: ..
+      dockerfile: deployment/app/Dockerfile
+    image: ${BETA4_APP_IMAGE:-projeqtor-app:beta4-test}
+    depends_on:
+      db: {condition: service_healthy}
+    environment: *app-environment
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1/ >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+    networks:
+      backend:
+      frontend:
+    volumes:
+      - app-data:/var/lib/projeqtor
+      - app-cache:/var/www/html/cache
+      - ${BETA4_SIGNING_KEY_FILE:?generated secret file required}:/run/secrets/projeqtor_signing_key:ro
+      - ${BETA4_CURSOR_KEY_FILE:?generated secret file required}:/run/secrets/projeqtor_cursor_key:ro
+      - ./support/api-apache.conf:/etc/apache2/conf-available/projeqtor-api.conf:ro
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+
+  worker:
+    image: ${BETA4_APP_IMAGE:-projeqtor-app:beta4-test}
+    pull_policy: never
+    depends_on:
+      app: {condition: service_healthy}
+    entrypoint: [/usr/local/bin/projeqtor-worker-entrypoint]
+    environment: *app-environment
+    user: "33:33"
+    cap_drop: [ALL]
+    healthcheck:
+      test: [CMD, php, /usr/local/lib/projeqtor/worker-healthcheck.php]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    networks: [backend]
+    volumes: *app-volumes
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+
+  mcp:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    image: ${BETA4_MCP_IMAGE:-projeqtor-mcp:beta4-test}
+    depends_on:
+      app: {condition: service_healthy}
+    environment:
+      PORT: "3000"
+      PROJEQTOR_API_URL: http://app/mcp-api
+      PROJEQTOR_SIGNING_KEY_FILE: /run/secrets/projeqtor_signing_key
+      MCP_USERS_FILE: /run/secrets/mcp_users
+      MCP_ALLOWED_HOSTS: mcp,gateway,test-runner,localhost,127.0.0.1
+      MCP_ALLOWED_ORIGINS: mcp,gateway,test-runner,localhost,127.0.0.1
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:3000/health]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      backend:
+        ipv4_address: ${BETA4_MCP_IP:-10.249.0.13}
+      frontend:
+    volumes:
+      - ${BETA4_SIGNING_KEY_FILE:?generated secret file required}:/run/secrets/projeqtor_signing_key:ro
+      - ${BETA4_USERS_FILE:?generated principal file required}:/run/secrets/mcp_users:ro
+    restart: "no"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  gateway:
+    image: nginx:1.27-alpine
+    depends_on:
+      app: {condition: service_healthy}
+      mcp: {condition: service_healthy}
+    networks: [frontend]
+    volumes:
+      - ./support/gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: "no"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /var/cache/nginx:uid=101,gid=101
+      - /var/run:uid=101,gid=101
+
+  mail:
+    image: axllent/mailpit:v1.27
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      MP_MAX_MESSAGES: "200"
+    networks: [backend]
+    restart: "no"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  test-runner:
+    image: node:22-alpine
+    depends_on:
+      gateway: {condition: service_started}
+      worker: {condition: service_healthy}
+    working_dir: /workspace
+    command: [node, tests/run-suite.mjs, integration]
+    environment:
+      PROJEQTOR_TEST_MODE: integration
+      PROJEQTOR_MCP_URL: http://mcp:3000/mcp
+      PROJEQTOR_APP_URL: http://gateway:8080
+      PROJEQTOR_MAIL_API_URL: http://mail:8025/api/v1
+      PROJEQTOR_TEST_ACTOR: admin
+      PROJEQTOR_TEST_TOKEN_FILE: /run/secrets/admin_token
+      PROJEQTOR_TEST_RUN_ID: ${BETA4_RUN_ID:?generated run ID required}
+      PROJEQTOR_TEST_ARTIFACT_DIR: /artifacts
+      PROJEQTOR_TEST_LOCK_DIR: /artifacts/locks
+    networks: [frontend, backend]
+    volumes:
+      - ..:/workspace:ro
+      - ${BETA4_ADMIN_TOKEN_FILE:?generated token file required}:/run/secrets/admin_token:ro
+      - ${BETA4_ARTIFACT_DIR:?generated artifact directory required}:/artifacts
+    restart: "no"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  backend:
+    internal: true
+    ipam:
+      config: [{subnet: "${BETA4_BACKEND_SUBNET:-10.249.0.0/24}"}]
+  frontend:
+    internal: true
+
+volumes:
+  db-data:
+  app-data:
+  app-cache:

@@ -26,6 +26,11 @@ jobs:
       - name: Run server tests
         working-directory: server
         run: npm test
+      - name: Prepare and validate disposable test topology
+        working-directory: server
+        run: |
+          npm run harness:prepare
+          npm run harness:config
       - name: Fetch checksum-pinned ProjeQtOr 13.1 source
         run: |
           curl -fL --retry 3 -o /tmp/projeqtor.zip https://sourceforge.net/projects/projectorria/files/projeqtorV13.1.0.zip/download
@@ -48,3 +53,70 @@ jobs:
           test "$(jq '.mutationCandidateCount' bridge/ui-handler-policy-v3.json)" -eq 331
           test "$(jq '.expectedInstalledClassCount' bridge/class-policy-v3.json)" -eq 640
           test "$(jq '.activeUserFacingCount' bridge/active-menu-classes-v3.json)" -eq 229
+
+  module-contracts:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - planning
+          - ticketing
+          - scrum
+          - follow-up
+          - steering
+          - financial
+          - products
+          - hr
+          - environment
+          - tools
+          - reports
+          - configuration
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Validate module contract
+        run: node tests/run-suite.mjs module --module "${{ matrix.module }}" --dry-run
+
+  disposable-integration:
+    runs-on: ubuntu-latest
+    needs: [validate, module-contracts]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install dependencies
+        working-directory: server
+        run: npm ci --ignore-scripts
+      - name: Start fresh-data disposable stack
+        working-directory: server
+        env:
+          BETA4_SEED_MODE: fresh
+        run: |
+          npm run harness:prepare
+          npm run harness:up
+      - name: Run disposable integration smoke
+        working-directory: server
+        run: npm run test:integration
+      - name: Produce sanitized diagnostics
+        if: always()
+        working-directory: server
+        run: npm run harness:sanitize || true
+      - name: Upload sanitized diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: beta4-disposable-diagnostics
+          path: tests/.runtime/*/artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Destroy disposable stack and volumes
+        if: always()
+        working-directory: server
+        run: npm run harness:down || true
