@@ -8,9 +8,9 @@ function mcpFinancialModuleDescriptor(): array {
   $money=array('type'=>array('number','null'),'minimum'=>-999999999999);$quantity=array('type'=>array('number','null'),'minimum'=>0);$boolean=array('type'=>'boolean');
   $operation=array('type'=>'string','enum'=>array('create','update','upsert','delete'));$transaction=array('type'=>'string','enum'=>array('atomic','best_effort'));
   $saved=array('type'=>array('object','null'),'properties'=>array('id'=>$id,'_version'=>$version),'required'=>array('id','_version'),'additionalProperties'=>false);
-  $error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string')),array('code','message'),true);
+  $error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string'),'expectedVersion'=>$version,'actualVersion'=>$version,'invalidFields'=>array('type'=>'array','items'=>array('type'=>'string')),'id'=>$id),array('code','message'),false);
   $itemResult=mcpObjectSchema(array(
-    'index'=>array('type'=>'integer','minimum'=>0),'status'=>array('type'=>'string','enum'=>array('created','updated','deleted','existing','error')),
+    'index'=>array('type'=>'integer','minimum'=>0),'status'=>array('type'=>'string','enum'=>array('created','updated','deleted','existing','rolled_back','error')),
     'objectClass'=>array('type'=>'string'),'id'=>array('type'=>array('integer','null')),'relatedIds'=>array('type'=>'array','maxItems'=>400,'items'=>$id),
     'requestedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'appliedFields'=>array('type'=>'array','items'=>array('type'=>'string')),
     'recalculatedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'ignoredFields'=>array('type'=>'array','items'=>array('type'=>'string')),

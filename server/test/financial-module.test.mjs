@@ -55,6 +55,11 @@ test('Financial contracts are closed, bounded, typed, permission-aware and guard
     for (const property of Object.values(action.schema.properties)) {
       if (property?.type === 'array' && property.items?.type === 'object') assert.equal(property.maxItems, 200, id);
     }
+    const resultItem = action.resultSchema.properties.items?.items;
+    if (resultItem) {
+      assert.equal(resultItem.properties.saved.additionalProperties, false, id);
+      assert.equal(resultItem.properties.error.additionalProperties, false, id);
+    }
   }
 });
 
@@ -66,6 +71,37 @@ test('Financial existing writes enforce optimistic concurrency in the executor',
   assert.match(source, /expected_version_required/);
   assert.match(source, /version_conflict/);
   assert.match(source, /Security::checkValidAccessForUser/);
+});
+
+test('Financial atomic batches report rollback accurately and preserve nested capture state', () => {
+  const actionsPath = new URL('../../bridge/modules/financial/actions.php', import.meta.url).pathname;
+  const result = JSON.parse(execFileSync('php', ['-r', `
+    class McpBridgeException extends RuntimeException { public string $errorCode; public array $details; function __construct($code,$message,$details=[]){parent::__construct($message);$this->errorCode=$code;$this->details=$details;} }
+    function cleanApiMessage($value){return (string)$value;}
+    function mcpJsonError($status,$code,$message,$details=[]){throw new McpBridgeException($code,$message,$details);}
+    class Sql { public static array $events=[]; public static function beginTransaction(){self::$events[]='begin';} public static function commitTransaction(){self::$events[]='commit';} public static function rollbackTransaction(){self::$events[]='rollback';} }
+    require ${JSON.stringify(actionsPath)};
+    $GLOBALS['mcpCaptureErrors']=true;
+    $result=mcpFinancialBatch([['id'=>1],['id'=>2]],'atomic',function($entry,$index){
+      if($index===1)throw new RuntimeException('stop');
+      return ['status'=>'updated','objectClass'=>'Bill','id'=>1,'relatedIds'=>[],'requestedFields'=>['amount'],'appliedFields'=>['amount'],'recalculatedFields'=>['total'],'ignoredFields'=>[],'rejectedFields'=>[],'saved'=>['id'=>1,'_version'=>'v'],'concurrencyUnchecked'=>false];
+    });
+    $mismatch=null;try{mcpFinancialRequireChildContext((object)['id'=>7,'idExpense'=>9],['idExpense'=>8]);}catch(McpBridgeException $error){$mismatch=$error->errorCode;}
+    echo json_encode(['result'=>$result,'events'=>Sql::$events,'capture'=>$GLOBALS['mcpCaptureErrors'],'mismatch'=>$mismatch],JSON_THROW_ON_ERROR);
+  `], { encoding: 'utf8' }));
+  assert.equal(result.result.rolledBack, true);
+  assert.deepEqual(result.result.items.map(item => item.status), ['rolled_back', 'error']);
+  assert.equal(result.result.items[0].saved, null);
+  assert.deepEqual(result.result.items[0].appliedFields, []);
+  assert.deepEqual(result.result.items[0].rejectedFields, ['amount']);
+  assert.deepEqual(result.events, ['begin', 'rollback']);
+  assert.equal(result.capture, true);
+  assert.equal(result.mismatch, 'financial_child_context_mismatch');
+});
+
+test('Financial semantic child executors bind existing rows to authorized parents', () => {
+  const source = readFileSync(new URL('../../bridge/modules/financial/actions.php', import.meta.url), 'utf8');
+  assert.ok((source.match(/mcpFinancialRequireChildContext\(/g) ?? []).length >= 11);
 });
 
 test('Financial async actions have one worker each and are never silently replayed', () => {
