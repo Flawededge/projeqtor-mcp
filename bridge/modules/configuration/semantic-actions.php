@@ -8,6 +8,10 @@ function mcpConfigurationRejectSensitive(mixed $value,string $path='$'): void {
   if(!is_array($value))return;
   foreach($value as $key=>$entry){$field=(string)$key;if(preg_match(MCP_CONFIGURATION_SECRET_PATTERN,$field))mcpJsonError(400,'secret_field_forbidden',"Secret-valued field '$path.$field' is not accepted");mcpConfigurationRejectSensitive($entry,$path.'.'.$field);}
 }
+function mcpConfigurationRedact(mixed $value): mixed {
+  if(!is_array($value))return $value;$redacted=array();foreach($value as $key=>$entry){if(is_string($key)&&preg_match(MCP_CONFIGURATION_SECRET_PATTERN,$key))continue;$redacted[$key]=mcpConfigurationRedact($entry);}return $redacted;
+}
+
 function mcpConfigurationSafeParameterCode(string $code): string {
   $code=trim($code);
   if(!preg_match('/^[A-Za-z][A-Za-z0-9_.:-]{0,119}$/D',$code))mcpJsonError(400,'invalid_parameter_code','Parameter code must be a safe identifier');
@@ -20,7 +24,7 @@ function mcpConfigurationBool(mixed $value): int {return $value?1:0;}
 function mcpConfigurationExecute(array $operations,array $arguments): array {
   mcpConfigurationRejectSensitive($arguments);$result=mcpExecuteOperationsArray($operations,(string)($arguments['transactionMode']??'atomic'),true);$effects=array();
   foreach($result['items']??array() as $item)if(in_array($item['status']??'',array('created','updated','existing','deleted'),true))$effects[]=array('action'=>$item['status']==='deleted'?'delete':($item['status']==='created'?'create':'update'),'objectClass'=>$item['objectClass']??null,'id'=>$item['id']??null);
-  $result['effects']=$effects;return $result;
+  $result['effects']=$effects;return mcpConfigurationRedact($result);
 }
 function mcpConfigurationExisting(string $class,array $criteria): ?object {$object=SqlElement::getSingleSqlElementFromCriteria($class,$criteria);return $object&&$object->id?$object:null;}
 function mcpConfigurationUpsert(string $class,array $criteria,array $data,array $request,string $key): array {
