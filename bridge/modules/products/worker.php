@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 function mcpProductsUpgradeWorker(int $jobId,array $arguments,string $username): array {
-  mcpProductsVersionTarget((int)$arguments['productVersionId']);$changes=mcpProductsUpgradePlan($arguments);$items=array();$total=max(1,count($changes));Sql::beginTransaction();
+  $parent=mcpProductsVersionTarget((int)$arguments['productVersionId'],'update');mcpProductsRequireVersion($parent,$arguments,'update');
+  $changes=mcpProductsUpgradePlan($arguments);$items=array();$total=max(1,count($changes));Sql::beginTransaction();
   try{
     foreach($changes as $index=>$change){
       if(workerCancelled($jobId))throw new RuntimeException('cancelled');$object=new ProductVersionStructure((int)$change['structureId']);

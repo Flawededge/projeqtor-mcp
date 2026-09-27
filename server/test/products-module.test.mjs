@@ -57,9 +57,14 @@ test('Products requires optimistic versions for lifecycle transitions and asset 
   assert.ok(transition.required.includes('expectedVersion'));
   const asset = actions['products.asset.composition'].schema.properties.assets.items;
   assert.ok(asset.required.includes('expectedVersion'));
+  const upgrade = actions['products.version_composition.upgrade'].schema;
+  assert.ok(upgrade.required.includes('expectedVersion'));
   const source = readFileSync(new URL('../../bridge/modules/products/actions.php', import.meta.url), 'utf8');
   assert.match(source, /expected_version_required/);
   assert.match(source, /version_conflict/);
+  assert.match(source, /\$criteria=array\('idProductVersion'=>\(int\)\$arguments\['productVersionId'\]\)/);
+  const worker = readFileSync(new URL('../../bridge/modules/products/worker.php', import.meta.url), 'utf8');
+  assert.match(worker, /mcpProductsRequireVersion\(\$parent,\$arguments,'update'\)/);
 });
 
 test('Products has exactly one asynchronous non-replayable worker action', () => {

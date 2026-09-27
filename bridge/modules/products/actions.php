@@ -270,7 +270,9 @@ function mcpProductsComponentFilterAction(array $arguments,string $username,stri
 }
 
 function mcpProductsUpgradePlan(array $arguments): array {
-  $criteria=!empty($arguments['structureId'])?array('id'=>(int)$arguments['structureId']):array('idProductVersion'=>(int)$arguments['productVersionId']);$rows=(new ProductVersionStructure())->getSqlElementsFromCriteria($criteria,false,null,'id asc');$changes=array();
+  $criteria=array('idProductVersion'=>(int)$arguments['productVersionId']);
+  if(!empty($arguments['structureId']))$criteria['id']=(int)$arguments['structureId'];
+  $rows=(new ProductVersionStructure())->getSqlElementsFromCriteria($criteria,false,null,'id asc');$changes=array();
   foreach($rows as $row){$current=new ComponentVersion((int)$row->idComponentVersion);if(!$current->id)continue;$where='idProduct='.Sql::fmtId((int)$current->idComponent)." AND (isEis=1 OR isDelivered=1) AND versionNumber IS NOT NULL";$latest=$current->getSqlElementsFromCriteria(null,false,$where,'versionNumber DESC',1,true);$next=$latest?reset($latest):null;
     $changes[]=array('structureId'=>(int)$row->id,'fromVersionId'=>(int)$current->id,'toVersionId'=>$next?(int)$next->id:(int)$current->id,'changed'=>(bool)($next&&$next->id!=$current->id),'expectedVersion'=>mcpObjectVersion($row));
   }
@@ -278,7 +280,9 @@ function mcpProductsUpgradePlan(array $arguments): array {
 }
 
 function mcpProductsUpgradePreview(array $arguments,string $username,string $action): array {
-  mcpProductsVersionTarget((int)$arguments['productVersionId']);$changes=mcpProductsUpgradePlan($arguments);return array('count'=>count($changes),'changed'=>count(array_filter($changes,fn($item)=>$item['changed'])),'items'=>array_slice($changes,0,200));
+  $parent=mcpProductsVersionTarget((int)$arguments['productVersionId'],'update');
+  mcpProductsRequireVersion($parent,$arguments,'update');
+  $changes=mcpProductsUpgradePlan($arguments);return array('count'=>count($changes),'changed'=>count(array_filter($changes,fn($item)=>$item['changed'])),'items'=>array_slice($changes,0,200));
 }
 
 function mcpProductsBatchPreview(array $arguments,string $username,string $action): array {
