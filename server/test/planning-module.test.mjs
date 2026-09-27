@@ -109,6 +109,9 @@ test('Planning executors are isolated from HTTP request globals and expose cance
   const worker = php(`echo file_get_contents(${JSON.stringify(path.join(repositoryRoot, 'bridge/modules/planning/worker.php'))});`);
   assert.doesNotMatch(actions, /\$_(?:REQUEST|POST|GET)/);
   assert.match(actions, /mcpPlanningRequireVersion/);
+  assert.match(actions, /expected_version_required/);
+  assert.match(actions, /mcpRequireClassOperation\(\$class,\$operation\)/);
+  assert.match(actions, /mcpRequireClassOperation\(\$class,'delete'\)/);
   assert.match(actions, /Security::checkValidAccessForUser/);
   assert.match(actions, /Sql::beginTransaction/);
   assert.match(worker, /workerCancelled/);

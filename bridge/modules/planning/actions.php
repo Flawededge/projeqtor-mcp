@@ -6,7 +6,7 @@ function mcpPlanningDiagnosticsAction(array $arguments,string $username,string $
 }
 
 function mcpPlanningRequireVersion(object $object,?string $expected): void {
-  if($expected===null||$expected==='')return;
+  if($expected===null||$expected==='')mcpJsonError(409,'expected_version_required',get_class($object).' #'.(int)$object->id.' requires expectedVersion');
   $actual=mcpObjectVersion($object);
   if(!hash_equals($actual,$expected))mcpJsonError(409,'version_conflict',get_class($object).' #'.(int)$object->id.' has changed',array('expectedVersion'=>$expected,'actualVersion'=>$actual));
 }
@@ -23,6 +23,7 @@ function mcpPlanningSave(object $object,string $code='planning_save_failed'): ob
 
 function mcpPlanningTarget(string $class,int $id,string $operation='update'): array {
   if(!preg_match('/^[A-Za-z][A-Za-z0-9_]*$/D',$class)||!SqlElement::class_exists($class))mcpJsonError(400,'invalid_target_class','Target type is not an installed ProjeQtOr class');
+  mcpRequireClassOperation($class,$operation);
   $target=new $class($id);
   mcpPlanningRequireAccess($target,$operation,"$operation access is denied for $class #$id");
   $planningClass=$class==='PeriodicMeeting'?'MeetingPlanningElement':$class.'PlanningElement';
@@ -72,9 +73,11 @@ function mcpPlanningBatch(array $arguments,callable $executor): array {
 }
 
 function mcpPlanningDeletePreview(string $class,array $arguments): array {
+  mcpRequireClassOperation($class,'delete');
   $items=array();
   foreach($arguments['items']??array() as $entry){
     $id=(int)($entry['id']??0);$object=new $class($id);
+    mcpPlanningRequireAccess($object,'delete',"Delete access is denied for $class #$id");
     $items[]=array('objectClass'=>$class,'id'=>$id,'exists'=>(bool)$object->id,'name'=>$object->name??null,'version'=>$object->id?mcpObjectVersion($object):null);
   }
   return array('count'=>count($items),'items'=>$items);
@@ -338,7 +341,10 @@ function mcpPlanningScenarioConfigure(array $arguments,string $username,string $
 
 function mcpPlanningBaselineDeletePreview(array $arguments,string $username,string $action): array {
   $baseline=new Baseline((int)($arguments['id']??0));
-  return array('objectClass'=>'Baseline','id'=>(int)($arguments['id']??0),'exists'=>(bool)$baseline->id,'name'=>$baseline->name??null,'version'=>$baseline->id?mcpObjectVersion($baseline):null,'ownedByActor'=>$baseline->id&&(int)$baseline->idUser===(int)getSessionUser()->id);
+  mcpRequireClassOperation('Baseline','delete');
+  if(!$baseline->id||(int)$baseline->idUser!==(int)getSessionUser()->id)mcpJsonError(403,'forbidden','Only the baseline owner may preview its deletion');
+  mcpPlanningRequireAccess($baseline,'delete','Baseline delete access is denied');
+  return array('objectClass'=>'Baseline','id'=>(int)$baseline->id,'exists'=>true,'name'=>$baseline->name??null,'version'=>mcpObjectVersion($baseline),'ownedByActor'=>true);
 }
 
 function mcpPlanningBaselineDelete(array $arguments,string $username,string $action): array {
