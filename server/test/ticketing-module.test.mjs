@@ -64,6 +64,12 @@ test('Ticketing action contracts are closed, bounded, typed, and actor-idempoten
   assert.ok(inspect.required.includes('linkId'));
   assert.ok(inspect.required.includes('linkVersion'));
   assert.deepEqual(inspect.properties.linkVersion.type, ['string', 'null']);
+  const ticketItem = actions['ticketing.transition'].resultSchema.properties.items.items;
+  assert.equal(ticketItem.properties.saved.additionalProperties, false);
+  assert.equal(ticketItem.properties.error.additionalProperties, false);
+  assert.ok(ticketItem.properties.saved.required.includes('actualDueDateTime'));
+  const definition = actions['ticketing.synchronization.configure'].resultSchema.properties.definition;
+  assert.equal(definition.additionalProperties, false);
 });
 
 test('Ticketing maps only genuine Ticket synchronization mutations and records handoffs', () => {
@@ -107,6 +113,9 @@ test('Ticketing executors fail closed on permissions, concurrency, and guarded s
   assert.match(actions, /Sql::beginTransaction/);
   assert.match(actions, /synchronization_batch_too_large/);
   assert.match(actions, /ticket_synchronization_failed/);
+  assert.match(actions, /mcpTicketingTicketData\(\$saved\)/);
+  assert.match(actions, /mcpTicketingDefinitionData\(\$saved\)/);
+  assert.doesNotMatch(actions, /mcpObjectArray\(\$saved\)/);
 });
 
 test('Ticketing batch rolls back atomically and isolates best-effort failures', () => {

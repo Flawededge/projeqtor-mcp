@@ -4,11 +4,16 @@ require_once __DIR__.'/actions.php';
 
 $id=array('type'=>'integer','minimum'=>1);$nullableId=array('type'=>array('integer','null'),'minimum'=>1);$version=array('type'=>'string','minLength'=>1,'maxLength'=>200);$nullableVersion=array('type'=>array('string','null'),'maxLength'=>200);$transaction=array('type'=>'string','enum'=>array('atomic','best_effort'));
 $effect=mcpObjectSchema(array('action'=>array('type'=>'string'),'objectClass'=>array('type'=>'string'),'id'=>$id),array('action','objectClass','id'),false);
-$saved=mcpObjectSchema(array('id'=>$id,'_version'=>$version),array('id','_version'),true);
-$error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string')),array('code','message'),true);
+$ticketSaved=mcpObjectSchema(array(
+  'id'=>$id,'_version'=>$version,'idProject'=>$nullableId,'idStatus'=>$nullableId,'idResource'=>$nullableId,'idAccountable'=>$nullableId,'idActivity'=>$nullableId,
+  'handled'=>array('type'=>'boolean'),'paused'=>array('type'=>'boolean'),'done'=>array('type'=>'boolean'),'idle'=>array('type'=>'boolean'),'cancelled'=>array('type'=>'boolean'),
+  'handledDateTime'=>array('type'=>array('string','null')),'pausedDateTime'=>array('type'=>array('string','null')),'doneDateTime'=>array('type'=>array('string','null')),'idleDateTime'=>array('type'=>array('string','null')),'initialDueDateTime'=>array('type'=>array('string','null')),'actualDueDateTime'=>array('type'=>array('string','null'))
+),array('id','_version','idProject','idStatus','idResource','idAccountable','idActivity','handled','paused','done','idle','cancelled','handledDateTime','pausedDateTime','doneDateTime','idleDateTime','initialDueDateTime','actualDueDateTime'),false);
+$definitionSaved=mcpObjectSchema(array('id'=>$id,'_version'=>$version,'statusId'=>$id,'ticketTypeId'=>$nullableId,'activityTypeId'=>$id,'setActivity'=>array('type'=>'boolean')),array('id','_version','statusId','ticketTypeId','activityTypeId','setActivity'),false);
+$error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string'),'expectedVersion'=>$version,'actualVersion'=>$version),array('code','message'),false);
 $itemResult=mcpObjectSchema(array(
   'index'=>array('type'=>'integer','minimum'=>0),'status'=>array('type'=>'string','enum'=>array('dispatched','transitioned','escalated','synchronized','unchanged','rolled_back','error')),
-  'objectClass'=>array('type'=>'string','enum'=>array('Ticket')),'id'=>$nullableId,'saved'=>$saved,
+  'objectClass'=>array('type'=>'string','enum'=>array('Ticket')),'id'=>$nullableId,'saved'=>$ticketSaved,
   'appliedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'recalculatedFields'=>array('type'=>'array','items'=>array('type'=>'string')),
   'rejectedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'ignoredFields'=>array('type'=>'array','items'=>array('type'=>'string')),
   'resolvedResourceId'=>$id,'noteId'=>$id,'synchronizedActivityId'=>$id,'error'=>$error
@@ -30,7 +35,7 @@ $slaResult=mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'evaluatedAt'=>a
 $expectedTicket=mcpObjectSchema(array('ticketId'=>$id,'expectedVersion'=>$version),array('ticketId','expectedVersion'),false);
 $expectedItem=mcpObjectSchema(array('id'=>$id,'expectedVersion'=>$version),array('id','expectedVersion'),false);
 $configureSchema=mcpObjectSchema(array('projectId'=>$id,'statusId'=>$id,'ticketTypeId'=>$id,'activityTypeId'=>$id,'setActivity'=>array('type'=>'boolean'),'includeExisting'=>array('type'=>'boolean'),'expectedVersion'=>$version,'expectedTicketVersions'=>array('type'=>'array','maxItems'=>200,'items'=>$expectedTicket)),array('projectId','statusId','activityTypeId'),false);
-$configureResult=mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'status'=>array('type'=>'string','enum'=>array('created','updated')),'definition'=>$saved,'synchronized'=>array('type'=>'array','maxItems'=>200,'items'=>mcpObjectSchema(array('ticketId'=>$id,'activityId'=>$id),array('ticketId','activityId'),false)),'effects'=>array('type'=>'array','items'=>$effect)),array('ok','status','definition','synchronized','effects'),false);
+$configureResult=mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'status'=>array('type'=>'string','enum'=>array('created','updated')),'definition'=>$definitionSaved,'synchronized'=>array('type'=>'array','maxItems'=>200,'items'=>mcpObjectSchema(array('ticketId'=>$id,'activityId'=>$id),array('ticketId','activityId'),false)),'effects'=>array('type'=>'array','items'=>$effect)),array('ok','status','definition','synchronized','effects'),false);
 $inspectDefinition=mcpObjectSchema(array('id'=>$id,'_version'=>$version,'statusId'=>$id,'ticketTypeId'=>$nullableId,'activityTypeId'=>$id,'setActivity'=>array('type'=>'boolean')),array('id','_version','statusId','ticketTypeId','activityTypeId','setActivity'),false);
 $inspectItem=mcpObjectSchema(array('ticketId'=>$id,'ticketVersion'=>$version,'linkId'=>$nullableId,'linkVersion'=>$nullableVersion,'targetType'=>array('type'=>array('string','null')),'targetId'=>$nullableId),array('ticketId','ticketVersion','linkId','linkVersion','targetType','targetId'),false);
 $inspectResult=mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'projectId'=>$id,'definition'=>array('type'=>array('object','null'),'properties'=>$inspectDefinition['properties'],'required'=>$inspectDefinition['required'],'additionalProperties'=>false),'items'=>array('type'=>'array','maxItems'=>200,'items'=>$inspectItem)),array('ok','projectId','definition','items'),false);

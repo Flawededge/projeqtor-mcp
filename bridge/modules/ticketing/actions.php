@@ -44,7 +44,7 @@ function mcpTicketingSavedResult(Ticket $ticket,string $status,array $applied,ar
   foreach(array('idAccountable','handled','handledDateTime','paused','pausedDateTime','done','doneDateTime','idle','idleDateTime','cancelled','initialDueDateTime','actualDueDateTime','idActivity') as $field){
     if(array_key_exists($field,$before)&&property_exists($saved,$field)&&$before[$field]!=$saved->$field)$recalculated[]=$field;
   }
-  return array_merge(array('status'=>$status,'objectClass'=>'Ticket','id'=>(int)$saved->id,'saved'=>mcpObjectArray($saved),'appliedFields'=>$applied,'recalculatedFields'=>$recalculated,'rejectedFields'=>array(),'ignoredFields'=>array(),'effects'=>array(array('action'=>'update','objectClass'=>'Ticket','id'=>(int)$saved->id))),$extra);
+  return array_merge(array('status'=>$status,'objectClass'=>'Ticket','id'=>(int)$saved->id,'saved'=>mcpTicketingTicketData($saved),'appliedFields'=>$applied,'recalculatedFields'=>$recalculated,'rejectedFields'=>array(),'ignoredFields'=>array(),'effects'=>array(array('action'=>'update','objectClass'=>'Ticket','id'=>(int)$saved->id))),$extra);
 }
 
 function mcpTicketingSave(Ticket $ticket,string $failureCode): string {
@@ -194,7 +194,7 @@ function mcpTicketingSynchronizationConfigure(array $arguments,string $username,
   if($existing)mcpTicketingRequireExpected($definition,$arguments['expectedVersion']??null);else $definition=new Synchronization();$tickets=mcpTicketingSynchronizationTickets($arguments,true);Sql::beginTransaction();
   try{$definition->idProject=(int)$project->id;$definition->originType='Ticket';$definition->targetType='Activity';$definition->idStatus=(int)$arguments['statusId'];$definition->idOrigineType=!empty($arguments['ticketTypeId'])?(int)$arguments['ticketTypeId']:null;$definition->idTargetType=(int)$arguments['activityTypeId'];$definition->setActivity=!empty($arguments['setActivity'])?1:0;$raw=$definition->save();if(!in_array(getLastOperationStatus($raw),array('OK','NO_CHANGE'),true))mcpJsonError(400,'synchronization_definition_failed',cleanApiMessage($raw));$effects=array(array('action'=>$existing?'update':'create','objectClass'=>'Synchronization','id'=>(int)$definition->id));$synchronized=array();
     foreach($tickets as $ticket){$prior=SynchronizedItems::getSynchronizedItemObj('Ticket',(int)$ticket->id);$target=Synchronization::startSynchronization($ticket);if(!$target||!$target->id)mcpJsonError(400,'ticket_synchronization_failed',cleanApiMessage(Synchronization::getLastErrorMessage()),array('ticketId'=>(int)$ticket->id));$synchronized[]=array('ticketId'=>(int)$ticket->id,'activityId'=>(int)$target->id);if(!$prior)$effects[]=array('action'=>'create','objectClass'=>'Activity','id'=>(int)$target->id);}
-    Sql::commitTransaction();$saved=new Synchronization((int)$definition->id);return array('ok'=>true,'status'=>$existing?'updated':'created','definition'=>mcpObjectArray($saved),'synchronized'=>$synchronized,'effects'=>$effects);
+    Sql::commitTransaction();$saved=new Synchronization((int)$definition->id);return array('ok'=>true,'status'=>$existing?'updated':'created','definition'=>mcpTicketingDefinitionData($saved),'synchronized'=>$synchronized,'effects'=>$effects);
   }catch(Throwable $error){Sql::rollbackTransaction();throw $error;}
 }
 
@@ -212,4 +212,14 @@ function mcpTicketingSynchronizationDisable(array $arguments,string $username,st
   $preview=mcpTicketingSynchronizationDisablePreview($arguments,$username,$action);$definition=Synchronization::getProjectSynchronizationDefinition((int)$arguments['projectId']);$items=!empty($arguments['unlinkItems'])?mcpTicketingSynchronizationItems((int)$arguments['projectId']):array();Sql::beginTransaction();
   try{$definitionId=(int)$definition->id;SqlElement::setDeleteConfirmed();$raw=$definition->delete();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'synchronization_disable_failed',cleanApiMessage($raw));$effects=array(array('action'=>'delete','objectClass'=>'Synchronization','id'=>$definitionId));$removed=array();foreach($items as $item){$id=(int)$item->id;SqlElement::setDeleteConfirmed();$raw=$item->delete();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'synchronized_item_delete_failed',cleanApiMessage($raw));$removed[]=$id;$effects[]=array('action'=>'delete','objectClass'=>'SynchronizedItems','id'=>$id);}Sql::commitTransaction();return array('ok'=>true,'status'=>'disabled','projectId'=>(int)$arguments['projectId'],'definitionId'=>$definitionId,'removedItemIds'=>$removed,'effects'=>$effects);
   }catch(Throwable $error){Sql::rollbackTransaction();throw $error;}
+}
+function mcpTicketingTicketData(Ticket $ticket): array {
+  $data=array('id'=>(int)$ticket->id,'_version'=>mcpObjectVersion($ticket));
+  foreach(array('idProject','idStatus','idResource','idAccountable','idActivity') as $field)$data[$field]=!empty($ticket->$field)?(int)$ticket->$field:null;
+  foreach(array('handled','paused','done','idle','cancelled') as $field)$data[$field]=(bool)($ticket->$field??false);
+  foreach(array('handledDateTime','pausedDateTime','doneDateTime','idleDateTime','initialDueDateTime','actualDueDateTime') as $field)$data[$field]=($ticket->$field??null)?:null;
+  return $data;
+}
+function mcpTicketingDefinitionData(Synchronization $definition): array {
+  return array('id'=>(int)$definition->id,'_version'=>mcpObjectVersion($definition),'statusId'=>(int)$definition->idStatus,'ticketTypeId'=>!empty($definition->idOrigineType)?(int)$definition->idOrigineType:null,'activityTypeId'=>(int)$definition->idTargetType,'setActivity'=>(bool)$definition->setActivity);
 }
