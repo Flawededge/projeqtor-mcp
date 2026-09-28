@@ -14,6 +14,11 @@ test('fresh database bootstrap gates application startup', () => {
   assert.match(app, /db-bootstrap: \{condition: service_completed_successfully\}/);
 });
 
+test('harness waits for PostgreSQL health before starting bootstrap', async () => {
+  const harness = await readFile(new URL('../support/harness.mjs', import.meta.url), 'utf8');
+  assert.equal((harness.match(/\['up', '-d', '--wait', 'db'\]/g) ?? []).length, 2);
+});
+
 test('fresh bootstrap uses official migrations and never assigns credentials', () => {
   assert.match(bootstrap, /require '\/var\/www\/html\/db\/maintenance\.php'/);
   assert.match(bootstrap, /DROP TABLE parameter/);

@@ -127,11 +127,11 @@ async function main() {
   if (command === 'up') {
     compose(run, ['config', '--quiet']);
     if (run.environment.BETA4_SEED_MODE === 'restore') {
-      compose(run, ['up', '-d', 'db']);
+      compose(run, ['up', '-d', '--wait', 'db']);
       compose(run, ['run', '--rm', 'restore-seed']);
     }
     compose(run, ['build', 'app', 'mcp']);
-    compose(run, ['up', '-d', 'db']);
+    compose(run, ['up', '-d', '--wait', 'db']);
     compose(run, ['up', '--abort-on-container-exit', '--exit-code-from', 'db-bootstrap', 'db-bootstrap']);
     compose(run, ['up', '-d', 'app', 'worker', 'mcp', 'gateway', 'mail']);
     process.stdout.write(`${JSON.stringify({ ok: true, runId: run.runId, seedMode: run.environment.BETA4_SEED_MODE })}\n`);
