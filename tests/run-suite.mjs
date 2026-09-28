@@ -11,6 +11,8 @@ import { discoverModules } from './support/module-discovery.mjs';
 import { structuredToolResult, verifyWhoami } from './support/tool-results.mjs';
 import { runAttachmentAcceptance } from './scenarios/attachment-acceptance.mjs';
 import { runReportAcceptance } from './scenarios/report-acceptance.mjs';
+import { runPlanningAcceptance } from './scenarios/planning-acceptance.mjs';
+import { runMailAcceptance } from './scenarios/mail-acceptance.mjs';
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -112,6 +114,10 @@ async function main() {
       await client.callTool('projeqtor_whoami'),
       process.env.PROJEQTOR_TEST_ACTOR ?? 'admin'
     );
+    summary.planning = await withLocks(['planning-engine'], () =>
+      runPlanningAcceptance({ client, identity, runId })
+    );
+    summary.mail = await withLocks(['mail'], () => runMailAcceptance({ client, runId }));
     summary.artifacts = await withLocks(['document-storage'], async () => ({
       attachment: await runAttachmentAcceptance({ client, identity, ledger, runId }),
       reports: await runReportAcceptance(client, runId)
