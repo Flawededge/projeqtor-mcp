@@ -3,11 +3,38 @@
   "version": "4.0.0",
   "dependsOn": [],
   "legacyAliases": [],
-  "pathPatterns": [],
+  "pathPatterns": ["#^(?:tool/(?:disconnectSession|hackMessage|loginCheck|saveJoblist|saveMessageLegalFollowup|saveObjectMultiple|saveSubTask|saveSubTaskOrder)\\.php|view/main\\.php)$#"],
   "classPatterns": [],
+  "ownedClasses": [
+    "Audit", "Job", "JobDefinition", "JoblistDefinition", "MessageLegal",
+    "MessageLegalFollowup", "SubTask"
+  ],
+  "ownedHandlers": [
+    "tool:disconnectSession",
+    "tool:hackMessage",
+    "tool:loginCheck",
+    "tool:saveJoblist",
+    "tool:saveMessageLegalFollowup",
+    "tool:saveObjectMultiple",
+    "tool:saveSubTask",
+    "tool:saveSubTaskOrder",
+    "view:main"
+  ],
+  "contractTests": [
+    "core.user.session.terminate",
+    "core.user.session.login",
+    "core.joblist.update",
+    "core.user.legal-notice.accept",
+    "core.object.bulk-update",
+    "core.subtask.manage",
+    "core.user.legal-notice.view"
+  ],
   "genericCrudHandlers": {
     "tool:removeJobDefinition": ["JobDefinition"],
     "tool:removeMessageFollowup": ["MessageLegalFollowup"],
     "tool:saveJobDefinition": ["JobDefinition"]
+  },
+  "intentionalExclusions": {
+    "tool:saveObjectMultiplePwd": "secrets_or_credentials"
   }
 }

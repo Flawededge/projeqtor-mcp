@@ -1,6 +1,26 @@
 import { defineModule } from '../runtime.mjs';
 import { registerFullControlTools } from '../../full-control.mjs';
 
+export const CORE_ACTIONS = Object.freeze([
+  'object.copy',
+  'workflow.transition',
+  'user.session.terminate',
+  'user.session.login',
+  'core.joblist.update',
+  'user.legal_notice.accept',
+  'core.object.bulk_update',
+  'core.subtask.manage',
+  'user.legal_notice.view'
+]);
+
+export const CORE_HANDLERS = Object.freeze([
+  'tool:copyObject', 'tool:copyObjectTo', 'tool:copyProjectTo',
+  'tool:changeObjectStatus', 'tool:saveStatus',
+  'tool:disconnectSession', 'tool:hackMessage', 'tool:loginCheck',
+  'tool:saveJoblist', 'tool:saveMessageLegalFollowup', 'tool:saveObjectMultiple',
+  'tool:saveSubTask', 'tool:saveSubTaskOrder', 'view:main'
+]);
+
 const tools = [
   'projeqtor_whoami', 'projeqtor_list_object_classes', 'projeqtor_list_ui_handlers',
   'projeqtor_query_items', 'projeqtor_get_changes', 'projeqtor_validate_operations',
@@ -13,6 +33,9 @@ const tools = [
 export default defineModule({
   id: 'core', version: '2.0.0-beta.4', dependencies: [],
   claims: {
+    classes: ['Audit', 'Job', 'JobDefinition', 'JoblistDefinition', 'MessageLegal', 'MessageLegalFollowup', 'SubTask'],
+    actions: CORE_ACTIONS,
+    handlers: CORE_HANDLERS,
     tools,
     resources: ['projeqtor-attachment', 'projeqtor-document-version', 'projeqtor-job-result']
   },
