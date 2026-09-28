@@ -45,7 +45,13 @@ $claim = static function (array &$claims, string $key, string $module, string $k
     if (isset($claims[$key]) && $claims[$key] !== $module) pqV4Fail("Duplicate exact $kind claim for $key");
     $claims[$key] = $module;
 };
-$canonicalHandler = static fn(string $value): string => str_contains($value, ':') ? $value : pqV4HandlerId($value);
+$canonicalHandler = static function (string $value): string {
+    if (preg_match('/^(?:tool|view|report|api|sso|plugin):[A-Za-z0-9_\/.+-]+$/', $value) === 1) return $value;
+    if (preg_match('#^(?:tool|view|report|api|sso|plugin)/.+\.php$#', $value) !== 1) {
+        pqV4Fail("Invalid handler identifier or source path: $value");
+    }
+    return pqV4HandlerId($value);
+};
 foreach ($fragments as $module => $fragment) {
     foreach ($fragment['ownedHandlers'] ?? [] as $handler) $claim($handlerOwners, $canonicalHandler((string) $handler), $module, 'handler');
     foreach ($fragment['ownedClasses'] ?? [] as $class) $claim($classOwners, (string) $class, $module, 'class');
