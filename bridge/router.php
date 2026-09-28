@@ -7,6 +7,7 @@ require_once __DIR__ . '/core/action-domains.php';
 require_once __DIR__ . '/core/module-registry.php';
 require_once __DIR__ . '/core/action-discovery.php';
 require_once __DIR__ . '/core/action-metadata.php';
+require_once __DIR__ . '/core/job-artifact-resource.php';
 require_once __DIR__ . '/full-control.php';
 require_once __DIR__ . '/operations.php';
 require_once __DIR__ . '/actions.php';
@@ -23,7 +24,7 @@ function mcpResourceFile(string $type, int $id, string $username): never {
     $path=(string)$object->fullName; $mime=$object->mimeType?:'application/octet-stream';
   } else if ($type === 'job-result') {
     mcpEnsureOperationTable(); $result=Sql::query('SELECT * FROM mcpoperation WHERE id='.Sql::fmtId($id).' AND username='.Sql::str($username)); $row=Sql::fetchLine($result); if(!$row||!in_array($row['status'],array('succeeded','failed','cancelled'),true))mcpJsonError(404,'resource_not_found','Job result is unavailable');
-    if($row['result_path']){$path=(string)$row['result_path'];$mime=str_ends_with($path,'.ndjson')?'application/x-ndjson':(str_ends_with($path,'.csv')?'text/csv':'application/json');}
+    if($row['result_path']){$artifact=mcpResolveJobArtifact($id,(string)$row['result_path']);if(!$artifact)mcpJsonError(404,'resource_not_found','Job result is unavailable');$path=$artifact['path'];$mime=$artifact['mimeType'];}
     else { mcpJsonResponse(array('mimeType'=>'application/json','base64'=>base64_encode((string)($row['result_json']??'{}')))); }
   } else mcpJsonError(404,'resource_not_found','Unknown resource type');
   $real=realpath($path); $allowed=array(realpath('/var/lib/projeqtor/attachments'),realpath('/var/lib/projeqtor/documents'),realpath('/var/lib/projeqtor/mcp-jobs'));
