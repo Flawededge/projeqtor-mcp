@@ -10,6 +10,32 @@ function mcpObjectSchema(array $properties=array(),array $required=array(),bool 
   return array('type'=>'object','properties'=>$properties,'required'=>$required,'additionalProperties'=>$additional);
 }
 
+function mcpWorkerInternalResultField(string $field): bool {
+  return in_array($field,array('path','resultPath','result_path','artifactPath','artifact_path','filePath','file_path','filesystemPath','filesystem_path','absolutePath','absolute_path'),true);
+}
+
+function mcpPublicActionResultSchema(array $schema): array {
+  $public=array();
+  foreach($schema as $keyword=>$value){
+    if($keyword==='properties'&&is_array($value)){
+      $properties=array();foreach($value as $field=>$property)if(!mcpWorkerInternalResultField((string)$field))$properties[$field]=is_array($property)?mcpPublicActionResultSchema($property):$property;
+      $public[$keyword]=$properties;
+    }elseif($keyword==='required'&&is_array($value))$public[$keyword]=array_values(array_filter($value,fn($field)=>!mcpWorkerInternalResultField((string)$field)));
+    elseif(is_array($value))$public[$keyword]=mcpPublicActionResultSchema($value);
+    else $public[$keyword]=$value;
+  }
+  return $public;
+}
+
+function mcpPublicAsyncActionResult(array $result): array {
+  $public=array();
+  foreach($result as $field=>$value){
+    if(mcpWorkerInternalResultField((string)$field))continue;
+    $public[$field]=is_array($value)?mcpPublicAsyncActionResult($value):$value;
+  }
+  return $public;
+}
+
 function mcpActionSpec(array $schema,array $resultSchema,string $risk,bool $async,string $callable,array $mappedHandlers,string $testContract,array $options=array()): array {
   $retry=$options['retryPolicy']??($async?'recovery_required':'never');
   return array_merge(array(

@@ -6,6 +6,7 @@ chdir('/var/www/html/mcp-api');
 require_once '/var/www/html/tool/projeqtor.php';
 require_once '/var/www/html/mcp-api/router.php';
 require_once '/usr/local/lib/projeqtor/cron-control.php';
+require_once '/var/www/html/mcp-api/core/worker-artifact-channel.php';
 $batchMode=false;
 
 const MCP_WORKER_LEASE_SECONDS=120;
@@ -40,10 +41,6 @@ function workerMaintenance(): void {
   foreach(glob('/var/lib/projeqtor/mcp-jobs/*.tmp-*')?:array() as $file)if(filemtime($file)<time()-300)@unlink($file);
   foreach(glob('/var/lib/projeqtor/mcp-uploads/*')?:array() as $file)if(filemtime($file)<time()-3600)@unlink($file);
   workerTouchHeartbeat();
-}
-
-function workerArtifactPath(int $id,string $extension): string {
-  $directory='/var/lib/projeqtor/mcp-jobs';if(!is_dir($directory))mkdir($directory,0700,true);return $directory.'/job-'.$id.'.'.$extension;
 }
 
 function workerProjectReferenceWhere(array $references,string $typeField='refType',string $idField='refId'): string {
@@ -107,10 +104,13 @@ function workerImport(array $arguments,string $username): array {
 
 function workerExecute(array $row): array {
   $payload=json_decode((string)$row['payload'],true);if(!is_array($payload))throw new RuntimeException('Invalid job payload');$action=(string)($payload['action']??$row['operation_type']);$arguments=is_array($payload['arguments']??null)?$payload['arguments']:array();$id=(int)$row['id'];
-  mcpValidateActionArguments($action,$arguments);
-  $registry=mcpWorkerActionRegistry();if(!isset($registry[$action]))throw new RuntimeException("Unsupported job action '$action'");$executor=$registry[$action];$result=$executor($id,$arguments,(string)$row['username']);
-  if(!is_array($result))throw new RuntimeException("Worker action '$action' returned an invalid result");
-  return mcpValidateActionResult($action,$result);
+  workerArtifactChannelBegin($id);
+  try{
+    mcpValidateActionArguments($action,$arguments);
+    $registry=mcpWorkerActionRegistry();if(!isset($registry[$action]))throw new RuntimeException("Unsupported job action '$action'");$executor=$registry[$action];$result=$executor($id,$arguments,(string)$row['username']);
+    if(!is_array($result))throw new RuntimeException("Worker action '$action' returned an invalid result");
+    return workerArtifactChannelFinish($id,mcpValidateActionResult($action,$result));
+  }catch(Throwable $error){workerArtifactChannelAbort($id);throw $error;}
 }
 
 mcpAssertPolicyComplete();
@@ -121,7 +121,7 @@ while(true){
   Sql::beginTransaction();$result=Sql::query("SELECT * FROM mcpoperation WHERE status='queued' AND attempts<max_attempts ORDER BY id ASC FOR UPDATE SKIP LOCKED LIMIT 1");$row=Sql::fetchLine($result);if($row)Sql::query("UPDATE mcpoperation SET status='running',progress=1,attempts=attempts+1,lease_owner=".Sql::str(workerLeaseOwner()).",lease_expires_at=CURRENT_TIMESTAMP + INTERVAL '".MCP_WORKER_LEASE_SECONDS." seconds',heartbeat_at=CURRENT_TIMESTAMP,started_at=COALESCE(started_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=".Sql::fmtId($row['id'])." AND status='queued'");Sql::commitTransaction();workerTouchHeartbeat();
   if(!$row){if(getenv('MCP_WORKER_ONCE')==='1')break;sleep(2);continue;}
   $startedAt=microtime(true);$user=SqlElement::getSingleSqlElementFromCriteria('User',array('name'=>$row['username']));if(!$user->id||$user->idle||$user->locked){workerUpdate((int)$row['id'],'failed',100,array('ok'=>false,'error'=>array('code'=>'user_unavailable','message'=>'Originating user is unavailable')));Sql::query("UPDATE mcpoperation SET error_code='user_unavailable' WHERE id=".Sql::fmtId($row['id']));error_log(json_encode(array('operationId'=>(int)$row['id'],'actor'=>$row['username'],'action'=>$row['operation_type'],'durationMs'=>(int)((microtime(true)-$startedAt)*1000),'outcome'=>'failed:user_unavailable')));continue;}$user->_API=true;setSessionUser($user);
-  try{if(workerCancelled((int)$row['id']))throw new RuntimeException('cancelled');$output=workerExecute($row);$path=$output['path']??null;unset($output['path']);workerUpdate((int)$row['id'],'succeeded',100,$output,$path);$outcome='succeeded';}catch(Throwable $error){$cancelled=$error->getMessage()==='cancelled';$code=$cancelled?'cancelled':'job_failed';workerUpdate((int)$row['id'],$cancelled?'cancelled':'failed',100,array('ok'=>false,'error'=>array('code'=>$code,'message'=>cleanApiMessage($error->getMessage()))));Sql::query('UPDATE mcpoperation SET error_code='.Sql::str($code).' WHERE id='.Sql::fmtId($row['id']));foreach(glob('/var/lib/projeqtor/mcp-jobs/job-'.(int)$row['id'].'.*.tmp-*')?:array() as $temporary)@unlink($temporary);$outcome=($cancelled?'cancelled':'failed:'.$code);}
+  try{if(workerCancelled((int)$row['id']))throw new RuntimeException('cancelled');$output=workerExecute($row);workerUpdate((int)$row['id'],'succeeded',100,$output['result'],$output['resultPath']);$outcome='succeeded';}catch(Throwable $error){$cancelled=$error->getMessage()==='cancelled';$code=$cancelled?'cancelled':'job_failed';workerUpdate((int)$row['id'],$cancelled?'cancelled':'failed',100,array('ok'=>false,'error'=>array('code'=>$code,'message'=>cleanApiMessage($error->getMessage()))));Sql::query('UPDATE mcpoperation SET error_code='.Sql::str($code).' WHERE id='.Sql::fmtId($row['id']));foreach(glob('/var/lib/projeqtor/mcp-jobs/job-'.(int)$row['id'].'.*.tmp-*')?:array() as $temporary)@unlink($temporary);$outcome=($cancelled?'cancelled':'failed:'.$code);}
   error_log(json_encode(array('operationId'=>(int)$row['id'],'actor'=>$row['username'],'action'=>$row['operation_type'],'durationMs'=>(int)((microtime(true)-$startedAt)*1000),'outcome'=>$outcome)));
   workerMaintenance();$lastMaintenance=time();
   if(getenv('MCP_WORKER_ONCE')==='1')break;
