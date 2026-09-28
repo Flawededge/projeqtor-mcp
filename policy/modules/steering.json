@@ -57,5 +57,8 @@
     "steering.voting.cast",
     "steering.voting.attribution-manage",
     "steering.consolidation.validate"
-  ]
+  ],
+  "handlerMappings": {
+    "tool:saveLiveMeetingAttachment": {"action": "steering.business.manage", "classes": ["Risk", "Issue", "Opportunity", "Decision", "Question", "Acceptance", "TestCase", "TestSession", "Meeting", "PeriodicMeeting"]}
+  }
 }
