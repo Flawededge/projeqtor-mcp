@@ -45,6 +45,9 @@ test('Planning bridge declares every requested semantic workflow family', () => 
     'planning.allocation.remove',
     'planning.dependency.upsert',
     'planning.dependency.remove',
+    'planning.selection.delete',
+    'planning.integrity.repair',
+    'planning.grid.inline_edit',
     'planning.element.resize',
     'planning.element.phase',
     'planning.activity.split',
@@ -82,6 +85,10 @@ test('Planning actions have exact contracts, unique native handlers, and guarded
   assert.equal(handlerOwners.get('tool:splitActivity'), 'planning.activity.split');
   assert.equal(handlerOwners.get('tool:refreshCriticalResources'), 'planning.critical_resources.evaluate');
   assert.equal(handlerOwners.get('tool:savePlanningBaseline'), 'planning.baseline.create');
+  assert.equal(handlerOwners.get('tool:deletePlanningSelection'), 'planning.selection.delete');
+  assert.equal(handlerOwners.get('tool:jsonPlanning'), 'planning.integrity.repair');
+  assert.equal(handlerOwners.get('tool:saveEditRowObject'), 'planning.grid.inline_edit');
+  assert.equal(handlerOwners.get('tool:recalculatePlanningSaveDates'), 'planning.grid.inline_edit');
 });
 
 test('Planning batch and date schemas reject unbounded or ambiguous input', () => {
@@ -94,7 +101,8 @@ test('Planning batch and date schemas reject unbounded or ambiguous input', () =
     '"empty"=>mcpValidateSchemaValue(array("items"=>array()),$assignment),',
     '"tooMany"=>mcpValidateSchemaValue(array("items"=>array_fill(0,201,array())),$assignment),',
     '"unknown"=>mcpValidateSchemaValue(array("items"=>array(array("refType"=>"Activity","refId"=>1,"resourceId"=>2,"rate"=>100,"assignedWork"=>1,"unexpected"=>true))),$assignment),',
-    '"badDate"=>mcpValidateSchemaValue(array("refType"=>"Activity","refId"=>1,"startDate"=>"09/27/2026","endDate"=>"2026-09-28"),$resize)',
+    '"badDate"=>mcpValidateSchemaValue(array("refType"=>"Activity","refId"=>1,"startDate"=>"09/27/2026","endDate"=>"2026-09-28"),$resize),',
+    '"quickPlan"=>mcpValidateSchemaValue(array("items"=>array(array("planningElementId"=>4,"expectedPlanningVersion"=>"v2:1:test","planningFields"=>array("quickplanStartDate"=>"2026-09-27","quickplanEndDate"=>"2026-09-28","quickplanUpdated"=>true)))),$module["actions"]["planning.grid.inline_edit"]["schema"])',
     ');echo json_encode($out,JSON_THROW_ON_ERROR);'
   ].join('');
   const result = JSON.parse(php(script));
@@ -102,6 +110,7 @@ test('Planning batch and date schemas reject unbounded or ambiguous input', () =
   assert.ok(result.tooMany.some(error => error.code === 'maxItems'));
   assert.ok(result.unknown.some(error => error.code === 'additional_property'));
   assert.ok(result.badDate.some(error => error.code === 'pattern'));
+  assert.deepEqual(result.quickPlan, []);
 });
 
 test('Planning executors are isolated from HTTP request globals and expose cancellation-aware workers', () => {
@@ -114,10 +123,30 @@ test('Planning executors are isolated from HTTP request globals and expose cance
   assert.match(actions, /mcpRequireClassOperation\(\$class,'delete'\)/);
   assert.match(actions, /Security::checkValidAccessForUser/);
   assert.match(actions, /Sql::beginTransaction/);
+  assert.match(actions, /saveForced/);
+  assert.match(actions, /planning_element_not_orphan/);
+  assert.match(actions, /dependency_target_mismatch/);
+  assert.match(actions, /PlanningElement::moveTaskFinalize/);
+  assert.match(actions, /PlanningElement::updateSynthesisNoDispatch/);
+  assert.match(actions, /realStartDate/);
+  assert.match(actions, /realEndDate/);
   assert.match(worker, /workerCancelled/);
   assert.match(worker, /mcpPlanningCriticalResourcesWorker/);
   assert.match(worker, /named_scenario_requires_activation/);
 });
+test('Planning destructive repairs require confirmation and policy maps exact source handlers', () => {
+  const module = descriptor();
+  for (const id of ['planning.selection.delete', 'planning.integrity.repair']) {
+    assert.equal(module.actions[id].confirmationRequired, true, id);
+    assert.match(module.actions[id].preview, /Preview$/, id);
+  }
+  const policy = JSON.parse(php(`echo file_get_contents(${JSON.stringify(path.join(repositoryRoot, 'policy/modules/planning.json'))});`));
+  assert.equal(policy.handlerMappings['tool/deletePlanningSelection.php'].action, 'planning.selection.delete');
+  assert.equal(policy.handlerMappings['tool/jsonPlanning.php'].action, 'planning.integrity.repair');
+  assert.equal(policy.handlerMappings['tool/saveEditRowObject.php'].action, 'planning.grid.inline_edit');
+  assert.equal(policy.handlerMappings['tool/recalculatePlanningSaveDates.php'].action, 'planning.grid.inline_edit');
+});
+
 test('Planning batches roll back atomically and isolate best-effort failures', () => {
   const actionsPath = path.join(repositoryRoot, 'bridge/modules/planning/actions.php');
   const script = [

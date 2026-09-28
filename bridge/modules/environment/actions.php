@@ -54,6 +54,7 @@ function mcpEnvironmentOperation(string $class,array $item,array $data,array $na
 function mcpEnvironmentEffects(array $result): array {
   $effects=array();
   foreach ($result['items']??array() as $item) {
+    if (!empty($item['effects'])) {foreach($item['effects'] as $effect)$effects[]=$effect;continue;}
     $status=(string)($item['status']??'');
     if (!in_array($status,array('created','updated','deleted','existing'),true)) continue;
     $ids=!empty($item['relatedIds'])?$item['relatedIds']:array($item['id']??null);

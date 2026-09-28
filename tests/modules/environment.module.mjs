@@ -16,10 +16,13 @@ export default {
     'environment.support.update',
     'environment.intervention.capacity.update',
     'environment.intervention.schedule',
-    'environment.organization.manage'
+    'environment.organization.manage',
+    'environment.prospect.event.manage',
+    'environment.prospect.convert',
+    'environment.client_relationship.promote'
   ],
   workflowFamilies: [
     'calendars', 'holidays', 'resources', 'teams', 'contacts', 'capacity',
-    'costs', 'surbooking', 'incompatibility', 'support', 'interventions', 'organizations'
+    'costs', 'prospect-events', 'prospect-conversion', 'client-promotion', 'surbooking', 'incompatibility', 'support', 'interventions', 'organizations'
   ]
 };

@@ -355,3 +355,63 @@ function mcpPlanningBaselineDelete(array $arguments,string $username,string $act
   if(getLastOperationStatus($raw)!=='OK'){Sql::rollbackTransaction();mcpJsonError(400,'baseline_delete_failed',cleanApiMessage($raw));}
   Sql::commitTransaction();return array('ok'=>true,'id'=>(int)$arguments['id'],'status'=>'deleted','effects'=>array(array('action'=>'delete','objectClass'=>'Baseline','id'=>(int)$arguments['id'])));
 }
+function mcpPlanningNormalizeSelectionClass(string $class): string {
+  return match($class){'Replan','Construction','Fixed'=>'Project','ProductVersionhasChild'=>'ProductVersion','ComponentVersionhasChild'=>'ComponentVersion',default=>$class};
+}
+function mcpPlanningSelectionDeletePreview(array $arguments,string $username,string $action): array {
+  $items=array();foreach($arguments['items'] as $entry){$class=mcpPlanningNormalizeSelectionClass((string)$entry['refType']);$id=(int)$entry['refId'];
+    if(!preg_match('/^[A-Za-z][A-Za-z0-9_]*$/D',$class)||!SqlElement::class_exists($class))mcpJsonError(400,'invalid_target_class','Selection contains an unavailable class');
+    mcpRequireClassOperation($class,'delete');$object=new $class($id);mcpPlanningRequireAccess($object,'delete',"Delete access is denied for $class #$id");$planning=SqlElement::getSingleSqlElementFromCriteria('PlanningElement',array('refType'=>$class,'refId'=>$id));
+    $items[]=array('objectClass'=>$class,'id'=>$id,'name'=>$object->name??null,'version'=>mcpObjectVersion($object),'wbsSortable'=>$planning->wbsSortable??null);
+  }usort($items,fn($left,$right)=>strcmp((string)($right['wbsSortable']??''),(string)($left['wbsSortable']??'')));return array('action'=>$action,'actor'=>$username,'count'=>count($items),'items'=>$items,'payloadRedacted'=>true);
+}
+function mcpPlanningSelectionDelete(array $arguments,string $username,string $action): array {
+  $prepared=array();foreach($arguments['items'] as $entry){$class=mcpPlanningNormalizeSelectionClass((string)$entry['refType']);$id=(int)$entry['refId'];
+    if(!preg_match('/^[A-Za-z][A-Za-z0-9_]*$/D',$class)||!SqlElement::class_exists($class))mcpJsonError(400,'invalid_target_class','Selection contains an unavailable class');
+    $planning=SqlElement::getSingleSqlElementFromCriteria('PlanningElement',array('refType'=>$class,'refId'=>$id));$entry['normalizedRefType']=$class;$entry['wbsSortable']=(string)($planning->wbsSortable??'');$entry['topRefType']=(string)($planning->topRefType??'');$entry['topRefId']=(int)($planning->topRefId??0);$entry['topId']=(int)($planning->topId??0);$prepared[]=$entry;
+  }usort($prepared,fn($left,$right)=>strcmp($right['wbsSortable'],$left['wbsSortable']));$batch=$arguments;$batch['items']=$prepared;$renumberTargets=array();$deletedCount=0;
+  PlanningElement::$_noDispatch=true;PlanningElement::$_noDispatchArray=array();PlanningElement::$_skipUpdateRevenue=true;
+  $result=mcpPlanningBatch($batch,function(array $item)use(&$renumberTargets,&$deletedCount): array {$class=(string)$item['normalizedRefType'];$id=(int)$item['refId'];mcpRequireClassOperation($class,'delete');$object=new $class($id);
+    mcpPlanningRequireAccess($object,'delete',"Delete access is denied for $class #$id");mcpPlanningRequireVersion($object,(string)($item['expectedVersion']??''));if(property_exists($object,'locked')&&!empty($object->locked))mcpJsonError(409,'object_locked',"$class #$id is locked");
+    if($class==='Project')Project::$_deleteProjectInProgress=true;SqlElement::setDeleteConfirmed();$raw=$object->delete();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'planning_selection_delete_failed',cleanApiMessage($raw));if(!empty($item['topRefType'])&&!empty($item['topRefId']))PlanningElement::updateSynthesisNoDispatch((string)$item['topRefType'],(int)$item['topRefId']);if(!empty($item['topId']))$renumberTargets[(int)$item['topId']]=(int)$item['topId'];$deletedCount++;return array('status'=>'deleted','objectClass'=>$class,'id'=>$id,'appliedFields'=>array(),'effects'=>array(array('action'=>'delete','objectClass'=>$class,'id'=>$id)));
+  });
+  PlanningElement::$_skipUpdateRevenue=false;
+  if($deletedCount&&!$result['rolledBack']){Sql::beginTransaction();try{PlanningElement::moveTaskFinalize();PlanningElement::$_noDispatch=false;foreach($renumberTargets as $planningElementId){$planningElement=new PlanningElement($planningElementId);if($planningElement->id)$planningElement->renumberWbs();}Sql::commitTransaction();}catch(Throwable $error){Sql::rollbackTransaction();PlanningElement::$_noDispatch=false;throw $error;}}else PlanningElement::$_noDispatch=false;
+  return $result;
+}
+function mcpPlanningIntegrityRepairPreview(array $arguments,string $username,string $action): array {
+  $items=array();foreach($arguments['items'] as $entry){$planning=new PlanningElement((int)$entry['id']);mcpPlanningRequireAccess($planning,'delete','Planning element is unavailable');$items[]=array('objectClass'=>'PlanningElement','id'=>(int)$planning->id,'refType'=>$planning->refType??null,'refId'=>(int)($planning->refId??0),'version'=>mcpObjectVersion($planning));}return array('action'=>$action,'actor'=>$username,'count'=>count($items),'items'=>$items,'payloadRedacted'=>true);
+}
+function mcpPlanningIntegrityRepair(array $arguments,string $username,string $action): array {
+  return mcpPlanningBatch($arguments,function(array $item): array {mcpRequireClassOperation('PlanningElement','delete');$planning=new PlanningElement((int)$item['id']);mcpPlanningRequireAccess($planning,'delete','Planning element is unavailable');mcpPlanningRequireVersion($planning,(string)($item['expectedVersion']??''));$class=(string)$planning->refType;$refId=(int)$planning->refId;
+    if($class!==''&&preg_match('/^[A-Za-z][A-Za-z0-9_]*$/D',$class)&&SqlElement::class_exists($class)){$reference=new $class($refId);if($reference->id)mcpJsonError(409,'planning_element_not_orphan','Planning element still has a live reference',array('refType'=>$class,'refId'=>$refId));}
+    SqlElement::setDeleteConfirmed();$id=(int)$planning->id;$raw=$planning->delete();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'planning_integrity_repair_failed',cleanApiMessage($raw));return array('status'=>'deleted','objectClass'=>'PlanningElement','id'=>$id,'appliedFields'=>array(),'effects'=>array(array('action'=>'delete','objectClass'=>'PlanningElement','id'=>$id)));
+  });
+}
+function mcpPlanningInlineDependency(object $target,array $change): array {
+  $operation=(string)$change['operation'];$direction=(string)$change['direction'];
+  if($operation==='create'){$otherClass=(string)$change['refType'];$otherId=(int)$change['refId'];[, $otherPlanning]=mcpPlanningTarget($otherClass,$otherId,$direction==='predecessor'?'read':'update');[, $targetPlanning]=mcpPlanningTarget(get_class($target),(int)$target->id,$direction==='predecessor'?'update':'read');$dependency=new Dependency();
+    if($direction==='predecessor'){$predecessor=$otherPlanning;$successor=$targetPlanning;}else{$predecessor=$targetPlanning;$successor=$otherPlanning;}$dependency->predecessorId=(int)$predecessor->id;$dependency->predecessorRefType=(string)$predecessor->refType;$dependency->predecessorRefId=(int)$predecessor->refId;$dependency->successorId=(int)$successor->id;$dependency->successorRefType=(string)$successor->refType;$dependency->successorRefId=(int)$successor->refId;
+    mcpRequireClassOperation('Dependency','create');if(!Security::checkValidAccessForUser($dependency,'create',null,null,false))mcpJsonError(403,'forbidden','Dependency create access is denied');
+  }else{$dependency=new Dependency((int)$change['id']);$required=$operation==='delete'?'delete':'update';mcpRequireClassOperation('Dependency',$required);mcpPlanningRequireAccess($dependency,$required,'Dependency is unavailable');mcpPlanningRequireVersion($dependency,(string)($change['expectedVersion']??''));
+    $belongs=$direction==='predecessor'?((string)$dependency->successorRefType===get_class($target)&&(int)$dependency->successorRefId===(int)$target->id):((string)$dependency->predecessorRefType===get_class($target)&&(int)$dependency->predecessorRefId===(int)$target->id);if(!$belongs)mcpJsonError(409,'dependency_target_mismatch','Dependency does not belong to the edited row');
+  }if($operation==='delete'){$id=(int)$dependency->id;SqlElement::setDeleteConfirmed();$raw=$dependency->delete();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'dependency_delete_failed',cleanApiMessage($raw));return array('action'=>'delete','objectClass'=>'Dependency','id'=>$id);}
+  if(array_key_exists('relationshipType',$change))$dependency->dependencyType=(string)$change['relationshipType'];elseif(!$dependency->dependencyType)$dependency->dependencyType='E-S';if(array_key_exists('lag',$change))$dependency->dependencyDelay=(float)$change['lag'];if(array_key_exists('comment',$change))$dependency->comment=(string)$change['comment'];$created=!$dependency->id;$saved=mcpPlanningSave($dependency,'dependency_save_failed');return array('action'=>$created?'create':'update','objectClass'=>'Dependency','id'=>(int)$saved->id);
+}
+function mcpPlanningGridInlineEdit(array $arguments,string $username,string $action): array {
+  return mcpPlanningBatch($arguments,function(array $item): array {
+    $direct=!empty($item['planningElementId']);$effects=array();$applied=array();$target=null;
+    if($direct){
+      if(!empty($item['objectFields'])||!empty($item['dependencyChanges']))mcpJsonError(400,'invalid_direct_planning_edit','Direct PlanningElement edits cannot change object or dependency fields');
+      mcpRequireClassOperation('PlanningElement','update');$planning=new PlanningElement((int)$item['planningElementId']);mcpPlanningRequireAccess($planning,'update','Planning element is unavailable');
+    }else{
+      if(empty($item['refType'])||empty($item['refId']))mcpJsonError(400,'missing_field','refType and refId are required for object row edits');
+      [$target,$planning]=mcpPlanningTarget((string)$item['refType'],(int)$item['refId']);mcpPlanningRequireVersion($target,(string)($item['expectedVersion']??''));
+      foreach($item['objectFields']??array() as $field=>$value){mcpValidateField($target,(string)$field,true);$target->$field=$value;$applied[]=$field;}
+    }
+    if(!empty($item['planningFields'])){mcpPlanningRequireVersion($planning,(string)($item['expectedPlanningVersion']??''));foreach($item['planningFields'] as $field=>$value){mcpValidateField($planning,(string)$field,true);if($field==='validatedWork')$value=Work::convertWork($value);if($direct&&$field==='quickplanStartDate'&&!empty($planning->realStartDate))$value=$planning->realStartDate;if($direct&&$field==='quickplanEndDate'&&!empty($planning->realEndDate))$value=$planning->realEndDate;$planning->$field=$value;$applied[]=$field;}}
+    if($direct){$raw=method_exists($planning,'saveForced')?$planning->saveForced(true):$planning->save();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'planning_inline_edit_failed',cleanApiMessage($raw));$saved=new PlanningElement((int)$planning->id);$effects[]=array('action'=>'update','objectClass'=>'PlanningElement','id'=>(int)$saved->id);}
+    else{foreach($item['dependencyChanges']??array() as $change)$effects[]=mcpPlanningInlineDependency($target,$change);if(!empty($item['objectFields'])||!empty($item['planningFields'])){$saved=mcpPlanningSave($target,'planning_inline_edit_failed');$effects[]=array('action'=>'update','objectClass'=>get_class($target),'id'=>(int)$saved->id);}else{$class=get_class($target);$saved=new $class((int)$target->id);}}
+    return array('status'=>'updated','objectClass'=>get_class($saved),'id'=>(int)$saved->id,'saved'=>mcpObjectArray($saved),'appliedFields'=>$applied,'effects'=>$effects);
+  });
+}

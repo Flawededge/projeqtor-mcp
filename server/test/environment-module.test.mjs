@@ -13,8 +13,8 @@ test('Environment owns typed semantic actions for every requested workflow famil
   assert.equal(environment.id, 'environment');
   assert.deepEqual(environment.dependencies, ['core', 'configuration']);
   assert.deepEqual(environment.claims.actions, ENVIRONMENT_ACTIONS);
-  assert.equal(ENVIRONMENT_ACTIONS.length, 14);
-  for (const family of ['calendar', 'resource', 'team', 'contact', 'capacity', 'cost', 'surbooking', 'incompatibility', 'support']) {
+  assert.equal(ENVIRONMENT_ACTIONS.length, 17);
+  for (const family of ['calendar', 'resource', 'team', 'contact', 'capacity', 'cost', 'surbooking', 'incompatibility', 'support', 'prospect', 'client_relationship']) {
     assert.ok(ENVIRONMENT_ACTIONS.some(action => action.includes(family)), family);
   }
 });
@@ -23,7 +23,11 @@ test('Environment maps every true Environment mutation handler after UI-layout r
   const descriptor = phpDescriptor();
   const mapped = new Set(Object.values(descriptor.actions).flatMap(action => action.mappedHandlers));
   assert.deepEqual(mapped, new Set(ENVIRONMENT_HANDLERS));
-  assert.equal(mapped.size, 15);
+  assert.equal(mapped.size, 18);
+  const owners = Object.fromEntries(Object.entries(descriptor.actions).flatMap(([id, action]) => action.mappedHandlers.map(handler => [handler, id])));
+  assert.equal(owners['tool:saveProspectEvent'], 'environment.prospect.event.manage');
+  assert.equal(owners['tool:saveProspectTransform'], 'environment.prospect.convert');
+  assert.equal(owners['tool:switchOtherClient'], 'environment.client_relationship.promote');
 });
 
 test('Environment action contracts are closed, bounded, permission-aware, and result-typed', () => {
@@ -37,7 +41,11 @@ test('Environment action contracts are closed, bounded, permission-aware, and re
     assert.equal(action.batchLimit, 200, id);
     assert.equal(action.transaction, 'atomic', id);
     assert.equal(action.async, false, id);
-    assert.ok(['write', 'administrative'].includes(action.risk), id);
+    assert.ok(['write', 'administrative', 'destructive'].includes(action.risk), id);
+    if (action.risk === 'destructive') {
+      assert.equal(action.confirmationRequired, true, id);
+      assert.equal(typeof action.preview, 'string', id);
+    }
     const batch = Object.values(action.schema.properties).find(property => property?.type === 'array');
     if (batch) assert.equal(batch.maxItems, 200, id);
   }
@@ -56,9 +64,22 @@ test('Environment mutations fail closed on concurrency and parent permissions', 
   const actions = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('actions.php', root).pathname)});`], { encoding: 'utf8' });
   const costs = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('cost-actions.php', root).pathname)});`], { encoding: 'utf8' });
   const internal = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('internal-batch.php', root).pathname)});`], { encoding: 'utf8' });
+  const prospects = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('prospect-actions.php', root).pathname)});`], { encoding: 'utf8' });
   assert.match(actions, /expected_version_required/);
   assert.match(costs, /ResourceCost update requires expectedVersion/);
   assert.doesNotMatch(costs, /\?\?mcpObjectVersion\(\$current\)/);
   assert.match(internal, /Existing intervention target is unavailable/);
   assert.match(internal, /\$resource,'update'/);
+  assert.match(prospects, /expected_version_required/);
+  assert.match(prospects, /Security::checkValidAccessForUser/);
+  assert.match(prospects, /targetExpectedVersion/);
+  assert.match(prospects, /new Link\(\)/);
+});
+
+test('Environment policy maps exact prospect handlers to public semantic actions', () => {
+  const policyPath = new URL('../../policy/modules/environment.json', import.meta.url).pathname;
+  const policy = JSON.parse(execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(policyPath)});`], { encoding: 'utf8' }));
+  assert.equal(policy.handlerMappings['tool/saveProspectEvent.php'].action, 'environment.prospect.event.manage');
+  assert.equal(policy.handlerMappings['tool/saveProspectTransform.php'].action, 'environment.prospect.convert');
+  assert.equal(policy.handlerMappings['tool/switchOtherClient.php'].action, 'environment.client_relationship.promote');
 });

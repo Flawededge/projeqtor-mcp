@@ -4,7 +4,7 @@
   "dependsOn": ["core", "configuration", "environment"],
   "legacyAliases": ["planning_followup_environment"],
   "pathPatterns": [
-    "#(?:^|/)[^/]*(?:activity|planning|assignment|affectation|dependency|baseline|criticalresource|scenario|phasing|splitactivity|indenttask|movetask|planproject|projectplan)#i",
+    "#(?:^|/)[^/]*(?:activity|planning|assignment|affectation|dependency|baseline|criticalresource|scenario|phasing|splitactivity|indenttask|movetask|planproject|projectplan|editrowobject)#i",
     "#^report/(?:activityplan|availabilityplan|colorplan|costplan|detailplan|global.*planning|projectplan|resourceplan|yearlyplan)#i"
   ],
   "classPatterns": [
@@ -15,6 +15,10 @@
     "tool:jsonResourcePlanning": {"action": "configuration.parameter.set", "classes": ["Parameter"]},
     "tool:jsonResourcePlanning_pdf": {"action": "configuration.parameter.set", "classes": ["Parameter"]},
     "tool:movePlanningColumn": {"action": "configuration.view.manage", "classes": ["ColumnSelector"]},
-    "tool:savePlanningColumn": {"action": "configuration.view.manage", "classes": ["ColumnSelector"]}
+    "tool:savePlanningColumn": {"action": "configuration.view.manage", "classes": ["ColumnSelector"]},
+    "tool/deletePlanningSelection.php": {"action": "planning.selection.delete", "test": "coverage.planning.selection.delete"},
+    "tool/jsonPlanning.php": {"action": "planning.integrity.repair", "test": "coverage.planning.integrity.repair"},
+    "tool/saveEditRowObject.php": {"action": "planning.grid.inline_edit", "test": "coverage.planning.grid.inline_edit"},
+    "tool/recalculatePlanningSaveDates.php": {"action": "planning.grid.inline_edit", "test": "coverage.planning.grid.quickplan_dates"}
   }
 }

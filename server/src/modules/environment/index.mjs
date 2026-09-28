@@ -14,6 +14,9 @@ export const ENVIRONMENT_ACTIONS = Object.freeze([
   'environment.support.update',
   'environment.intervention.capacity.update',
   'environment.intervention.schedule',
+  'environment.prospect.event.manage',
+  'environment.prospect.convert',
+  'environment.client_relationship.promote',
   'environment.organization.manage'
 ]);
 
@@ -31,6 +34,9 @@ export const ENVIRONMENT_HANDLERS = Object.freeze([
   'tool:saveResourceIncompatible',
   'tool:saveResourceSupport',
   'tool:saveResourceSurbooking',
+  'tool:saveProspectEvent',
+  'tool:saveProspectTransform',
+  'tool:switchOtherClient',
   'tool:selectInterventionDate',
   'tool:updateResourceCost',
 ]);
@@ -43,7 +49,7 @@ export default defineModule({
   claims: {
     classes: [
       'Calendar', 'CalendarBankOffDays', 'CalendarDefinition', 'Resource', 'Team', 'Contact',
-      'Organization', 'ResourceCapacity', 'ResourceCost', 'ResourceSurbooking',
+      'Client', 'OtherClient', 'Prospect', 'ProspectEvent', 'Organization', 'ResourceCapacity', 'ResourceCost', 'ResourceSurbooking',
       'ResourceIncompatible', 'ResourceSupport',
       'InterventionCapacity'
     ],

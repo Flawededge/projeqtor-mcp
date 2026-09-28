@@ -27,7 +27,7 @@ function mcpEnvironmentExecuteInternalBatch(array $entries,string $mode,callable
   }
   if ($mode==='atomic') Sql::commitTransaction();
   $result=array('ok'=>!count(array_filter($items,fn($item)=>($item['status']??'')==='error')),'rolledBack'=>false,'transactionMode'=>$mode,'items'=>$items);
-  $result['effects']=mcpEnvironmentEffects($result);return $result;
+  $result['effects']=mcpEnvironmentEffects($result);foreach($result['items'] as &$item)unset($item['effects']);unset($item);return $result;
 }
 
 function mcpEnvironmentInterventionCapacityBatchAction(array $arguments,string $username,string $action): array {

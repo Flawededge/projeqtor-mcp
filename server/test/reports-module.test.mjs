@@ -45,7 +45,7 @@ test('Reports bridge replaces row export with native rendering and exact schemas
   assert.equal(module.actions['reports.render'].retryPolicy, 'safe');
   assert.equal(module.actions['reports.delivery.send'].retryPolicy, 'recovery_required');
   assert.equal(module.actions['reports.schedule'].risk, 'external');
-  for (const id of ['reports.favorite.manage', 'reports.favorite.delete', 'reports.layout.manage', 'reports.layout.delete', 'reports.dashboard.pin', 'reports.dashboard.unpin', 'reports.schedule']) {
+  for (const id of ['reports.favorite.manage', 'reports.favorite.delete', 'reports.layout.manage', 'reports.layout.delete', 'reports.dashboard.pin', 'reports.dashboard.unpin', 'reports.dashboard.configure', 'reports.schedule']) {
     assert.deepEqual(module.actions[id].schema.properties.transactionMode.enum, ['atomic', 'best_effort'], id);
     assert.ok(module.actions[id].resultSchema.required.includes('rolledBack'), id);
     assert.ok(module.actions[id].resultSchema.required.includes('transactionMode'), id);
@@ -93,6 +93,10 @@ test('Reports batches isolate best-effort failures and report atomic rollback', 
   assert.match(mutations, /Sql::beginTransaction\(\)/);
   assert.match(mutations, /Sql::rollbackTransaction\(\)/);
   assert.match(personal, /mcpReportsBestEffort\(\$arguments,\$username,\$actionId,__FUNCTION__\)/);
+  assert.match(personal, /function mcpReportsDashboardConfigureAction/);
+  assert.match(personal, /mcpReportsRequireOwned/);
+  assert.match(personal, /mcpRequireClassOperation/);
+  assert.match(personal, /periodDays.*periodNotSet.*todayRefreshDelay.*todayScrollDelay/s);
   assert.match(scheduling, /mcpReportsBestEffort\(\$arguments,\$username,\$actionId,__FUNCTION__\)/);
 });
 
@@ -133,6 +137,9 @@ test('Reports policy resolves known ownership collisions explicitly', () => {
   assert.ok(policy.ownedClasses.includes('Favorite'));
   assert.ok(policy.ownedClasses.includes('TodayParameter'));
   assert.equal(policy.handlerMappings['tool/saveReportFavoriteOrder.php'].action, 'reports.favorite.manage');
+  assert.equal(policy.handlerMappings['tool/saveCustomTodayMenuOrder.php'].action, 'reports.dashboard.configure');
+  assert.equal(policy.handlerMappings['tool/saveTodayParameters.php'].action, 'reports.dashboard.configure');
+  assert.equal(policy.handlerMappings['tool/saveTodayParametersSwitch.php'].action, 'reports.dashboard.configure');
   assert.equal(policy.handlerHandoffs['view/dashboardEmployeeManager.php'], 'hr');
   assert.equal(policy.handlerHandoffs['view/dashboardTicketMain.php'], 'configuration');
 });

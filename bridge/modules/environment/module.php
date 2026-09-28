@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/actions.php';require_once __DIR__.'/cost-actions.php';require_once __DIR__.'/internal-batch.php';require_once __DIR__.'/intervention-guards.php';require_once __DIR__.'/relationship-actions.php';require_once __DIR__.'/team-actions.php';
+require_once __DIR__.'/actions.php';require_once __DIR__.'/cost-actions.php';require_once __DIR__.'/internal-batch.php';require_once __DIR__.'/intervention-guards.php';require_once __DIR__.'/prospect-actions.php';require_once __DIR__.'/relationship-actions.php';require_once __DIR__.'/team-actions.php';
 
 $id=array('type'=>'integer','minimum'=>1);
 $nullableId=array('type'=>array('integer','null'),'minimum'=>1);
@@ -25,13 +25,15 @@ $itemResult=mcpObjectSchema(array(
   'recalculatedFields'=>array('type'=>'array','items'=>array('type'=>'string')),
   'ignoredFields'=>array('type'=>'array','items'=>array('type'=>'string')),
   'rejectedFields'=>array('type'=>'array','items'=>array('type'=>'string')),
-  'relatedIds'=>array('type'=>'array','items'=>$id),'saved'=>$saved,'error'=>$error,'concurrencyUnchecked'=>array('type'=>'boolean'),'idempotencyKey'=>array('type'=>'string')
+  'relatedIds'=>array('type'=>'array','items'=>$id),'saved'=>$saved,'error'=>$error,'concurrencyUnchecked'=>array('type'=>'boolean'),'idempotencyKey'=>array('type'=>'string'),
+  'parentClass'=>array('type'=>'string'),'parentId'=>$nullableId,'parentVersion'=>$version,'clientId'=>$nullableId,'contactId'=>$nullableId,
+  'previousClientId'=>$nullableId,'relationshipId'=>$nullableId,'linkIds'=>array('type'=>'array','items'=>$id)
 ),array('status','objectClass'),false);
 $effect=mcpObjectSchema(array('action'=>array('type'=>'string','enum'=>array('create','update','delete')),'objectClass'=>array('type'=>array('string','null')),'id'=>array('type'=>array('integer','null'))),array('action','objectClass','id'),false);
 $result=mcpObjectSchema(array(
   'ok'=>array('type'=>'boolean'),'rolledBack'=>array('type'=>'boolean'),
   'transactionMode'=>$transaction,'items'=>array('type'=>'array','maxItems'=>200,'items'=>$itemResult),
-  'effects'=>array('type'=>'array','maxItems'=>200,'items'=>$effect)
+  'effects'=>array('type'=>'array','maxItems'=>1000,'items'=>$effect)
 ),array('ok','rolledBack','transactionMode','items','effects'),false);
 
 $options=function(array $classes,array $extra=array()): array {
@@ -82,6 +84,13 @@ $interventionSchedule=mcpObjectSchema(array(
   'operation'=>array('type'=>'string','enum'=>array('set','clear')),'refType'=>array('type'=>'string','minLength'=>1,'maxLength'=>100),
   'refId'=>$id,'idInterventionMode'=>$id,'work'=>array('type'=>'number','minimum'=>0),'expectedVersion'=>$version
 ),array('idResource','workDate','period','operation'),false);
+$prospectEvent=mcpObjectSchema(array(
+  'operation'=>array('type'=>'string','enum'=>array('create','update','delete')),'id'=>$id,'expectedVersion'=>$version,'parentExpectedVersion'=>$version,
+  'refType'=>array('type'=>'string','enum'=>array('Prospect','Contact')),'refId'=>$id,'name'=>array('type'=>'string','minLength'=>1,'maxLength'=>200),
+  'eventTypeId'=>$id,'description'=>$text,'contactId'=>$nullableId,'eventDateTime'=>array('type'=>'string','pattern'=>'^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}(:\\d{2})?$')
+),array('operation'),false);
+$prospectConvert=mcpObjectSchema(array('prospectId'=>$id,'expectedVersion'=>$version,'clientTypeId'=>$id),array('prospectId','expectedVersion'),false);
+$clientPromote=mcpObjectSchema(array('id'=>$id,'expectedVersion'=>$version,'targetExpectedVersion'=>$version),array('id','expectedVersion','targetExpectedVersion'),false);
 
 return array('id'=>'environment','version'=>'4.0.0','dependencies'=>array('core','configuration'),'actions'=>array(
   'environment.calendar.update'=>mcpActionSpec(mcpObjectSchema(array('entries'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$calendarEntry),'transactionMode'=>$transaction),array('entries')),$result,'administrative',false,'mcpEnvironmentCalendarAction',array('tool:saveCalendar'),'environment.calendar.update',$options(array('CalendarDefinition'))),
@@ -97,5 +106,8 @@ return array('id'=>'environment','version'=>'4.0.0','dependencies'=>array('core'
   'environment.support.update'=>mcpActionSpec(mcpObjectSchema(array('relationships'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$support),'transactionMode'=>$transaction),array('relationships')),$result,'administrative',false,'mcpEnvironmentSupportAction',array('tool:saveResourceSupport'),'environment.support.update',$options(array('Resource'))),
   'environment.intervention.capacity.update'=>mcpActionSpec(mcpObjectSchema(array('entries'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$interventionCapacity),'transactionMode'=>$transaction),array('entries')),$result,'write',false,'mcpEnvironmentInterventionCapacityBatchAction',array('tool:saveInterventionCapacity'),'environment.intervention.capacity',$options(array('Resource'),array('sideEffectClassification'=>'write'))),
   'environment.intervention.schedule'=>mcpActionSpec(mcpObjectSchema(array('entries'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$interventionSchedule),'transactionMode'=>$transaction),array('entries')),$result,'write',false,'mcpEnvironmentInterventionScheduleBatchAction',array('tool:selectInterventionDate'),'environment.intervention.schedule',$options(array('Resource'),array('sideEffectClassification'=>'write'))),
+  'environment.prospect.event.manage'=>mcpActionSpec(mcpObjectSchema(array('items'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$prospectEvent),'transactionMode'=>$transaction),array('items')),$result,'destructive',false,'mcpEnvironmentProspectEventAction',array('tool:saveProspectEvent'),'environment.prospect.event.manage',$options(array('ProspectEvent','Prospect','Contact'),array('preview'=>'mcpEnvironmentWorkflowPreview','confirmationRequired'=>true,'sideEffectClassification'=>'destructive'))),
+  'environment.prospect.convert'=>mcpActionSpec(mcpObjectSchema(array('items'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$prospectConvert),'transactionMode'=>$transaction),array('items')),$result,'administrative',false,'mcpEnvironmentProspectConvertAction',array('tool:saveProspectTransform'),'environment.prospect.convert',$options(array('Prospect','Client','Contact','Link'),array('preview'=>'mcpEnvironmentWorkflowPreview','confirmationRequired'=>true))),
+  'environment.client_relationship.promote'=>mcpActionSpec(mcpObjectSchema(array('items'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$clientPromote),'transactionMode'=>$transaction),array('items')),$result,'destructive',false,'mcpEnvironmentClientPromoteAction',array('tool:switchOtherClient'),'environment.client_relationship.promote',$options(array('OtherClient'),array('preview'=>'mcpEnvironmentWorkflowPreview','confirmationRequired'=>true,'sideEffectClassification'=>'destructive'))),
   'environment.organization.manage'=>mcpActionSpec(mcpObjectSchema(array('organizations'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$organization),'transactionMode'=>$transaction),array('organizations')),$result,'administrative',false,'mcpEnvironmentOrganizationAction',array(),'environment.organization.manage',$options(array('Organization')))
 ));

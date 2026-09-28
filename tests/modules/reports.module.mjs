@@ -4,7 +4,7 @@ export default {
     'report.start', 'reports.render', 'reports.catalog.read', 'reports.dashboard.read',
     'reports.favorite.manage', 'reports.favorite.delete', 'reports.layout.manage',
     'reports.layout.delete', 'reports.dashboard.pin', 'reports.dashboard.unpin',
-    'reports.schedule', 'reports.delivery.send'
+    'reports.dashboard.configure', 'reports.schedule', 'reports.delivery.send'
   ],
   workflowFamilies: [
     'native-rendering', 'pdf', 'charts', 'images', 'csv', 'structured-data',
