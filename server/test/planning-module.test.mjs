@@ -54,6 +54,7 @@ test('Planning bridge declares every requested semantic workflow family', () => 
     'planning.scenario.configure',
     'planning.critical_resources.evaluate',
     'planning.calculate',
+    'planning.wbs.renumber',
     'planning.diagnostics',
     'planning.baseline.create',
     'planning.baseline.delete'

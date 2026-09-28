@@ -4,6 +4,7 @@ import { registerFullControlTools } from '../../full-control.mjs';
 export const CORE_ACTIONS = Object.freeze([
   'object.copy',
   'workflow.transition',
+  'core.reference.rebuild',
   'user.session.terminate',
   'user.session.login',
   'core.joblist.update',

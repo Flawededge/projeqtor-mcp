@@ -4,10 +4,10 @@
     "sourceArchiveSha256": "221c2a0b2facbdfc0b5af9878e030cdd7ded6e3f989b1da9cd609eccebaa0a69",
     "sourceTreeHash": "07087afdad8c5d8a506f03996873400a433df0338643a1c5dca78e27e7d33ca8",
     "sourceFileCount": 944,
-    "entrypointCount": 900,
-    "includedLibraryCount": 44,
-    "detectedMutationFileCount": 333,
-    "mutationCandidateCount": 331,
+    "entrypointCount": 899,
+    "includedLibraryCount": 45,
+    "detectedMutationFileCount": 340,
+    "mutationCandidateCount": 337,
     "surfaceCounts": {
         "api": 1,
         "plugin": 4,
@@ -1704,8 +1704,10 @@
             "sourceRole": "http_entrypoint",
             "coverageClassification": "handler_policy",
             "sourceHash": "2beb58756d1573f5611f9ac05038377b8ceb031d396413ce75ef9ab4310d9d6f",
-            "detectedMutationTypes": [],
-            "mutationCandidate": false
+            "detectedMutationTypes": [
+                "object_create_update"
+            ],
+            "mutationCandidate": true
         },
         {
             "id": "tool:commonFilter",
@@ -1768,8 +1770,10 @@
             "sourceRole": "http_entrypoint",
             "coverageClassification": "handler_policy",
             "sourceHash": "184b02c5bb630f606a1050158619f43ad3f527d418eb194f333c53e9d60101d6",
-            "detectedMutationTypes": [],
-            "mutationCandidate": false
+            "detectedMutationTypes": [
+                "object_create_update"
+            ],
+            "mutationCandidate": true
         },
         {
             "id": "tool:copyDocumentTo",
@@ -3714,13 +3718,13 @@
             "id": "tool:file",
             "path": "tool/file.php",
             "surface": "tool",
-            "sourceRole": "http_entrypoint",
-            "coverageClassification": "handler_policy",
+            "sourceRole": "included_library",
+            "coverageClassification": "included_library",
             "sourceHash": "30db16f9daf6212118b2d40b05b837217f50adb0da893941b55f613b4634435d",
             "detectedMutationTypes": [
                 "file_write"
             ],
-            "mutationCandidate": true
+            "mutationCandidate": false
         },
         {
             "id": "tool:filterComponentType",
@@ -5198,8 +5202,10 @@
             "sourceRole": "http_entrypoint",
             "coverageClassification": "handler_policy",
             "sourceHash": "cc8fc8b11362d29252568cc58ff66d639c5a91f92a98e1845cd5876af5858051",
-            "detectedMutationTypes": [],
-            "mutationCandidate": false
+            "detectedMutationTypes": [
+                "object_create_update"
+            ],
+            "mutationCandidate": true
         },
         {
             "id": "tool:refreshAttachmentSendMail",
@@ -6397,8 +6403,10 @@
             "sourceRole": "http_entrypoint",
             "coverageClassification": "handler_policy",
             "sourceHash": "e1525a8ac66edb41c4cd3c40d4ef6f7a89a09f4f1693a429bb9bb6c2a1facb3d",
-            "detectedMutationTypes": [],
-            "mutationCandidate": false
+            "detectedMutationTypes": [
+                "object_create_update"
+            ],
+            "mutationCandidate": true
         },
         {
             "id": "tool:saveAutoSendReport",
@@ -6993,8 +7001,10 @@
             "sourceRole": "http_entrypoint",
             "coverageClassification": "handler_policy",
             "sourceHash": "49e04f400a9ef04672fca54ce6a4d9b3d9a1a3b33275847ca0ca047ae93dbc96",
-            "detectedMutationTypes": [],
-            "mutationCandidate": false
+            "detectedMutationTypes": [
+                "object_create_update"
+            ],
+            "mutationCandidate": true
         },
         {
             "id": "tool:saveLink",
@@ -7016,8 +7026,10 @@
             "sourceRole": "http_entrypoint",
             "coverageClassification": "handler_policy",
             "sourceHash": "99de596d748dd508267d38d3c69ba7ff3709c82c474bbbaf59e194355bbaeab6",
-            "detectedMutationTypes": [],
-            "mutationCandidate": false
+            "detectedMutationTypes": [
+                "object_create_update"
+            ],
+            "mutationCandidate": true
         },
         {
             "id": "tool:saveLvTypeOfEmpContractType",
@@ -7207,8 +7219,10 @@
             "sourceRole": "http_entrypoint",
             "coverageClassification": "handler_policy",
             "sourceHash": "30f953ddc2a0d74b719c13097182924d047d0114bb4c7170b34a521f16ff3292",
-            "detectedMutationTypes": [],
-            "mutationCandidate": false
+            "detectedMutationTypes": [
+                "object_create_update"
+            ],
+            "mutationCandidate": true
         },
         {
             "id": "tool:saveOrigin",
@@ -10246,5 +10260,5 @@
             "mutationCandidate": false
         }
     ],
-    "inventoryHash": "36de4b32c2ad286e662519f9422e3613c6022056e594386d39dbf3cefda7e3e2"
+    "inventoryHash": "9a9f4978fa7a558b446eb2bb31d323febbb7d4343f139fee9097513c3d45df92"
 }

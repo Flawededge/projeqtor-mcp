@@ -48,3 +48,21 @@ function mcpPlanningCriticalResourcesWorker(int $jobId,array $arguments,string $
   $max=max(1,min(200,(int)($arguments['maxResources']??50)));$resources=array_slice($resources,0,$max);
   return array('ok'=>$planning['ok'],'status'=>$planning['status'],'message'=>$planning['message'],'projects'=>$projectIds,'startDate'=>$arguments['startDate']??null,'endDate'=>$arguments['endDate']??null,'resources'=>$resources,'counts'=>array('resources'=>count($resources),'overloaded'=>count(array_filter($resources,fn($item)=>$item['surbookedWork']>0))),'effects'=>$planning['effects']??array());
 }
+
+function mcpPlanningWbsRenumberWorker(int $jobId,array $arguments,string $username): array {
+  if(securityGetAccessRightYesNo('menuAdmin','read')!=='YES')throw new RuntimeException('forbidden');
+  if(workerCancelled($jobId))throw new RuntimeException('cancelled');
+  if(function_exists('projeqtor_set_time_limit'))projeqtor_set_time_limit(900);
+  $oldIndicator=IndicatorValue::$_doNotUpdate;IndicatorValue::$_doNotUpdate=true;
+  $priorityChanges=0;$structureChanges=0;Sql::beginTransaction();
+  try{
+    $planning=new PlanningElement();
+    if(!array_key_exists('fixProjectOrder',$arguments)||!empty($arguments['fixProjectOrder']))$priorityChanges=(int)$planning->renumberWbs(true,true);
+    if(workerCancelled($jobId))throw new RuntimeException('cancelled');
+    $structureChanges=(int)$planning->renumberWbs(true,false);
+    Sql::commitTransaction();
+  }catch(Throwable $error){Sql::rollbackTransaction();throw $error;}
+  finally{IndicatorValue::$_doNotUpdate=$oldIndicator;}
+  return array('ok'=>true,'status'=>'renumbered','priorityChanges'=>$priorityChanges,'structureChanges'=>$structureChanges,
+    'effects'=>array(array('action'=>'update','objectClass'=>'PlanningElement','count'=>$priorityChanges+$structureChanges)));
+}

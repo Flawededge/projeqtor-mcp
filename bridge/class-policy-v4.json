@@ -5,47 +5,52 @@
     "sourcePolicyVersion": 3,
     "expectedInstalledClassCount": 640,
     "unknownCount": 0,
-    "modulePolicyHash": "1a03b0606e5520f052c33eedca7475d109fc8fe0afb65e524d99fe5d3cd77b81",
+    "modulePolicyHash": "d3acec12fd22946115927e6111789f4ab40ff32c30373a57e4fd798e33d8d065",
     "modules": {
         "core": {
             "version": "4.0.0",
             "dependsOn": [],
             "legacyAliases": [],
-            "fragmentHash": "5d9486234bf15e5f175e123c2e3e4b9f77c8896bfac6360cdcbd8422ae57353b"
+            "fragmentHash": "f7462249ab2ebbb7de35c87d2b6b8e74b3993c9fd3cfd938dfa96c7e99a9c53c"
         },
         "planning": {
             "version": "4.0.0",
             "dependsOn": [
                 "core",
+                "configuration",
                 "environment"
             ],
             "legacyAliases": [
                 "planning_followup_environment"
             ],
-            "fragmentHash": "27343e340772b670081051a1e960bfaddc7d7c846634247dddad2f28491ac8c1"
+            "fragmentHash": "064661bad48e6b5f4e585d3cf711136d72778184f3f94c20e7eb3305d4cb02c0"
         },
         "ticketing": {
             "version": "4.0.0",
             "dependsOn": [
                 "core",
+                "configuration",
+                "environment",
                 "products"
             ],
             "legacyAliases": [
                 "ticketing_scrum"
             ],
-            "fragmentHash": "6f73b1d236393d31f51c1f48822984cf8f86ec32f757d812ac8d0b13fbb8b945"
+            "fragmentHash": "cc410e399caef61ccf39916dae6c9cc7a344336a6e967f4acef00aa2fcdb2a1a"
         },
         "scrum": {
             "version": "4.0.0",
             "dependsOn": [
                 "core",
-                "planning",
-                "ticketing"
+                "configuration",
+                "environment",
+                "ticketing",
+                "products"
             ],
             "legacyAliases": [
                 "ticketing_scrum"
             ],
-            "fragmentHash": "41294f16c8a2519c2b1f51b21cc8f207150d05be2e6e267ddd22eb1884b1d949"
+            "fragmentHash": "37da192eaa1b210e54d8c75439cbd8edcf8e1ce311488562a2ac3672257875d4"
         },
         "follow_up": {
             "version": "4.0.0",
@@ -57,81 +62,92 @@
             "legacyAliases": [
                 "planning_followup_environment"
             ],
-            "fragmentHash": "083b754f5544d6db4daf6a562b95b3e4dd0b8c2d5abf9de37c576143b2c957af"
+            "fragmentHash": "0bd0ae02b27780462d162485f93bac8794d9e3a1ebed3a695d88f58b952c93f7"
         },
         "steering": {
             "version": "4.0.0",
             "dependsOn": [
                 "core",
-                "planning"
+                "configuration",
+                "planning",
+                "tools"
             ],
             "legacyAliases": [
                 "steering_reports"
             ],
-            "fragmentHash": "303e9c2d02ea976b47ab477731a903847155166a026023b3c5b5a934111c22fc"
+            "fragmentHash": "16f229ec7d380931b21b04ba7419fbd858e1d10600c98a09a0657fbc9f9b0705"
         },
         "financial": {
             "version": "4.0.0",
             "dependsOn": [
                 "core",
-                "planning",
-                "environment"
+                "configuration",
+                "environment",
+                "products",
+                "follow_up",
+                "tools"
             ],
             "legacyAliases": [
                 "financial_products"
             ],
-            "fragmentHash": "c45969444963f57f3239a062deced0342ea1dda327741487c9794627bb504bc0"
+            "fragmentHash": "5b094db9a68ffd10a33a3fbb66023ceaf30188a1ff89513e7b5ea1338e6398bf"
         },
         "products": {
             "version": "4.0.0",
             "dependsOn": [
-                "core"
+                "core",
+                "configuration"
             ],
             "legacyAliases": [
                 "financial_products"
             ],
-            "fragmentHash": "740250e773820992092a813fd5e2447f490661c78830d28515672cbe04f69eb4"
+            "fragmentHash": "8bc28a290a52a94342f5fb1295f976917286c8ddc7ce7bc257ce0afde487d75c"
         },
         "hr": {
             "version": "4.0.0",
             "dependsOn": [
                 "core",
+                "configuration",
                 "environment"
             ],
             "legacyAliases": [
                 "hr_tools_configuration"
             ],
-            "fragmentHash": "a2f561c2e152b82e42224414a9e89c964aba8e44e12cb5026c84980827035086"
+            "fragmentHash": "211ac4f8dea0ea7935345267d3786fcf1b8af699cedb0473cfcbca31df157b91"
         },
         "environment": {
             "version": "4.0.0",
             "dependsOn": [
-                "core"
+                "core",
+                "configuration"
             ],
             "legacyAliases": [
                 "planning_followup_environment"
             ],
-            "fragmentHash": "3ab9d93ebdaef33d9e2e092a5e3b566ebfe4fa4b9ce3908966ace67fad5020c1"
+            "fragmentHash": "1652ac181d640373e9e787662d2af74174f772b863ad5a290269467fa7b42efe"
         },
         "tools": {
             "version": "4.0.0",
             "dependsOn": [
-                "core"
+                "core",
+                "configuration"
             ],
             "legacyAliases": [
                 "hr_tools_configuration"
             ],
-            "fragmentHash": "d36aa77bd9fb98e945fcf23b7c96842ff092e767a88f487ea8c319157811936c"
+            "fragmentHash": "23c0466ff7b820886bf3f26ce79d97b43457fb48307f28230a3833d2e65a2eb4"
         },
         "reports": {
             "version": "4.0.0",
             "dependsOn": [
-                "core"
+                "core",
+                "configuration",
+                "tools"
             ],
             "legacyAliases": [
                 "steering_reports"
             ],
-            "fragmentHash": "b1eab10c6af31d9f45a2d6c2480e37d088f2d158427beba96178c34897442e0d"
+            "fragmentHash": "c8491c80ee0eb4fa025a05ebb9437901625c0b779522b0afcfddd2adf5cc1fbe"
         },
         "configuration": {
             "version": "4.0.0",
@@ -141,23 +157,23 @@
             "legacyAliases": [
                 "hr_tools_configuration"
             ],
-            "fragmentHash": "c219b8480f8d62811275106a7be8a1e7aced0788ef296826f417f733917748d4"
+            "fragmentHash": "c2fe1ba3285055cb6f97339eb91e572d3c839efbea6baf2a5c76847a0e2ec47a"
         }
     },
     "moduleCounts": {
-        "core": 165,
-        "planning": 86,
-        "ticketing": 10,
-        "scrum": 23,
+        "core": 152,
+        "planning": 83,
+        "ticketing": 11,
+        "scrum": 21,
         "follow_up": 8,
-        "steering": 64,
-        "financial": 92,
+        "steering": 65,
+        "financial": 80,
         "products": 29,
-        "hr": 17,
-        "environment": 30,
+        "hr": 25,
+        "environment": 49,
         "tools": 51,
-        "reports": 7,
-        "configuration": 58
+        "reports": 11,
+        "configuration": 55
     },
     "legacyModuleAliases": {
         "financial_products": [
@@ -2045,12 +2061,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuClient",
             "sourcePath": "model/Client.php",
             "sourceHash": "60c369192dc8b6bcdbdad308f6abfb4d275bfbe3bd2e74fdc46a49529ad5fa72",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ClientContract": {
@@ -2070,7 +2086,8 @@
             "sourcePath": "model/ClientContract.php",
             "sourceHash": "428ddc77f82816e2542e45e6dbdceb47682dbcb5988683218b243c23da1335ed",
             "modules": [
-                "financial"
+                "financial",
+                "environment"
             ]
         },
         "ClientContractMain": {
@@ -2085,7 +2102,8 @@
             "sourcePath": "model/ClientContractMain.php",
             "sourceHash": "805a3b8477bebc87a00fc9f8dcda857e908b28059ce132b73974115b959837ca",
             "modules": [
-                "financial"
+                "financial",
+                "environment"
             ]
         },
         "ClientContractType": {
@@ -2105,7 +2123,8 @@
             "sourcePath": "model/ClientContractType.php",
             "sourceHash": "89391ca64ccdc15d826e1b85da421a95898d5cf1c8b4b6e8a1c03dd5bb1e37f8",
             "modules": [
-                "financial"
+                "financial",
+                "environment"
             ]
         },
         "ClientMain": {
@@ -2115,12 +2134,12 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": null,
             "sourcePath": "model/ClientMain.php",
             "sourceHash": "d73afd70fb231442cfbf39efa80d828f1b8b5ba69377c0154e1ccadcb87ff853",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ClientType": {
@@ -2135,12 +2154,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuClientType",
             "sourcePath": "model/ClientType.php",
             "sourceHash": "ef11f347f6f66b4d0a34b1d9f93f35d00b6cb0b51a343daf6e730958ecbea0e8",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "Collapsed": {
@@ -2235,12 +2254,13 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "scrum",
+            "module": "financial",
             "menu": null,
             "sourcePath": "model/Complexity.php",
             "sourceHash": "e190b69efb3e3b9951b8a692c7e992ed5844f0eac1b8d900b5a8fdbe1276e998",
             "modules": [
-                "scrum"
+                "financial",
+                "core"
             ]
         },
         "ComplexityValues": {
@@ -2250,12 +2270,13 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "scrum",
+            "module": "financial",
             "menu": null,
             "sourcePath": "model/ComplexityValues.php",
             "sourceHash": "ac63cbc548adedc15d77bc7a278b33ad0004dc2d4e854c294bf1a1e75b5e6733",
             "modules": [
-                "scrum"
+                "financial",
+                "core"
             ]
         },
         "Component": {
@@ -2465,12 +2486,11 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": true,
-            "module": "financial",
+            "module": "environment",
             "menu": null,
             "sourcePath": "model/ContactContract.php",
             "sourceHash": "37cc1c311ac907649b5874e5a3f448231e034aa453b0c594b668b8b10025a9d5",
             "modules": [
-                "financial",
                 "environment"
             ]
         },
@@ -2699,12 +2719,11 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": null,
             "sourcePath": "model/CustomEarnedRulesOfEmploymentContractType.php",
             "sourceHash": "c1ef6d914cd0809b827c782e83e0abbb7b96f0799d3fb344404e2776b9d53175",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -2775,7 +2794,8 @@
             "sourcePath": "model/DecisionMakerProspect.php",
             "sourceHash": "d59a07ccdbd607fab6e9f53aa02d340563a1f546e2d1ef25513bb5efa3e59e2a",
             "modules": [
-                "steering"
+                "steering",
+                "environment"
             ]
         },
         "DecisionType": {
@@ -3205,12 +3225,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuDomainProspect",
             "sourcePath": "model/DomainProspect.php",
             "sourceHash": "2887a84727861c5be7f3b430af8755bcbcb7e33edc68132782ec45c05656fb45",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "Efficiency": {
@@ -3385,12 +3405,11 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": "menuEmploymentContract",
             "sourcePath": "model/EmploymentContract.php",
             "sourceHash": "aed7d364e55c27ebda8b6e9dc02147a64df694430824068f4c922e7bc83564eb",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -3406,12 +3425,11 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": "menuEmploymentContractEndReason",
             "sourcePath": "model/EmploymentContractEndReason.php",
             "sourceHash": "aa3ba831bafaa0e61ffcc78554f75077500190537bf29e98ba814efec025c99e",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -3422,12 +3440,11 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": null,
             "sourcePath": "model/EmploymentContractEndReasonMain.php",
             "sourceHash": "cab95f5ef43f26ec0abc1909c3e5fbb94c04423912b01263cb00b6e9b97cbd31",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -3438,12 +3455,11 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": null,
             "sourcePath": "model/EmploymentContractMain.php",
             "sourceHash": "58e3a9c384f5e6aa283ab3489e824e545f54eed726fbd6d6dcac467e93de2b83",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -3459,12 +3475,11 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": "menuEmploymentContractType",
             "sourcePath": "model/EmploymentContractType.php",
             "sourceHash": "d2568ef118105f077b2cb6d2c546336a6f7e7fbf1b32b0a8ae95419bee718583",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -3475,12 +3490,11 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": null,
             "sourcePath": "model/EmploymentContractTypeMain.php",
             "sourceHash": "309f11bac648d3829447ee6cc03eb35a889bce3bcfab8e95e39155bbb969c2e9",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -3681,12 +3695,12 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "reports",
             "menu": null,
             "sourcePath": "model/Favorite.php",
             "sourceHash": "8df259acd260bc0565fb1cc32be4ec6678121b5f82bc6ff8985bb4647a420b81",
             "modules": [
-                "core"
+                "reports"
             ]
         },
         "FavoriteParameter": {
@@ -3696,11 +3710,12 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "configuration",
+            "module": "reports",
             "menu": null,
             "sourcePath": "model/FavoriteParameter.php",
             "sourceHash": "e07976d9d6675ec82859114d4976eebf4e9835128e4956c8161c30e1b4bd98a2",
             "modules": [
+                "reports",
                 "configuration"
             ]
         },
@@ -3716,7 +3731,8 @@
             "sourcePath": "model/FavoriteProjectItem.php",
             "sourceHash": "845eab2c13df93dd4981f23d4f4086415074553dfda746d4c496a688967ba68a",
             "modules": [
-                "planning"
+                "planning",
+                "reports"
             ]
         },
         "FavoriteProjectList": {
@@ -3731,7 +3747,8 @@
             "sourcePath": "model/FavoriteProjectList.php",
             "sourceHash": "26460a11269cc85a2c089951adbc6afd4865806b7a348542f20da5bce8a5efd2",
             "modules": [
-                "planning"
+                "planning",
+                "reports"
             ]
         },
         "Feasibility": {
@@ -4808,12 +4825,11 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "hr",
             "menu": null,
             "sourcePath": "model/LeaveTypeOfEmploymentContractType.php",
             "sourceHash": "4049e63177b44665550400bf50fa1c3aaf1c79c28f53f358a2dd3f72c232826f",
             "modules": [
-                "financial",
                 "hr"
             ]
         },
@@ -6037,11 +6053,12 @@
             "reason": "credential_or_authentication_state",
             "operations": [],
             "guarded": false,
-            "module": "configuration",
+            "module": "environment",
             "menu": null,
             "sourcePath": "model/OAuthClient.php",
             "sourceHash": "55506753093f3b74d2b3b79752b01d6b5cd6e4cc7cbd3d4275f417e9cc07ee42",
             "modules": [
+                "environment",
                 "configuration"
             ]
         },
@@ -6305,12 +6322,12 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": null,
             "sourcePath": "model/OtherClient.php",
             "sourceHash": "6a3da0ed3306cf6521e9ef5552dcc0733775499fa0f886105cd44c7aebac89fd",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "OtherOriginalComponentVersion": {
@@ -6776,11 +6793,12 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "financial",
             "menu": null,
             "sourcePath": "model/Phase.php",
             "sourceHash": "baaec430b32c19cef611df2b3e14fa9d57c5074567d1b540d376818de5f3b741",
             "modules": [
+                "financial",
                 "core"
             ]
         },
@@ -7207,12 +7225,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuPositionProspect",
             "sourcePath": "model/PositionProspect.php",
             "sourceHash": "325463e06a7cfaeaed4925611c7c31dbda383d25e723f8eb62b0682f48f39b0c",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "PredefinedAction": {
@@ -7639,13 +7657,13 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "planning",
+            "module": "financial",
             "menu": "menuProjectExpense",
             "sourcePath": "model/ProjectExpense.php",
             "sourceHash": "e998bf0321a7a03a09e43b6b71609e30847e555c0f3d169c50228e98f4eb947b",
             "modules": [
-                "planning",
-                "financial"
+                "financial",
+                "planning"
             ]
         },
         "ProjectExpenseMain": {
@@ -7859,12 +7877,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspect",
             "sourcePath": "model/Prospect.php",
             "sourceHash": "b892e860ee2708eae334edcd87df86b0a8a50f7b759761855a22aabf1d261e5f",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectEstimate": {
@@ -7879,12 +7897,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspectEstimate",
             "sourcePath": "model/ProspectEstimate.php",
             "sourceHash": "cba5a6c90f162e6dc761bf8d8ec16ff16ade301083d563d066228adc8c4db90c",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectEstimateMain": {
@@ -7894,12 +7912,12 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": null,
             "sourcePath": "model/ProspectEstimateMain.php",
             "sourceHash": "57f88b62e27b8a3d997d24c75e1fded74ddd392026e515a35d21ecd079b8e776",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectEstimateType": {
@@ -7914,12 +7932,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspectEstimateType",
             "sourcePath": "model/ProspectEstimateType.php",
             "sourceHash": "067811f9b9396c6306d83c5a60337d03371ac136f7cbd9127b22fc25e0b5984c",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectEvent": {
@@ -7929,12 +7947,12 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": null,
             "sourcePath": "model/ProspectEvent.php",
             "sourceHash": "b0608953e139ac8cf53a012ccca210bffe1efca7241cc4d8233e8cad536a9327",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectEventType": {
@@ -7949,12 +7967,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspectEventType",
             "sourcePath": "model/ProspectEventType.php",
             "sourceHash": "4ba8ece7fb4306b4d1a7c6ed10e58aa31e0061e193a802623d054349f1fd44ac",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectMain": {
@@ -7964,12 +7982,12 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": null,
             "sourcePath": "model/ProspectMain.php",
             "sourceHash": "efc99b94bca6eef3fa711d78c341b8250e64b691ab2aecbf076dd826a96b0bbc",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectOrigin": {
@@ -7984,12 +8002,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspectOrigin",
             "sourcePath": "model/ProspectOrigin.php",
             "sourceHash": "01f45c23175c3af03c043e12840ee15a02e179fde5f0e150de907179d5c88114",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectQualification": {
@@ -8004,12 +8022,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspectQualification",
             "sourcePath": "model/ProspectQualification.php",
             "sourceHash": "2e4543466a758ef33d35bd155aeed9ab73dda8b4b3f9d67a586b4b25ccbac645",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectType": {
@@ -8024,12 +8042,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspectType",
             "sourcePath": "model/ProspectType.php",
             "sourceHash": "540f23c280793c6fdb439ae5e2d1b9a9cb458b40910583e00797b7c7e66ed606",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "ProspectionSource": {
@@ -8044,12 +8062,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "core",
+            "module": "environment",
             "menu": "menuProspectionSource",
             "sourcePath": "model/ProspectionSource.php",
             "sourceHash": "9397487214e50df07b73a1a3623a91b13082f4ca8d4f2fb979408a7ddeeea8a2",
             "modules": [
-                "core"
+                "environment"
             ]
         },
         "Provider": {
@@ -8064,12 +8082,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "core",
             "menu": "menuProvider",
             "sourcePath": "model/Provider.php",
             "sourceHash": "dd1cf9b47d2c3d1074f21a18e74d99b9f2a6c1f0c2bc535f5be5ec9582c2b006",
             "modules": [
-                "financial"
+                "core"
             ]
         },
         "ProviderBill": {
@@ -8134,12 +8152,12 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "financial",
+            "module": "core",
             "menu": null,
             "sourcePath": "model/ProviderMain.php",
             "sourceHash": "3fdf1d8df84832bdc68675fad152d3391b4788b04b4734306076b43ec0a50b63",
             "modules": [
-                "financial"
+                "core"
             ]
         },
         "ProviderOrder": {
@@ -8299,12 +8317,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "core",
             "menu": "menuProviderType",
             "sourcePath": "model/ProviderType.php",
             "sourceHash": "e4bb7712d1e58d4b2b7f325dd5e4e1f6c3ff1f830cb79aea57c721f6492817f8",
             "modules": [
-                "financial"
+                "core"
             ]
         },
         "Quality": {
@@ -8449,13 +8467,13 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "planning",
+            "module": "steering",
             "menu": null,
             "sourcePath": "model/RaciAssignment.php",
             "sourceHash": "8f220bea8c0d25fc25b07c364cc49b848aebcfb5d1a13ca6522421c6b61f02be",
             "modules": [
-                "planning",
-                "steering"
+                "steering",
+                "planning"
             ]
         },
         "RaciCell": {
@@ -9275,12 +9293,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "core",
             "menu": null,
             "sourcePath": "model/RulableForEmpContractType.php",
             "sourceHash": "58bb4eef5e4a0474f432a20bd23881f4af8d90a1c38b391c637aebd6210d06ea",
             "modules": [
-                "financial"
+                "core"
             ]
         },
         "RunStatus": {
@@ -10033,12 +10051,12 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "financial",
+            "module": "core",
             "menu": "menuTerm",
             "sourcePath": "model/Term.php",
             "sourceHash": "e57d266b87d86765f89b12a545007c713a30537568b4f38f4686be6ec085a65e",
             "modules": [
-                "financial"
+                "core"
             ]
         },
         "TermMain": {
@@ -10048,12 +10066,12 @@
             "reason": "ui_projection_or_internal_state",
             "operations": [],
             "guarded": false,
-            "module": "financial",
+            "module": "core",
             "menu": null,
             "sourcePath": "model/TermMain.php",
             "sourceHash": "ecfb141ddd377d6921b6ecccb19e2992ca18b70283a1afe17b4e87f9a7f435d5",
             "modules": [
-                "financial"
+                "core"
             ]
         },
         "TestCase": {
@@ -10301,13 +10319,13 @@
                 "delete"
             ],
             "guarded": false,
-            "module": "planning",
+            "module": "ticketing",
             "menu": "menuTicketDelayPerProject",
             "sourcePath": "model/TicketDelayPerProject.php",
             "sourceHash": "5bdb2310804731930be98317f059619b748230942841a859eab915648dfb2c87",
             "modules": [
-                "planning",
-                "ticketing"
+                "ticketing",
+                "planning"
             ]
         },
         "TicketMain": {
@@ -10402,12 +10420,12 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "core",
+            "module": "reports",
             "menu": null,
             "sourcePath": "model/Today.php",
             "sourceHash": "c85e2edd6ffaf0ed14a1ec0cc9e328327be1d6845e1b946ba7a75aaae6c56c9c",
             "modules": [
-                "core"
+                "reports"
             ]
         },
         "TodayParameter": {
@@ -10417,11 +10435,12 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "configuration",
+            "module": "reports",
             "menu": null,
             "sourcePath": "model/TodayParameter.php",
             "sourceHash": "47207eab8a968f6c29da15f08f6b93045fdda2ac8d2cf2c1f70d9a2c829a5290",
             "modules": [
+                "reports",
                 "configuration"
             ]
         },
@@ -10442,7 +10461,8 @@
             "sourcePath": "model/TokenDefinition.php",
             "sourceHash": "5150a5af163f0e7fc754370fa0256c94018f75a8f77e56cc81502a58af7f23a8",
             "modules": [
-                "core"
+                "core",
+                "financial"
             ]
         },
         "TokenDefinitionMain": {
@@ -10507,12 +10527,12 @@
             "reason": "unpublished_support_model",
             "operations": [],
             "guarded": false,
-            "module": "financial",
+            "module": "core",
             "menu": null,
             "sourcePath": "model/UnitContract.php",
             "sourceHash": "c6bb35696166d3b725312da3890beeb1fee57e3d26d9a3be6186af138ccfba3c",
             "modules": [
-                "financial"
+                "core"
             ]
         },
         "UnitNotice": {
@@ -11207,7 +11227,8 @@
             "sourcePath": "model/WorkTokenClientContract.php",
             "sourceHash": "761560d8a81521beb51a07505bd61830f0e6019a8f46970b47837aaaf2846e0b",
             "modules": [
-                "financial"
+                "financial",
+                "environment"
             ]
         },
         "WorkTokenClientContractWork": {
@@ -11222,7 +11243,8 @@
             "sourcePath": "model/WorkTokenClientContractWork.php",
             "sourceHash": "c198145f28247a6e06f96c053c079986af51cad3c331ad29d9cf7fe9102e1bcf",
             "modules": [
-                "financial"
+                "financial",
+                "environment"
             ]
         },
         "WorkTokenMarkup": {
@@ -11336,5 +11358,5 @@
             ]
         }
     },
-    "manifestHash": "1272220c14e87f92ff26ec9febbb8ea008fc00fe0f7a8e95bca666e2106bf64b"
+    "manifestHash": "d99e3265fcbfc15867ae8a392f237a6ff57fe6e0fc2458f19df9b9056e9bcf0d"
 }

@@ -34,7 +34,7 @@ test('every async module publishes a result schema without worker filesystem fie
     'echo json_encode($items,JSON_THROW_ON_ERROR);'
   ].join('');
   const actions = JSON.parse(php(script));
-  assert.equal(Object.keys(actions).length, 25);
+  assert.equal(Object.keys(actions).length, 27);
   assert.deepEqual(Object.entries(actions).filter(([, schemas]) => reservedSchemaFields(schemas.internal).length).map(([id]) => id), [
     'tools.document.extract', 'export.start', 'hr.leave.calendar.export'
   ]);

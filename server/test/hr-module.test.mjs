@@ -33,7 +33,7 @@ test('HR server pack owns its semantic actions and exhaustive native handlers wi
   assert.deepEqual(hr.claims.jobs, ['hr.leave.calendar.export']);
   assert.deepEqual(hr.claims.classes, HR_CLASSES);
   assert.equal(HR_ACTIONS.length, 16);
-  assert.equal(HR_HANDLERS.length, 11);
+  assert.equal(HR_HANDLERS.length, 16);
   assert.deepEqual(hr.claims.tools, []);
   assert.equal(new Set(HR_ACTIONS).size, HR_ACTIONS.length);
   assert.equal(new Set(HR_HANDLERS).size, HR_HANDLERS.length);

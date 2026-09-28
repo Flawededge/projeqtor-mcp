@@ -17,8 +17,9 @@ test('Core owns the requested session, joblist, legal notice, bulk-update and su
   assert.equal(core.id, 'core');
   assert.deepEqual(core.dependencies, []);
   assert.deepEqual(core.claims.actions, CORE_ACTIONS);
-  assert.equal(CORE_ACTIONS.length, 9);
+  assert.equal(CORE_ACTIONS.length, 10);
   for (const action of [
+    'core.reference.rebuild',
     'user.session.terminate', 'user.session.login', 'core.joblist.update',
     'user.legal_notice.accept', 'core.object.bulk_update', 'core.subtask.manage',
     'user.legal_notice.view'
@@ -46,9 +47,9 @@ test('Core action contracts are closed, result-typed, actor-idempotent and trans
     assert.equal(action.idempotency.scope, 'actor', id);
     assert.equal(action.idempotency.sameBodyReturnsOriginal, true, id);
     assert.equal(action.idempotency.conflictOnDifferentBody, true, id);
-    assert.ok(['atomic', 'best_effort'].includes(action.transaction), id);
-    assert.equal(action.retryPolicy, 'never', id);
-    if (['destructive', 'external'].includes(action.risk)) {
+    assert.ok(['atomic', 'best_effort', 'worker'].includes(action.transaction), id);
+    assert.ok(['never', 'recovery_required'].includes(action.retryPolicy), id);
+    if (['destructive', 'administrative', 'external'].includes(action.risk)) {
       assert.equal(action.confirmationRequired, true, id);
       assert.equal(typeof action.preview, 'string', id);
     } else {

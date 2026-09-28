@@ -21,17 +21,17 @@ The bearer token is stored only as a SHA-256 digest. The MCP server and bridge s
 
 ## Current interface
 
-Version `2.0.0-beta.3` hardens the policy-controlled ProjeQtOr 13.1 object engine with reproducible coverage inventories, consistent cursors, durable idempotency, and recoverable worker jobs.
+Version `2.0.0-beta.4` splits full-control coverage into Core plus twelve independently owned module packs for ProjeQtOr 13.1.
 
-- Discovery: identity, capabilities, installed class policy, exact schemas, and reference values.
+- Discovery: identity, capabilities, module/action ownership, installed class policy, exact schemas, reference values, and native-handler coverage.
 - Query: database-filtered keyset pagination and History-aware changes with tombstones.
 - Mutation: validation and atomic or best-effort operation batches of up to 200 records.
 - Guarded changes: actor-bound, expiring previews for deletion, security, configuration, Cron, mail, and comparable side effects.
-- Actions: 20 registered workflows covering copy, transitions, snapshots, planning, baselines, import/export/report, attachments, reset mail, cleanup, and Cron.
+- Actions: 212 typed workflows across Planning, Ticketing, Scrum, Follow-up, Steering, Financial, Products, HR, Environment, Tools, Reports, Configuration, and Core.
 - Jobs: durable per-user queue, progress, cooperative cancellation, and expiring result artifacts.
-- Resources: permission-checked attachments, document versions, and job results.
+- Resources: permission-checked attachments, document versions, and typed job results including PDF, image, CSV, XLSX, ZIP, JSON, and NDJSON artifacts.
 
-All 13 beta.1 tools remain as compatibility wrappers, for a total of 31 tools. Every one of the 640 installed `SqlElement` subclasses and all 797 installed PHP entrypoints are classified; unknown or source-changed classes/handlers fail readiness, and the caller's native ProjeQtOr rights are applied above repository policy. The 310 module handlers deferred to Beta 4 are visible through `projeqtor_list_ui_handlers` and linked to milestone issues.
+All 31 Beta 3 tools remain available and five typed convenience tools bring the public surface to 36. The pinned inventory contains 944 PHP files, 899 HTTP entrypoints, 337 mutation candidates, and 640 installed `SqlElement` subclasses with zero unknown and zero deferred surfaces. Unknown or source-changed classes/handlers fail readiness, and the caller's native ProjeQtOr rights are applied above repository policy.
 
 See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagination behavior.
 

@@ -11,9 +11,16 @@
 - The worker remains non-root, capability-free, backend-only, and without published ports.
 - All 13 compatibility tools remain available alongside the 18 canonical tools.
 
-## Assigned to 2.0.0-beta.4
+## Implemented in 2.0.0-beta.4
 
-Beta 4 closes the 310 visible deferrals grouped in the [2.0.0-beta.4 milestone](https://github.com/Flawededge/projeqtor-mcp/milestone/1):
+- Core and twelve deterministic module packs own 212 typed actions without expanding beyond the planned 36-tool surface.
+- Token-aware coverage now inventories 944 PHP files, 899 HTTP entrypoints, 337 mutation candidates, and all 640 installed classes.
+- Every installed surface is classified with zero unknown and zero deferred handlers.
+- Native report rendering, guarded administration, canonical job artifacts, and the internal-only disposable acceptance harness are included.
+
+## Completed module milestone
+
+Beta 4 closes the former 310 visible deferrals grouped in the [2.0.0-beta.4 milestone](https://github.com/Flawededge/projeqtor-mcp/milestone/1):
 
 1. [Planning, Follow-up and Environment](https://github.com/Flawededge/projeqtor-mcp/issues/2) — work submission/validation, calendars, leave, capacity, and resource actions.
 2. [Ticketing and Scrum](https://github.com/Flawededge/projeqtor-mcp/issues/3) — SLA/escalation, backlog ordering, sprint lifecycle, points, and agile calculations.
@@ -21,7 +28,7 @@ Beta 4 closes the 310 visible deferrals grouped in the [2.0.0-beta.4 milestone](
 4. [Financial and Products](https://github.com/Flawededge/projeqtor-mcp/issues/5) — expenses, billing, procurement, budgets, product/version lifecycle, composition, and compatibility.
 5. [HR, Tools and Configuration](https://github.com/Flawededge/projeqtor-mcp/issues/6) — HR/absence/skills, notifications, mail, automation, cloning, profiles, access rules, workflows, modules, and parameters.
 
-Beta 4 completes only when the listed key modules have zero deferred handlers. HR workflows are enabled and tested only in a disposable environment unless separately approved for a live instance.
+The listed key modules now have zero deferred handlers. Risky HR, configuration, and outbound-delivery acceptance remains confined to the disposable environment unless separately approved for the live test instance.
 
 ## Remaining before stable
 

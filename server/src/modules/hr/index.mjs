@@ -24,11 +24,16 @@ export const HR_HANDLERS = Object.freeze([
   'tool:deleteLeaveOfCalendar',
   'tool:exportLeaveCalendarOfDashboardEmployeeManager',
   'tool:moveSkillFromHierarchicalView',
+  'tool:removeCustomEarnedRulesOfEmpContractType',
   'tool:removeEmployeesManaged',
+  'tool:removeLvTypeOfEmpContractType',
   'tool:saveAbsence',
+  'tool:saveActivitySkill',
+  'tool:saveCustomEarnedRulesOfEmpContractType',
   'tool:saveEmployeesManaged',
   'tool:saveLeaveOfCalendar',
   'tool:saveLeavesSystemHabilitation',
+  'tool:saveLvTypeOfEmpContractType',
   'tool:saveResourceSkill',
   'tool:saveValidOrCancelStatusLeave'
 ]);

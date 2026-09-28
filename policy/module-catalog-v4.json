@@ -1,0 +1,3601 @@
+{
+    "catalogVersion": 4,
+    "modules": {
+        "configuration": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core"
+            ]
+        },
+        "core": {
+            "version": "4.0.0",
+            "dependencies": []
+        },
+        "environment": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration"
+            ]
+        },
+        "financial": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration",
+                "environment",
+                "products",
+                "follow_up",
+                "tools"
+            ]
+        },
+        "follow_up": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "planning",
+                "environment"
+            ]
+        },
+        "hr": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration",
+                "environment"
+            ]
+        },
+        "planning": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration",
+                "environment"
+            ]
+        },
+        "products": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration"
+            ]
+        },
+        "reports": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration",
+                "tools"
+            ]
+        },
+        "scrum": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration",
+                "environment",
+                "ticketing",
+                "products"
+            ]
+        },
+        "steering": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration",
+                "planning",
+                "tools"
+            ]
+        },
+        "ticketing": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration",
+                "environment",
+                "products"
+            ]
+        },
+        "tools": {
+            "version": "4.0.0",
+            "dependencies": [
+                "core",
+                "configuration"
+            ]
+        }
+    },
+    "actions": {
+        "attachment.upload.abort": {
+            "module": "tools",
+            "testContract": "tools.attachment.abort",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "attachment.upload.begin": {
+            "module": "tools",
+            "testContract": "tools.attachment.begin",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "attachment.upload.chunk": {
+            "module": "tools",
+            "testContract": "tools.attachment.chunk",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "attachment.upload.commit": {
+            "module": "tools",
+            "testContract": "tools.attachment.commit",
+            "mappedHandlers": [
+                "tool:saveAttachment"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "configuration.access.manage": {
+            "module": "configuration",
+            "testContract": "configuration.access.manage",
+            "mappedHandlers": [
+                "tool:saveParameter"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "configuration.admin.execute": {
+            "module": "configuration",
+            "testContract": "configuration.admin.execute",
+            "mappedHandlers": [
+                "tool:adminFunctionalities"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "configuration.consistency.check": {
+            "module": "configuration",
+            "testContract": "configuration.consistency.check",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "configuration.consistency.repair": {
+            "module": "configuration",
+            "testContract": "configuration.consistency.repair",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "configuration.deferred_updates.execute": {
+            "module": "configuration",
+            "testContract": "configuration.deferred-updates.execute",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "configuration.maintenance.run": {
+            "module": "configuration",
+            "testContract": "configuration.maintenance.run",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "configuration.module.set_state": {
+            "module": "configuration",
+            "testContract": "configuration.module.set_state",
+            "mappedHandlers": [
+                "tool:saveModuleStatus",
+                "tool:resetModuleTablesInSession"
+            ],
+            "risk": "administrative",
+            "async": true
+        },
+        "configuration.parameter.set": {
+            "module": "configuration",
+            "testContract": "configuration.parameter.set",
+            "mappedHandlers": [
+                "tool:saveUserParameter",
+                "tool:saveGlobalParameter"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "configuration.plugin_update.notify": {
+            "module": "configuration",
+            "testContract": "configuration.plugin-update.notify",
+            "mappedHandlers": [
+                "view:menuNewGuiLeft"
+            ],
+            "risk": "external",
+            "async": false
+        },
+        "configuration.profile.manage": {
+            "module": "configuration",
+            "testContract": "configuration.profile.manage",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "configuration.user.manage": {
+            "module": "configuration",
+            "testContract": "configuration.user.manage",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "configuration.view.manage": {
+            "module": "configuration",
+            "testContract": "configuration.view.manage",
+            "mappedHandlers": [
+                "tool:saveFilter",
+                "tool:saveFilterShared",
+                "tool:shareFilter",
+                "tool:removeFilter",
+                "tool:saveLayout",
+                "tool:shareLayout",
+                "tool:removeLayout",
+                "tool:moveLayoutColumn",
+                "tool:saveSelectedLayoutColumn",
+                "tool:saveValidateLayoutForOthers"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "configuration.workflow.manage": {
+            "module": "configuration",
+            "testContract": "configuration.workflow.manage",
+            "mappedHandlers": [
+                "tool:saveWorkflowParameter",
+                "tool:saveWorkflowProfileParameter"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "core.joblist.update": {
+            "module": "core",
+            "testContract": "core.joblist.update",
+            "mappedHandlers": [
+                "tool:saveJoblist"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "core.object.bulk_update": {
+            "module": "core",
+            "testContract": "core.object.bulk-update",
+            "mappedHandlers": [
+                "tool:saveObjectMultiple"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "core.reference.rebuild": {
+            "module": "core",
+            "testContract": "core.reference.rebuild",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": true
+        },
+        "core.subtask.manage": {
+            "module": "core",
+            "testContract": "core.subtask.manage",
+            "mappedHandlers": [
+                "tool:saveSubTask",
+                "tool:saveSubTaskOrder"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "cron.check": {
+            "module": "configuration",
+            "testContract": "configuration.cron.check",
+            "mappedHandlers": [
+                "tool:cronCheck"
+            ],
+            "risk": "read",
+            "async": false
+        },
+        "cron.configure": {
+            "module": "configuration",
+            "testContract": "configuration.cron.configure",
+            "mappedHandlers": [
+                "tool:cronExecutionStandard"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "cron.restart": {
+            "module": "configuration",
+            "testContract": "configuration.cron.restart",
+            "mappedHandlers": [
+                "tool:cronRelaunch",
+                "tool:cronRun"
+            ],
+            "risk": "administrative",
+            "async": true
+        },
+        "cron.start": {
+            "module": "configuration",
+            "testContract": "configuration.cron.start",
+            "mappedHandlers": [
+                "tool:cronActivation"
+            ],
+            "risk": "administrative",
+            "async": true
+        },
+        "cron.stop": {
+            "module": "configuration",
+            "testContract": "configuration.cron.stop",
+            "mappedHandlers": [
+                "tool:cronStop"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.calendar.bank_holidays.apply": {
+            "module": "environment",
+            "testContract": "environment.calendar.bank-holidays",
+            "mappedHandlers": [
+                "tool:addGenericBankOffDaysToCalendar"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.calendar.update": {
+            "module": "environment",
+            "testContract": "environment.calendar.update",
+            "mappedHandlers": [
+                "tool:saveCalendar"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.capacity.update": {
+            "module": "environment",
+            "testContract": "environment.capacity.update",
+            "mappedHandlers": [
+                "tool:saveResourceCapacity",
+                "tool:removeResourceCapacity"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.client_relationship.promote": {
+            "module": "environment",
+            "testContract": "environment.client_relationship.promote",
+            "mappedHandlers": [
+                "tool:switchOtherClient"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "environment.contact.manage": {
+            "module": "environment",
+            "testContract": "environment.contact.manage",
+            "mappedHandlers": [
+                "tool:saveContact",
+                "tool:removeContact"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.cost.apply_role_defaults": {
+            "module": "environment",
+            "testContract": "environment.cost.role-defaults",
+            "mappedHandlers": [
+                "tool:updateResourceCost"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.cost.update": {
+            "module": "environment",
+            "testContract": "environment.cost.update",
+            "mappedHandlers": [
+                "tool:saveResourceCost",
+                "tool:removeResourceCost"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.incompatibility.update": {
+            "module": "environment",
+            "testContract": "environment.incompatibility.update",
+            "mappedHandlers": [
+                "tool:saveResourceIncompatible"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.intervention.capacity.update": {
+            "module": "environment",
+            "testContract": "environment.intervention.capacity",
+            "mappedHandlers": [
+                "tool:saveInterventionCapacity"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "environment.intervention.schedule": {
+            "module": "environment",
+            "testContract": "environment.intervention.schedule",
+            "mappedHandlers": [
+                "tool:selectInterventionDate"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "environment.organization.manage": {
+            "module": "environment",
+            "testContract": "environment.organization.manage",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.prospect.convert": {
+            "module": "environment",
+            "testContract": "environment.prospect.convert",
+            "mappedHandlers": [
+                "tool:saveProspectTransform"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.prospect.event.manage": {
+            "module": "environment",
+            "testContract": "environment.prospect.event.manage",
+            "mappedHandlers": [
+                "tool:saveProspectEvent"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "environment.resource.manage": {
+            "module": "environment",
+            "testContract": "environment.resource.manage",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.support.update": {
+            "module": "environment",
+            "testContract": "environment.support.update",
+            "mappedHandlers": [
+                "tool:saveResourceSupport"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.surbooking.update": {
+            "module": "environment",
+            "testContract": "environment.surbooking.update",
+            "mappedHandlers": [
+                "tool:saveResourceSurbooking",
+                "tool:removeResourceSurbooking"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "environment.team.manage": {
+            "module": "environment",
+            "testContract": "environment.team.manage",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "export.start": {
+            "module": "tools",
+            "testContract": "tools.export.start",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": true
+        },
+        "financial.abacus.apply_to_project": {
+            "module": "financial",
+            "testContract": "financial.abacus.apply",
+            "mappedHandlers": [
+                "tool:saveAbacusAffectations",
+                "tool:saveAbacusAssignments"
+            ],
+            "risk": "destructive",
+            "async": true
+        },
+        "financial.abacus.manage": {
+            "module": "financial",
+            "testContract": "financial.abacus.manage",
+            "mappedHandlers": [
+                "tool:saveAbacusDefinition",
+                "tool:saveAbacusLine",
+                "tool:saveAbacusPhase",
+                "tool:saveAbacusProjectLine",
+                "tool:saveAbacusable"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.bill_line.manage": {
+            "module": "financial",
+            "testContract": "financial.bill-line.manage",
+            "mappedHandlers": [
+                "tool:saveBillLine",
+                "tool:removeBillLine"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.billing.generate": {
+            "module": "financial",
+            "testContract": "financial.billing.generate",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.budget.move": {
+            "module": "financial",
+            "testContract": "financial.budget.move",
+            "mappedHandlers": [
+                "tool:moveBudgetFromHierarchicalView"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.budget.update": {
+            "module": "financial",
+            "testContract": "financial.budget.update",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.expense.submit": {
+            "module": "financial",
+            "testContract": "financial.expense.submit",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.expense_detail.manage": {
+            "module": "financial",
+            "testContract": "financial.expense-detail.manage",
+            "mappedHandlers": [
+                "tool:saveExpenseDetail",
+                "tool:removeExpenseDetail"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.facturx.import": {
+            "module": "financial",
+            "testContract": "financial.factur-x.import",
+            "mappedHandlers": [
+                "tool:importFacturX"
+            ],
+            "risk": "external",
+            "async": true
+        },
+        "financial.organization_budget.manage": {
+            "module": "financial",
+            "testContract": "financial.organization-budget.manage",
+            "mappedHandlers": [
+                "tool:saveOrganizationBudgetElement",
+                "tool:closeUncloseOrganizationBudgetElement",
+                "tool:removeOrganizationBudgetElement"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.provider_term.manage": {
+            "module": "financial",
+            "testContract": "financial.provider-term.manage",
+            "mappedHandlers": [
+                "tool:saveProviderTerm",
+                "tool:saveProviderTermFromProviderBill",
+                "tool:removeProviderTerm"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.tender.manage": {
+            "module": "financial",
+            "testContract": "financial.tender.manage",
+            "mappedHandlers": [
+                "tool:saveTenderSubmission",
+                "tool:removeTenderSubmission"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.tender_criteria.manage": {
+            "module": "financial",
+            "testContract": "financial.tender-criteria.manage",
+            "mappedHandlers": [
+                "tool:saveTenderEvaluationCriteria",
+                "tool:removeTenderEvaluationCriteria"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.work_command.accept": {
+            "module": "financial",
+            "testContract": "financial.work-command.accept",
+            "mappedHandlers": [
+                "tool:saveAcceptedWorkCommand",
+                "tool:removeAcceptedWorkCommand"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.work_command.bill": {
+            "module": "financial",
+            "testContract": "financial.work-command.bill",
+            "mappedHandlers": [
+                "tool:saveBilledWorkCommand",
+                "tool:removeBilledWorkCommand"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.work_command.manage": {
+            "module": "financial",
+            "testContract": "financial.work-command.manage",
+            "mappedHandlers": [
+                "tool:saveWorkCommand",
+                "tool:saveParentWorkCommand",
+                "tool:removeWorkCommand"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.work_token_contract.manage": {
+            "module": "financial",
+            "testContract": "financial.work-token-contract.manage",
+            "mappedHandlers": [
+                "tool:saveWorkTokenClientContract"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.work_token_markup.manage": {
+            "module": "financial",
+            "testContract": "financial.work-token-markup.manage",
+            "mappedHandlers": [
+                "tool:saveWorkTokenMarkup"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.work_unit.manage": {
+            "module": "financial",
+            "testContract": "financial.work-unit.manage",
+            "mappedHandlers": [
+                "tool:saveWorkUnit",
+                "tool:removeWorkUnit"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "financial.work_unit_phase.manage": {
+            "module": "financial",
+            "testContract": "financial.work-unit-phase.manage",
+            "mappedHandlers": [
+                "tool:saveWorkUnitCatalogPhase",
+                "tool:removeWorkUnitCatalogPhase"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "follow_up.comment.add": {
+            "module": "follow_up",
+            "testContract": "follow-up.comment",
+            "mappedHandlers": [
+                "tool:dynamicDialogCommentImputation"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "follow_up.dispatch_work.apply": {
+            "module": "follow_up",
+            "testContract": "follow-up.dispatch-work",
+            "mappedHandlers": [
+                "tool:dynamicDialogDispatchWork",
+                "tool:saveDispatchWork"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "follow_up.imputation_alert.generate": {
+            "module": "follow_up",
+            "testContract": "follow-up.imputation-alert",
+            "mappedHandlers": [
+                "tool:generateImputationAlert"
+            ],
+            "risk": "external",
+            "async": true
+        },
+        "follow_up.period.submit": {
+            "module": "follow_up",
+            "testContract": "follow-up.period-submit",
+            "mappedHandlers": [
+                "tool:submitWorkPeriod"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "follow_up.period.validate": {
+            "module": "follow_up",
+            "testContract": "follow-up.period-validation",
+            "mappedHandlers": [
+                "tool:saveImputationValidation"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "follow_up.remaining_work.update": {
+            "module": "follow_up",
+            "testContract": "follow-up.remaining-work",
+            "mappedHandlers": [
+                "tool:saveLeftWork"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "follow_up.timer.control": {
+            "module": "follow_up",
+            "testContract": "follow-up.timer",
+            "mappedHandlers": [
+                "tool:startStopWork"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "follow_up.timesheet.result": {
+            "module": "follow_up",
+            "testContract": "follow-up.timesheet-result",
+            "mappedHandlers": [
+                "tool:timesheetAddResult"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "follow_up.work.delete": {
+            "module": "follow_up",
+            "testContract": "follow-up.work-delete",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "follow_up.work.record": {
+            "module": "follow_up",
+            "testContract": "follow-up.work-record",
+            "mappedHandlers": [
+                "tool:saveImputation",
+                "tool:saveWorkDetailImputation"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "hr.absence.record": {
+            "module": "hr",
+            "testContract": "hr.absence.record",
+            "mappedHandlers": [
+                "tool:saveAbsence"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "hr.absence.remove": {
+            "module": "hr",
+            "testContract": "hr.absence.remove",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "hr.employee.manage": {
+            "module": "hr",
+            "testContract": "hr.employee.manage",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "hr.employee.manager.assign": {
+            "module": "hr",
+            "testContract": "hr.employee.manager.assign",
+            "mappedHandlers": [
+                "tool:addEmployeesManagedBulk",
+                "tool:saveEmployeesManaged"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "hr.employee.manager.remove": {
+            "module": "hr",
+            "testContract": "hr.employee.manager.remove",
+            "mappedHandlers": [
+                "tool:removeEmployeesManaged"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "hr.employment.contract.close": {
+            "module": "hr",
+            "testContract": "hr.employment.contract.close",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "hr.employment.contract.manage": {
+            "module": "hr",
+            "testContract": "hr.employment.contract.manage",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "hr.leave.calendar.export": {
+            "module": "hr",
+            "testContract": "hr.leave.calendar.export",
+            "mappedHandlers": [
+                "tool:exportLeaveCalendarOfDashboardEmployeeManager"
+            ],
+            "risk": "read",
+            "async": true
+        },
+        "hr.leave.decide": {
+            "module": "hr",
+            "testContract": "hr.leave.decide",
+            "mappedHandlers": [
+                "tool:saveValidOrCancelStatusLeave"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "hr.leave.delete": {
+            "module": "hr",
+            "testContract": "hr.leave.delete",
+            "mappedHandlers": [
+                "tool:deleteLeaveOfCalendar"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "hr.leave.entitlement.adjust": {
+            "module": "hr",
+            "testContract": "hr.leave.entitlement.adjust",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "hr.leave.permissions.configure": {
+            "module": "hr",
+            "testContract": "hr.leave.permissions.configure",
+            "mappedHandlers": [
+                "tool:saveLeavesSystemHabilitation",
+                "tool:saveCustomEarnedRulesOfEmpContractType",
+                "tool:removeCustomEarnedRulesOfEmpContractType",
+                "tool:saveLvTypeOfEmpContractType",
+                "tool:removeLvTypeOfEmpContractType"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "hr.leave.submit": {
+            "module": "hr",
+            "testContract": "hr.leave.submit",
+            "mappedHandlers": [
+                "tool:saveLeaveOfCalendar"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "hr.skill.assign": {
+            "module": "hr",
+            "testContract": "hr.skill.assign",
+            "mappedHandlers": [
+                "tool:saveResourceSkill",
+                "tool:saveActivitySkill"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "hr.skill.hierarchy.move": {
+            "module": "hr",
+            "testContract": "hr.skill.hierarchy.move",
+            "mappedHandlers": [
+                "tool:moveSkillFromHierarchicalView"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "hr.skill.remove": {
+            "module": "hr",
+            "testContract": "hr.skill.remove",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "import.cleanup": {
+            "module": "tools",
+            "testContract": "tools.import.cleanup",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "import.start": {
+            "module": "tools",
+            "testContract": "tools.import.start",
+            "mappedHandlers": [
+                "tool:import",
+                "view:importData"
+            ],
+            "risk": "write",
+            "async": true
+        },
+        "object.copy": {
+            "module": "core",
+            "testContract": "core.object.copy",
+            "mappedHandlers": [
+                "tool:copyObject",
+                "tool:copyObjectTo",
+                "tool:copyProjectTo"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.activity.split": {
+            "module": "planning",
+            "testContract": "planning.activity.split",
+            "mappedHandlers": [
+                "tool:splitActivity"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "planning.allocation.remove": {
+            "module": "planning",
+            "testContract": "planning.allocation.remove",
+            "mappedHandlers": [
+                "tool:removeAffectation",
+                "tool:removeAffectationResourceTeam"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "planning.allocation.upsert": {
+            "module": "planning",
+            "testContract": "planning.allocation.upsert",
+            "mappedHandlers": [
+                "tool:saveAffectation",
+                "tool:saveAffectationReplacement",
+                "tool:saveAffectationResourceTeam"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.assignment.automatic": {
+            "module": "planning",
+            "testContract": "planning.assignment.automatic",
+            "mappedHandlers": [
+                "tool:saveAutomaticAssignment"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.assignment.remove": {
+            "module": "planning",
+            "testContract": "planning.assignment.remove",
+            "mappedHandlers": [
+                "tool:removeAssignment",
+                "tool:purgeAssignment",
+                "tool:resetAssignment"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "planning.assignment.upsert": {
+            "module": "planning",
+            "testContract": "planning.assignment.upsert",
+            "mappedHandlers": [
+                "tool:saveAssignment",
+                "tool:saveSwitchAssignment"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.baseline.create": {
+            "module": "planning",
+            "testContract": "planning.baseline.create",
+            "mappedHandlers": [
+                "tool:savePlanningBaseline"
+            ],
+            "risk": "write",
+            "async": true
+        },
+        "planning.baseline.delete": {
+            "module": "planning",
+            "testContract": "planning.baseline.delete",
+            "mappedHandlers": [
+                "tool:removePlanningBaseline"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "planning.calculate": {
+            "module": "planning",
+            "testContract": "planning.calculate",
+            "mappedHandlers": [
+                "tool:plan"
+            ],
+            "risk": "write",
+            "async": true
+        },
+        "planning.critical_resources.evaluate": {
+            "module": "planning",
+            "testContract": "planning.critical_resources.evaluate",
+            "mappedHandlers": [
+                "tool:refreshCriticalResources",
+                "view:criticalResourcesList"
+            ],
+            "risk": "write",
+            "async": true
+        },
+        "planning.dependency.remove": {
+            "module": "planning",
+            "testContract": "planning.dependency.remove",
+            "mappedHandlers": [
+                "tool:removeDependency"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "planning.dependency.upsert": {
+            "module": "planning",
+            "testContract": "planning.dependency.upsert",
+            "mappedHandlers": [
+                "tool:saveDependency",
+                "tool:saveDependencyDnd",
+                "tool:saveDependencyRightClick"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.diagnostics": {
+            "module": "planning",
+            "testContract": "planning.diagnostics",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "planning.element.phase": {
+            "module": "planning",
+            "testContract": "planning.element.phase",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "planning.element.resize": {
+            "module": "planning",
+            "testContract": "planning.element.resize",
+            "mappedHandlers": [
+                "tool:savePlanningElementAfterResize"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.grid.inline_edit": {
+            "module": "planning",
+            "testContract": "planning.grid.inline_edit",
+            "mappedHandlers": [
+                "tool:saveEditRowObject",
+                "tool:recalculatePlanningSaveDates"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.integrity.repair": {
+            "module": "planning",
+            "testContract": "planning.integrity.repair",
+            "mappedHandlers": [
+                "tool:jsonPlanning"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "planning.scenario.configure": {
+            "module": "planning",
+            "testContract": "planning.scenario.configure",
+            "mappedHandlers": [
+                "tool:scenarioPoolDate",
+                "tool:scenarioPoolSwitch",
+                "tool:scenarioProjectSwitch"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "planning.selection.delete": {
+            "module": "planning",
+            "testContract": "planning.selection.delete",
+            "mappedHandlers": [
+                "tool:deletePlanningSelection"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "planning.wbs.renumber": {
+            "module": "planning",
+            "testContract": "planning.wbs.renumber",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": true
+        },
+        "products.asset.composition": {
+            "module": "products",
+            "testContract": "products.asset.composition",
+            "mappedHandlers": [
+                "tool:saveAssetComposition",
+                "tool:removeAssetComposition"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "products.asset.update": {
+            "module": "products",
+            "testContract": "products.asset.update",
+            "mappedHandlers": [
+                "tool:saveProductAsset",
+                "tool:removeProductVersionStructureAsset"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.business_feature.update": {
+            "module": "products",
+            "testContract": "products.business-feature.update",
+            "mappedHandlers": [
+                "tool:saveBusinessFeature",
+                "tool:removeBusinessFeature"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.compatibility.update": {
+            "module": "products",
+            "testContract": "products.compatibility.update",
+            "mappedHandlers": [
+                "tool:saveVersionCompatibility",
+                "tool:removeVersionCompatibility"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.component_filter.apply": {
+            "module": "products",
+            "testContract": "products.component-filter.apply",
+            "mappedHandlers": [
+                "tool:dynamicDialogProductVersionStructure",
+                "tool:filterComponentType"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "products.composition.update": {
+            "module": "products",
+            "testContract": "products.composition.update",
+            "mappedHandlers": [
+                "tool:saveProductStructure",
+                "tool:removeProductStructure"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.context.update": {
+            "module": "products",
+            "testContract": "products.context.update",
+            "mappedHandlers": [
+                "tool:saveProductContext",
+                "tool:removeProductContext"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.hierarchy.manage": {
+            "module": "products",
+            "testContract": "products.hierarchy.manage",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.language.update": {
+            "module": "products",
+            "testContract": "products.language.update",
+            "mappedHandlers": [
+                "tool:saveProductLanguage",
+                "tool:removeProductLanguage"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.other_version.update": {
+            "module": "products",
+            "testContract": "products.other-version.update",
+            "mappedHandlers": [
+                "tool:saveOtherVersion",
+                "tool:removeOtherVersion",
+                "tool:switchOtherVersion"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.project_links.update": {
+            "module": "products",
+            "testContract": "products.project-links.update",
+            "mappedHandlers": [
+                "tool:saveProductProject",
+                "tool:removeProductProject",
+                "tool:saveVersionProject",
+                "tool:removeVersionProject"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.restriction.update": {
+            "module": "products",
+            "testContract": "products.restriction.update",
+            "mappedHandlers": [
+                "tool:dynamicDialogRestrictProductList",
+                "tool:saveRestrictProductList"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "products.version.transition": {
+            "module": "products",
+            "testContract": "products.version.transition",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "products.version_composition.update": {
+            "module": "products",
+            "testContract": "products.version-composition.update",
+            "mappedHandlers": [
+                "tool:saveProductVersionStructure",
+                "tool:removeProductVersionStructure"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "products.version_composition.upgrade": {
+            "module": "products",
+            "testContract": "products.version-composition.upgrade",
+            "mappedHandlers": [
+                "tool:upgradeProductVersionStructure"
+            ],
+            "risk": "destructive",
+            "async": true
+        },
+        "project.snapshot": {
+            "module": "planning",
+            "testContract": "planning.project.snapshot",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": true
+        },
+        "report.start": {
+            "module": "reports",
+            "testContract": "reports.render.legacy",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": true
+        },
+        "reports.catalog.read": {
+            "module": "reports",
+            "testContract": "reports.catalog.read",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "reports.dashboard.configure": {
+            "module": "reports",
+            "testContract": "reports.dashboard.configure",
+            "mappedHandlers": [
+                "tool:saveCustomTodayMenuOrder",
+                "tool:saveTodayParameters",
+                "tool:saveTodayParametersSwitch"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "reports.dashboard.pin": {
+            "module": "reports",
+            "testContract": "reports.dashboard.pin",
+            "mappedHandlers": [
+                "tool:saveReportInToday"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "reports.dashboard.read": {
+            "module": "reports",
+            "testContract": "reports.dashboard.read",
+            "mappedHandlers": [
+                "tool:getParamDashboard",
+                "tool:jsonProjectDashboard",
+                "tool:jsonProjectDashboardDetail"
+            ],
+            "risk": "read",
+            "async": false
+        },
+        "reports.dashboard.unpin": {
+            "module": "reports",
+            "testContract": "reports.dashboard.unpin",
+            "mappedHandlers": [
+                "tool:saveTodayDeleteReport"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "reports.delivery.send": {
+            "module": "reports",
+            "testContract": "reports.delivery.send",
+            "mappedHandlers": [],
+            "risk": "external",
+            "async": true
+        },
+        "reports.favorite.delete": {
+            "module": "reports",
+            "testContract": "reports.favorite.delete",
+            "mappedHandlers": [
+                "tool:removeFavoriteReport"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "reports.favorite.manage": {
+            "module": "reports",
+            "testContract": "reports.favorite.manage",
+            "mappedHandlers": [
+                "tool:saveReportAsFavorite",
+                "tool:saveReportFavoriteOrder"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "reports.layout.delete": {
+            "module": "reports",
+            "testContract": "reports.layout.delete",
+            "mappedHandlers": [
+                "tool:removeReportLayout"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "reports.layout.manage": {
+            "module": "reports",
+            "testContract": "reports.layout.manage",
+            "mappedHandlers": [
+                "tool:backupReportLayout",
+                "tool:saveReportLayout",
+                "tool:moveReportLayoutColumn",
+                "tool:shareReportLayout"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "reports.render": {
+            "module": "reports",
+            "testContract": "reports.render",
+            "mappedHandlers": [
+                "view:print"
+            ],
+            "risk": "read",
+            "async": true
+        },
+        "reports.schedule": {
+            "module": "reports",
+            "testContract": "reports.schedule",
+            "mappedHandlers": [
+                "tool:saveAutoSendReport"
+            ],
+            "risk": "external",
+            "async": false
+        },
+        "scrum.backlog.prioritize": {
+            "module": "scrum",
+            "testContract": "scrum.backlog.prioritize",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.kanban.board.get": {
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.get",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "scrum.kanban.board.manage": {
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.manage",
+            "mappedHandlers": [
+                "tool:kanbanAdd",
+                "tool:kanbanCopy",
+                "tool:kanbanDel",
+                "tool:kanbanEditName",
+                "tool:kanbanFunction",
+                "tool:kanbanShare"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "scrum.kanban.card.move": {
+            "module": "scrum",
+            "testContract": "scrum.kanban.card.move",
+            "mappedHandlers": [
+                "tool:backlogCheckRequiredField",
+                "tool:dynamicDialogKanbanUpdate",
+                "tool:kanbanScrumSimplifiedService",
+                "tool:kanbanUpdate"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.kanban.columns.replace": {
+            "module": "scrum",
+            "testContract": "scrum.kanban.columns.replace",
+            "mappedHandlers": [
+                "tool:kanbanColumnAdd",
+                "tool:kanbanColumnEdit",
+                "tool:saveKanbanColumnManagment"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "scrum.kanban.preferences": {
+            "module": "scrum",
+            "testContract": "scrum.kanban.preferences",
+            "mappedHandlers": [
+                "view:kanbanView",
+                "view:kanbanViewMain"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.poker.item.manage": {
+            "module": "scrum",
+            "testContract": "scrum.poker.item.manage",
+            "mappedHandlers": [
+                "tool:removePokerItem",
+                "tool:savePokerItem"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "scrum.poker.item.state": {
+            "module": "scrum",
+            "testContract": "scrum.poker.item.state",
+            "mappedHandlers": [
+                "tool:openPokerItemVote"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.poker.session.lifecycle": {
+            "module": "scrum",
+            "testContract": "scrum.poker.session.lifecycle",
+            "mappedHandlers": [
+                "tool:startPausePokerSession",
+                "tool:startPokerSession"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.poker.state.get": {
+            "module": "scrum",
+            "testContract": "scrum.poker.state.get",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "scrum.poker.vote.cast": {
+            "module": "scrum",
+            "testContract": "scrum.poker.vote.cast",
+            "mappedHandlers": [
+                "tool:voteToPokerItem"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.poker.vote.visibility": {
+            "module": "scrum",
+            "testContract": "scrum.poker.vote.visibility",
+            "mappedHandlers": [
+                "tool:flipPokerVote"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "scrum.sprint.lifecycle": {
+            "module": "scrum",
+            "testContract": "scrum.sprint.lifecycle",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.sprint.manage": {
+            "module": "scrum",
+            "testContract": "scrum.sprint.manage",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "scrum.story.manage": {
+            "module": "scrum",
+            "testContract": "scrum.story.manage",
+            "mappedHandlers": [
+                "tool:saveUserStory"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.approval.decide": {
+            "module": "steering",
+            "testContract": "steering.approval.decide",
+            "mappedHandlers": [
+                "tool:approveItem"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "steering.approver.manage": {
+            "module": "steering",
+            "testContract": "steering.approver.manage",
+            "mappedHandlers": [
+                "tool:saveApprover",
+                "tool:removeApprover"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.business.manage": {
+            "module": "steering",
+            "testContract": "steering.business.manage",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.checklist.update": {
+            "module": "steering",
+            "testContract": "steering.checklist.update",
+            "mappedHandlers": [
+                "tool:dynamicDialogChecklist",
+                "tool:saveChecklist"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.checklist_definition.manage": {
+            "module": "steering",
+            "testContract": "steering.checklist-definition.manage",
+            "mappedHandlers": [
+                "tool:saveChecklistDefinitionLine",
+                "tool:removeChecklistDefinitionLine"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.consolidation.validate": {
+            "module": "steering",
+            "testContract": "steering.consolidation.validate",
+            "mappedHandlers": [
+                "tool:saveConsolidationValidation"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "steering.kpi_threshold.manage": {
+            "module": "steering",
+            "testContract": "steering.kpi-threshold.manage",
+            "mappedHandlers": [
+                "tool:saveKpiThreshold",
+                "tool:removeKpiThreshold"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.meeting.assign_team": {
+            "module": "steering",
+            "testContract": "steering.meeting.assign-team",
+            "mappedHandlers": [
+                "tool:assignTeamForMeeting"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "steering.meeting.link": {
+            "module": "steering",
+            "testContract": "steering.meeting.link",
+            "mappedHandlers": [
+                "view:liveMeetingViewBottom"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.meeting.live_update": {
+            "module": "steering",
+            "testContract": "steering.meeting.live-update",
+            "mappedHandlers": [
+                "tool:liveMeetingUpdate",
+                "view:liveMeetingView"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "steering.raci.update": {
+            "module": "steering",
+            "testContract": "steering.raci.update",
+            "mappedHandlers": [
+                "tool:saveRaciAssignment",
+                "tool:removeRaciAssignment"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.situation.manage": {
+            "module": "steering",
+            "testContract": "steering.situation.manage",
+            "mappedHandlers": [
+                "tool:saveSituation"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "steering.state.query": {
+            "module": "steering",
+            "testContract": "steering.state.query",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "steering.test_run.execute": {
+            "module": "steering",
+            "testContract": "steering.test-run.execute",
+            "mappedHandlers": [
+                "tool:saveTestCaseRun",
+                "tool:removeTestCaseRun",
+                "tool:saveTcrData"
+            ],
+            "risk": "destructive",
+            "async": true
+        },
+        "steering.voting.attribution_manage": {
+            "module": "steering",
+            "testContract": "steering.voting.attribution-manage",
+            "mappedHandlers": [
+                "tool:saveVotingAttributionVote"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "steering.voting.cast": {
+            "module": "steering",
+            "testContract": "steering.voting.cast",
+            "mappedHandlers": [
+                "tool:saveAddVote",
+                "tool:saveNoteStreamVote"
+            ],
+            "risk": "external",
+            "async": true
+        },
+        "ticketing.dispatch": {
+            "module": "ticketing",
+            "testContract": "ticketing.dispatch",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "ticketing.escalate": {
+            "module": "ticketing",
+            "testContract": "ticketing.escalate",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "ticketing.sla.evaluate": {
+            "module": "ticketing",
+            "testContract": "ticketing.sla.evaluate",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "ticketing.synchronization.configure": {
+            "module": "ticketing",
+            "testContract": "ticketing.synchronization.configure",
+            "mappedHandlers": [
+                "tool:saveSynchronizationDefinition"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "ticketing.synchronization.disable": {
+            "module": "ticketing",
+            "testContract": "ticketing.synchronization.disable",
+            "mappedHandlers": [
+                "tool:saveDisableSynchronizationDefinition"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "ticketing.synchronization.inspect": {
+            "module": "ticketing",
+            "testContract": "ticketing.synchronization.inspect",
+            "mappedHandlers": [],
+            "risk": "read",
+            "async": false
+        },
+        "ticketing.synchronize": {
+            "module": "ticketing",
+            "testContract": "ticketing.synchronize",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "ticketing.ticket.manage": {
+            "module": "ticketing",
+            "testContract": "ticketing.ticket.manage",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "ticketing.transition": {
+            "module": "ticketing",
+            "testContract": "ticketing.transition",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "tools.asset.manage": {
+            "module": "tools",
+            "testContract": "tools.asset.manage",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "tools.attachment.delete": {
+            "module": "tools",
+            "testContract": "tools.attachment.delete",
+            "mappedHandlers": [
+                "tool:removeAttachment",
+                "tool:removeAttachmentSendMail"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "tools.automation.manage": {
+            "module": "tools",
+            "testContract": "tools.automation.manage",
+            "mappedHandlers": [
+                "tool:dynamicDialogWorkflowProfileParameter"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "tools.clone.schedule": {
+            "module": "tools",
+            "testContract": "tools.clone.schedule",
+            "mappedHandlers": [
+                "tool:saveDataCloning"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "tools.clone.start": {
+            "module": "tools",
+            "testContract": "tools.clone.start",
+            "mappedHandlers": [
+                "tool:copyDocumentTo"
+            ],
+            "risk": "write",
+            "async": true
+        },
+        "tools.document.extract": {
+            "module": "tools",
+            "testContract": "tools.document.extract",
+            "mappedHandlers": [
+                "tool:extractDocumentFromObject"
+            ],
+            "risk": "read",
+            "async": true
+        },
+        "tools.document.manage": {
+            "module": "tools",
+            "testContract": "tools.document.manage",
+            "mappedHandlers": [
+                "tool:documentExplorerColumnAction",
+                "tool:documentExplorerMove"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "tools.document.rights": {
+            "module": "tools",
+            "testContract": "tools.document.rights",
+            "mappedHandlers": [
+                "tool:saveDocumentRight"
+            ],
+            "risk": "administrative",
+            "async": false
+        },
+        "tools.document.version": {
+            "module": "tools",
+            "testContract": "tools.document.version",
+            "mappedHandlers": [
+                "tool:saveDocumentVersion"
+            ],
+            "risk": "write",
+            "async": true
+        },
+        "tools.document.version.delete": {
+            "module": "tools",
+            "testContract": "tools.document.version.delete",
+            "mappedHandlers": [
+                "tool:removeDocumentVersion"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "tools.image.upload.begin": {
+            "module": "tools",
+            "testContract": "tools.image.upload.begin",
+            "mappedHandlers": [],
+            "risk": "write",
+            "async": false
+        },
+        "tools.image.upload.commit": {
+            "module": "tools",
+            "testContract": "tools.image.upload.commit",
+            "mappedHandlers": [
+                "tool:uploadImage"
+            ],
+            "risk": "administrative",
+            "async": true
+        },
+        "tools.link.delete": {
+            "module": "tools",
+            "testContract": "tools.link.delete",
+            "mappedHandlers": [
+                "tool:removeLink"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "tools.link.manage": {
+            "module": "tools",
+            "testContract": "tools.link.manage",
+            "mappedHandlers": [
+                "tool:saveLink"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "tools.localization.manage": {
+            "module": "tools",
+            "testContract": "tools.localization.manage",
+            "mappedHandlers": [],
+            "risk": "administrative",
+            "async": false
+        },
+        "tools.mail.send": {
+            "module": "tools",
+            "testContract": "tools.mail.send",
+            "mappedHandlers": [
+                "tool:sendMail",
+                "tool:sendMailTest"
+            ],
+            "risk": "external",
+            "async": true
+        },
+        "tools.note.delete": {
+            "module": "tools",
+            "testContract": "tools.note.delete",
+            "mappedHandlers": [
+                "tool:removeNote"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "tools.note.manage": {
+            "module": "tools",
+            "testContract": "tools.note.manage",
+            "mappedHandlers": [
+                "tool:saveNote",
+                "tool:saveNoteStream"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "tools.notification.send": {
+            "module": "tools",
+            "testContract": "tools.notification.send",
+            "mappedHandlers": [],
+            "risk": "external",
+            "async": true
+        },
+        "tools.notification.status": {
+            "module": "tools",
+            "testContract": "tools.notification.status",
+            "mappedHandlers": [
+                "tool:changeStatusNotification",
+                "tool:readNotification",
+                "tool:readNotificationTree",
+                "view:menuNotificationRead"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "tools.notification.subscribe": {
+            "module": "tools",
+            "testContract": "tools.notification.subscribe",
+            "mappedHandlers": [
+                "tool:saveSubscription"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "tools.notification.unsubscribe": {
+            "module": "tools",
+            "testContract": "tools.notification.unsubscribe",
+            "mappedHandlers": [],
+            "risk": "destructive",
+            "async": false
+        },
+        "tools.relationship.link": {
+            "module": "tools",
+            "testContract": "tools.relationship.link",
+            "mappedHandlers": [
+                "tool:saveObjectLinkedByIdToMainObject"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "tools.relationship.unlink": {
+            "module": "tools",
+            "testContract": "tools.relationship.unlink",
+            "mappedHandlers": [
+                "tool:removeObjectLinkedByIdToMainObject"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "user.legal_notice.accept": {
+            "module": "core",
+            "testContract": "core.user.legal-notice.accept",
+            "mappedHandlers": [
+                "tool:saveMessageLegalFollowup"
+            ],
+            "risk": "external",
+            "async": false
+        },
+        "user.legal_notice.view": {
+            "module": "core",
+            "testContract": "core.user.legal-notice.view",
+            "mappedHandlers": [
+                "view:main"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "user.session.login": {
+            "module": "core",
+            "testContract": "core.user.session.login",
+            "mappedHandlers": [
+                "tool:loginCheck"
+            ],
+            "risk": "write",
+            "async": false
+        },
+        "user.session.terminate": {
+            "module": "core",
+            "testContract": "core.user.session.terminate",
+            "mappedHandlers": [
+                "tool:disconnectSession",
+                "tool:hackMessage"
+            ],
+            "risk": "destructive",
+            "async": false
+        },
+        "user.trigger_password_reset": {
+            "module": "configuration",
+            "testContract": "configuration.user.reset",
+            "mappedHandlers": [
+                "tool:sendRequestResetPassword"
+            ],
+            "risk": "external",
+            "async": false
+        },
+        "workflow.transition": {
+            "module": "core",
+            "testContract": "core.workflow.transition",
+            "mappedHandlers": [
+                "tool:changeObjectStatus"
+            ],
+            "risk": "write",
+            "async": false
+        }
+    },
+    "tests": [
+        "configuration.access.manage",
+        "configuration.admin.execute",
+        "configuration.consistency.check",
+        "configuration.consistency.repair",
+        "configuration.cron.check",
+        "configuration.cron.configure",
+        "configuration.cron.restart",
+        "configuration.cron.start",
+        "configuration.cron.stop",
+        "configuration.deferred-updates.execute",
+        "configuration.maintenance.run",
+        "configuration.module.set_state",
+        "configuration.parameter.set",
+        "configuration.plugin-update.notify",
+        "configuration.profile.manage",
+        "configuration.user.manage",
+        "configuration.user.reset",
+        "configuration.view.manage",
+        "configuration.workflow.manage",
+        "core.joblist.update",
+        "core.object.bulk-update",
+        "core.object.copy",
+        "core.reference.rebuild",
+        "core.subtask.manage",
+        "core.user.legal-notice.accept",
+        "core.user.legal-notice.view",
+        "core.user.session.login",
+        "core.user.session.terminate",
+        "core.workflow.transition",
+        "coverage.core.generic_crud",
+        "environment.calendar.bank-holidays",
+        "environment.calendar.update",
+        "environment.capacity.update",
+        "environment.client_relationship.promote",
+        "environment.contact.manage",
+        "environment.cost.role-defaults",
+        "environment.cost.update",
+        "environment.incompatibility.update",
+        "environment.intervention.capacity",
+        "environment.intervention.schedule",
+        "environment.organization.manage",
+        "environment.prospect.convert",
+        "environment.prospect.event.manage",
+        "environment.resource.manage",
+        "environment.support.update",
+        "environment.surbooking.update",
+        "environment.team.manage",
+        "financial.abacus.apply",
+        "financial.abacus.manage",
+        "financial.bill-line.manage",
+        "financial.billing.generate",
+        "financial.budget.move",
+        "financial.budget.update",
+        "financial.expense-detail.manage",
+        "financial.expense.submit",
+        "financial.factur-x.import",
+        "financial.organization-budget.manage",
+        "financial.provider-term.manage",
+        "financial.tender-criteria.manage",
+        "financial.tender.manage",
+        "financial.work-command.accept",
+        "financial.work-command.bill",
+        "financial.work-command.manage",
+        "financial.work-token-contract.manage",
+        "financial.work-token-markup.manage",
+        "financial.work-unit-phase.manage",
+        "financial.work-unit.manage",
+        "follow-up.comment",
+        "follow-up.dispatch-work",
+        "follow-up.imputation-alert",
+        "follow-up.period-submit",
+        "follow-up.period-validation",
+        "follow-up.remaining-work",
+        "follow-up.timer",
+        "follow-up.timesheet-result",
+        "follow-up.work-delete",
+        "follow-up.work-record",
+        "hr.absence.record",
+        "hr.absence.remove",
+        "hr.employee.manage",
+        "hr.employee.manager.assign",
+        "hr.employee.manager.remove",
+        "hr.employment.contract.close",
+        "hr.employment.contract.manage",
+        "hr.leave.calendar.export",
+        "hr.leave.decide",
+        "hr.leave.delete",
+        "hr.leave.entitlement.adjust",
+        "hr.leave.permissions.configure",
+        "hr.leave.submit",
+        "hr.skill.assign",
+        "hr.skill.hierarchy.move",
+        "hr.skill.remove",
+        "planning.activity.split",
+        "planning.allocation.remove",
+        "planning.allocation.upsert",
+        "planning.assignment.automatic",
+        "planning.assignment.remove",
+        "planning.assignment.upsert",
+        "planning.baseline.create",
+        "planning.baseline.delete",
+        "planning.calculate",
+        "planning.critical_resources.evaluate",
+        "planning.dependency.remove",
+        "planning.dependency.upsert",
+        "planning.diagnostics",
+        "planning.element.phase",
+        "planning.element.resize",
+        "planning.grid.inline_edit",
+        "planning.integrity.repair",
+        "planning.project.snapshot",
+        "planning.scenario.configure",
+        "planning.selection.delete",
+        "planning.wbs.renumber",
+        "products.asset.composition",
+        "products.asset.update",
+        "products.business-feature.update",
+        "products.compatibility.update",
+        "products.component-filter.apply",
+        "products.composition.update",
+        "products.context.update",
+        "products.hierarchy.manage",
+        "products.language.update",
+        "products.other-version.update",
+        "products.project-links.update",
+        "products.restriction.update",
+        "products.version-composition.update",
+        "products.version-composition.upgrade",
+        "products.version.transition",
+        "reports.catalog.read",
+        "reports.dashboard.configure",
+        "reports.dashboard.pin",
+        "reports.dashboard.read",
+        "reports.dashboard.unpin",
+        "reports.delivery.send",
+        "reports.favorite.delete",
+        "reports.favorite.manage",
+        "reports.layout.delete",
+        "reports.layout.manage",
+        "reports.render",
+        "reports.render.legacy",
+        "reports.schedule",
+        "scrum.backlog.prioritize",
+        "scrum.kanban.board.get",
+        "scrum.kanban.board.manage",
+        "scrum.kanban.card.move",
+        "scrum.kanban.columns.replace",
+        "scrum.kanban.preferences",
+        "scrum.poker.item.manage",
+        "scrum.poker.item.state",
+        "scrum.poker.session.lifecycle",
+        "scrum.poker.state.get",
+        "scrum.poker.vote.cast",
+        "scrum.poker.vote.visibility",
+        "scrum.sprint.lifecycle",
+        "scrum.sprint.manage",
+        "scrum.story.manage",
+        "steering.approval.decide",
+        "steering.approver.manage",
+        "steering.business.manage",
+        "steering.checklist-definition.manage",
+        "steering.checklist.update",
+        "steering.consolidation.validate",
+        "steering.kpi-threshold.manage",
+        "steering.meeting.assign-team",
+        "steering.meeting.link",
+        "steering.meeting.live-update",
+        "steering.raci.update",
+        "steering.situation.manage",
+        "steering.state.query",
+        "steering.test-run.execute",
+        "steering.voting.attribution-manage",
+        "steering.voting.cast",
+        "ticketing.dispatch",
+        "ticketing.escalate",
+        "ticketing.sla.evaluate",
+        "ticketing.synchronization.configure",
+        "ticketing.synchronization.disable",
+        "ticketing.synchronization.inspect",
+        "ticketing.synchronize",
+        "ticketing.ticket.manage",
+        "ticketing.transition",
+        "tools.asset.manage",
+        "tools.attachment.abort",
+        "tools.attachment.begin",
+        "tools.attachment.chunk",
+        "tools.attachment.commit",
+        "tools.attachment.delete",
+        "tools.automation.manage",
+        "tools.clone.schedule",
+        "tools.clone.start",
+        "tools.document.extract",
+        "tools.document.manage",
+        "tools.document.rights",
+        "tools.document.version",
+        "tools.document.version.delete",
+        "tools.export.start",
+        "tools.image.upload.begin",
+        "tools.image.upload.commit",
+        "tools.import.cleanup",
+        "tools.import.start",
+        "tools.link.delete",
+        "tools.link.manage",
+        "tools.localization.manage",
+        "tools.mail.send",
+        "tools.note.delete",
+        "tools.note.manage",
+        "tools.notification.send",
+        "tools.notification.status",
+        "tools.notification.subscribe",
+        "tools.notification.unsubscribe",
+        "tools.relationship.link",
+        "tools.relationship.unlink"
+    ],
+    "handlers": {
+        "tool:addEmployeesManagedBulk": {
+            "action": "hr.employee.manager.assign",
+            "module": "hr",
+            "testContract": "hr.employee.manager.assign"
+        },
+        "tool:addGenericBankOffDaysToCalendar": {
+            "action": "environment.calendar.bank_holidays.apply",
+            "module": "environment",
+            "testContract": "environment.calendar.bank-holidays"
+        },
+        "tool:adminFunctionalities": {
+            "action": "configuration.admin.execute",
+            "module": "configuration",
+            "testContract": "configuration.admin.execute"
+        },
+        "tool:approveItem": {
+            "action": "steering.approval.decide",
+            "module": "steering",
+            "testContract": "steering.approval.decide"
+        },
+        "tool:assignTeamForMeeting": {
+            "action": "steering.meeting.assign_team",
+            "module": "steering",
+            "testContract": "steering.meeting.assign-team"
+        },
+        "tool:backlogCheckRequiredField": {
+            "action": "scrum.kanban.card.move",
+            "module": "scrum",
+            "testContract": "scrum.kanban.card.move"
+        },
+        "tool:backupReportLayout": {
+            "action": "reports.layout.manage",
+            "module": "reports",
+            "testContract": "reports.layout.manage"
+        },
+        "tool:changeObjectStatus": {
+            "action": "workflow.transition",
+            "module": "core",
+            "testContract": "core.workflow.transition"
+        },
+        "tool:changeStatusNotification": {
+            "action": "tools.notification.status",
+            "module": "tools",
+            "testContract": "tools.notification.status"
+        },
+        "tool:closeUncloseOrganizationBudgetElement": {
+            "action": "financial.organization_budget.manage",
+            "module": "financial",
+            "testContract": "financial.organization-budget.manage"
+        },
+        "tool:copyDocumentTo": {
+            "action": "tools.clone.start",
+            "module": "tools",
+            "testContract": "tools.clone.start"
+        },
+        "tool:copyObject": {
+            "action": "object.copy",
+            "module": "core",
+            "testContract": "core.object.copy"
+        },
+        "tool:copyObjectTo": {
+            "action": "object.copy",
+            "module": "core",
+            "testContract": "core.object.copy"
+        },
+        "tool:copyProjectTo": {
+            "action": "object.copy",
+            "module": "core",
+            "testContract": "core.object.copy"
+        },
+        "tool:cronActivation": {
+            "action": "cron.start",
+            "module": "configuration",
+            "testContract": "configuration.cron.start"
+        },
+        "tool:cronCheck": {
+            "action": "cron.check",
+            "module": "configuration",
+            "testContract": "configuration.cron.check"
+        },
+        "tool:cronExecutionStandard": {
+            "action": "cron.configure",
+            "module": "configuration",
+            "testContract": "configuration.cron.configure"
+        },
+        "tool:cronRelaunch": {
+            "action": "cron.restart",
+            "module": "configuration",
+            "testContract": "configuration.cron.restart"
+        },
+        "tool:cronRun": {
+            "action": "cron.restart",
+            "module": "configuration",
+            "testContract": "configuration.cron.restart"
+        },
+        "tool:cronStop": {
+            "action": "cron.stop",
+            "module": "configuration",
+            "testContract": "configuration.cron.stop"
+        },
+        "tool:deleteLeaveOfCalendar": {
+            "action": "hr.leave.delete",
+            "module": "hr",
+            "testContract": "hr.leave.delete"
+        },
+        "tool:deletePlanningSelection": {
+            "action": "planning.selection.delete",
+            "module": "planning",
+            "testContract": "planning.selection.delete"
+        },
+        "tool:disconnectSession": {
+            "action": "user.session.terminate",
+            "module": "core",
+            "testContract": "core.user.session.terminate"
+        },
+        "tool:documentExplorerColumnAction": {
+            "action": "tools.document.manage",
+            "module": "tools",
+            "testContract": "tools.document.manage"
+        },
+        "tool:documentExplorerMove": {
+            "action": "tools.document.manage",
+            "module": "tools",
+            "testContract": "tools.document.manage"
+        },
+        "tool:dynamicDialogChecklist": {
+            "action": "steering.checklist.update",
+            "module": "steering",
+            "testContract": "steering.checklist.update"
+        },
+        "tool:dynamicDialogCommentImputation": {
+            "action": "follow_up.comment.add",
+            "module": "follow_up",
+            "testContract": "follow-up.comment"
+        },
+        "tool:dynamicDialogDispatchWork": {
+            "action": "follow_up.dispatch_work.apply",
+            "module": "follow_up",
+            "testContract": "follow-up.dispatch-work"
+        },
+        "tool:dynamicDialogKanbanUpdate": {
+            "action": "scrum.kanban.card.move",
+            "module": "scrum",
+            "testContract": "scrum.kanban.card.move"
+        },
+        "tool:dynamicDialogProductVersionStructure": {
+            "action": "products.component_filter.apply",
+            "module": "products",
+            "testContract": "products.component-filter.apply"
+        },
+        "tool:dynamicDialogRestrictProductList": {
+            "action": "products.restriction.update",
+            "module": "products",
+            "testContract": "products.restriction.update"
+        },
+        "tool:dynamicDialogWorkflowProfileParameter": {
+            "action": "tools.automation.manage",
+            "module": "tools",
+            "testContract": "tools.automation.manage"
+        },
+        "tool:exportLeaveCalendarOfDashboardEmployeeManager": {
+            "action": "hr.leave.calendar.export",
+            "module": "hr",
+            "testContract": "hr.leave.calendar.export"
+        },
+        "tool:extractDocumentFromObject": {
+            "action": "tools.document.extract",
+            "module": "tools",
+            "testContract": "tools.document.extract"
+        },
+        "tool:filterComponentType": {
+            "action": "products.component_filter.apply",
+            "module": "products",
+            "testContract": "products.component-filter.apply"
+        },
+        "tool:flipPokerVote": {
+            "action": "scrum.poker.vote.visibility",
+            "module": "scrum",
+            "testContract": "scrum.poker.vote.visibility"
+        },
+        "tool:generateImputationAlert": {
+            "action": "follow_up.imputation_alert.generate",
+            "module": "follow_up",
+            "testContract": "follow-up.imputation-alert"
+        },
+        "tool:getParamDashboard": {
+            "action": "reports.dashboard.read",
+            "module": "reports",
+            "testContract": "reports.dashboard.read"
+        },
+        "tool:hackMessage": {
+            "action": "user.session.terminate",
+            "module": "core",
+            "testContract": "core.user.session.terminate"
+        },
+        "tool:import": {
+            "action": "import.start",
+            "module": "tools",
+            "testContract": "tools.import.start"
+        },
+        "tool:importFacturX": {
+            "action": "financial.facturx.import",
+            "module": "financial",
+            "testContract": "financial.factur-x.import"
+        },
+        "tool:jsonPlanning": {
+            "action": "planning.integrity.repair",
+            "module": "planning",
+            "testContract": "planning.integrity.repair"
+        },
+        "tool:jsonProjectDashboard": {
+            "action": "reports.dashboard.read",
+            "module": "reports",
+            "testContract": "reports.dashboard.read"
+        },
+        "tool:jsonProjectDashboardDetail": {
+            "action": "reports.dashboard.read",
+            "module": "reports",
+            "testContract": "reports.dashboard.read"
+        },
+        "tool:kanbanAdd": {
+            "action": "scrum.kanban.board.manage",
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.manage"
+        },
+        "tool:kanbanColumnAdd": {
+            "action": "scrum.kanban.columns.replace",
+            "module": "scrum",
+            "testContract": "scrum.kanban.columns.replace"
+        },
+        "tool:kanbanColumnEdit": {
+            "action": "scrum.kanban.columns.replace",
+            "module": "scrum",
+            "testContract": "scrum.kanban.columns.replace"
+        },
+        "tool:kanbanCopy": {
+            "action": "scrum.kanban.board.manage",
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.manage"
+        },
+        "tool:kanbanDel": {
+            "action": "scrum.kanban.board.manage",
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.manage"
+        },
+        "tool:kanbanEditName": {
+            "action": "scrum.kanban.board.manage",
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.manage"
+        },
+        "tool:kanbanFunction": {
+            "action": "scrum.kanban.board.manage",
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.manage"
+        },
+        "tool:kanbanScrumSimplifiedService": {
+            "action": "scrum.kanban.card.move",
+            "module": "scrum",
+            "testContract": "scrum.kanban.card.move"
+        },
+        "tool:kanbanShare": {
+            "action": "scrum.kanban.board.manage",
+            "module": "scrum",
+            "testContract": "scrum.kanban.board.manage"
+        },
+        "tool:kanbanUpdate": {
+            "action": "scrum.kanban.card.move",
+            "module": "scrum",
+            "testContract": "scrum.kanban.card.move"
+        },
+        "tool:liveMeetingUpdate": {
+            "action": "steering.meeting.live_update",
+            "module": "steering",
+            "testContract": "steering.meeting.live-update"
+        },
+        "tool:loginCheck": {
+            "action": "user.session.login",
+            "module": "core",
+            "testContract": "core.user.session.login"
+        },
+        "tool:moveBudgetFromHierarchicalView": {
+            "action": "financial.budget.move",
+            "module": "financial",
+            "testContract": "financial.budget.move"
+        },
+        "tool:moveLayoutColumn": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:moveReportLayoutColumn": {
+            "action": "reports.layout.manage",
+            "module": "reports",
+            "testContract": "reports.layout.manage"
+        },
+        "tool:moveSkillFromHierarchicalView": {
+            "action": "hr.skill.hierarchy.move",
+            "module": "hr",
+            "testContract": "hr.skill.hierarchy.move"
+        },
+        "tool:openPokerItemVote": {
+            "action": "scrum.poker.item.state",
+            "module": "scrum",
+            "testContract": "scrum.poker.item.state"
+        },
+        "tool:plan": {
+            "action": "planning.calculate",
+            "module": "planning",
+            "testContract": "planning.calculate"
+        },
+        "tool:purgeAssignment": {
+            "action": "planning.assignment.remove",
+            "module": "planning",
+            "testContract": "planning.assignment.remove"
+        },
+        "tool:readNotification": {
+            "action": "tools.notification.status",
+            "module": "tools",
+            "testContract": "tools.notification.status"
+        },
+        "tool:readNotificationTree": {
+            "action": "tools.notification.status",
+            "module": "tools",
+            "testContract": "tools.notification.status"
+        },
+        "tool:recalculatePlanningSaveDates": {
+            "action": "planning.grid.inline_edit",
+            "module": "planning",
+            "testContract": "planning.grid.inline_edit"
+        },
+        "tool:refreshCriticalResources": {
+            "action": "planning.critical_resources.evaluate",
+            "module": "planning",
+            "testContract": "planning.critical_resources.evaluate"
+        },
+        "tool:removeAcceptedWorkCommand": {
+            "action": "financial.work_command.accept",
+            "module": "financial",
+            "testContract": "financial.work-command.accept"
+        },
+        "tool:removeAffectation": {
+            "action": "planning.allocation.remove",
+            "module": "planning",
+            "testContract": "planning.allocation.remove"
+        },
+        "tool:removeAffectationResourceTeam": {
+            "action": "planning.allocation.remove",
+            "module": "planning",
+            "testContract": "planning.allocation.remove"
+        },
+        "tool:removeApprover": {
+            "action": "steering.approver.manage",
+            "module": "steering",
+            "testContract": "steering.approver.manage"
+        },
+        "tool:removeAssetComposition": {
+            "action": "products.asset.composition",
+            "module": "products",
+            "testContract": "products.asset.composition"
+        },
+        "tool:removeAssignment": {
+            "action": "planning.assignment.remove",
+            "module": "planning",
+            "testContract": "planning.assignment.remove"
+        },
+        "tool:removeAttachment": {
+            "action": "tools.attachment.delete",
+            "module": "tools",
+            "testContract": "tools.attachment.delete"
+        },
+        "tool:removeAttachmentSendMail": {
+            "action": "tools.attachment.delete",
+            "module": "tools",
+            "testContract": "tools.attachment.delete"
+        },
+        "tool:removeBillLine": {
+            "action": "financial.bill_line.manage",
+            "module": "financial",
+            "testContract": "financial.bill-line.manage"
+        },
+        "tool:removeBilledWorkCommand": {
+            "action": "financial.work_command.bill",
+            "module": "financial",
+            "testContract": "financial.work-command.bill"
+        },
+        "tool:removeBusinessFeature": {
+            "action": "products.business_feature.update",
+            "module": "products",
+            "testContract": "products.business-feature.update"
+        },
+        "tool:removeChecklistDefinitionLine": {
+            "action": "steering.checklist_definition.manage",
+            "module": "steering",
+            "testContract": "steering.checklist-definition.manage"
+        },
+        "tool:removeContact": {
+            "action": "environment.contact.manage",
+            "module": "environment",
+            "testContract": "environment.contact.manage"
+        },
+        "tool:removeCustomEarnedRulesOfEmpContractType": {
+            "action": "hr.leave.permissions.configure",
+            "module": "hr",
+            "testContract": "hr.leave.permissions.configure"
+        },
+        "tool:removeDependency": {
+            "action": "planning.dependency.remove",
+            "module": "planning",
+            "testContract": "planning.dependency.remove"
+        },
+        "tool:removeDocumentVersion": {
+            "action": "tools.document.version.delete",
+            "module": "tools",
+            "testContract": "tools.document.version.delete"
+        },
+        "tool:removeEmployeesManaged": {
+            "action": "hr.employee.manager.remove",
+            "module": "hr",
+            "testContract": "hr.employee.manager.remove"
+        },
+        "tool:removeExpenseDetail": {
+            "action": "financial.expense_detail.manage",
+            "module": "financial",
+            "testContract": "financial.expense-detail.manage"
+        },
+        "tool:removeFavoriteReport": {
+            "action": "reports.favorite.delete",
+            "module": "reports",
+            "testContract": "reports.favorite.delete"
+        },
+        "tool:removeFilter": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:removeKpiThreshold": {
+            "action": "steering.kpi_threshold.manage",
+            "module": "steering",
+            "testContract": "steering.kpi-threshold.manage"
+        },
+        "tool:removeLayout": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:removeLink": {
+            "action": "tools.link.delete",
+            "module": "tools",
+            "testContract": "tools.link.delete"
+        },
+        "tool:removeLvTypeOfEmpContractType": {
+            "action": "hr.leave.permissions.configure",
+            "module": "hr",
+            "testContract": "hr.leave.permissions.configure"
+        },
+        "tool:removeNote": {
+            "action": "tools.note.delete",
+            "module": "tools",
+            "testContract": "tools.note.delete"
+        },
+        "tool:removeObjectLinkedByIdToMainObject": {
+            "action": "tools.relationship.unlink",
+            "module": "tools",
+            "testContract": "tools.relationship.unlink"
+        },
+        "tool:removeOrganizationBudgetElement": {
+            "action": "financial.organization_budget.manage",
+            "module": "financial",
+            "testContract": "financial.organization-budget.manage"
+        },
+        "tool:removeOtherVersion": {
+            "action": "products.other_version.update",
+            "module": "products",
+            "testContract": "products.other-version.update"
+        },
+        "tool:removePlanningBaseline": {
+            "action": "planning.baseline.delete",
+            "module": "planning",
+            "testContract": "planning.baseline.delete"
+        },
+        "tool:removePokerItem": {
+            "action": "scrum.poker.item.manage",
+            "module": "scrum",
+            "testContract": "scrum.poker.item.manage"
+        },
+        "tool:removeProductContext": {
+            "action": "products.context.update",
+            "module": "products",
+            "testContract": "products.context.update"
+        },
+        "tool:removeProductLanguage": {
+            "action": "products.language.update",
+            "module": "products",
+            "testContract": "products.language.update"
+        },
+        "tool:removeProductProject": {
+            "action": "products.project_links.update",
+            "module": "products",
+            "testContract": "products.project-links.update"
+        },
+        "tool:removeProductStructure": {
+            "action": "products.composition.update",
+            "module": "products",
+            "testContract": "products.composition.update"
+        },
+        "tool:removeProductVersionStructure": {
+            "action": "products.version_composition.update",
+            "module": "products",
+            "testContract": "products.version-composition.update"
+        },
+        "tool:removeProductVersionStructureAsset": {
+            "action": "products.asset.update",
+            "module": "products",
+            "testContract": "products.asset.update"
+        },
+        "tool:removeProviderTerm": {
+            "action": "financial.provider_term.manage",
+            "module": "financial",
+            "testContract": "financial.provider-term.manage"
+        },
+        "tool:removeRaciAssignment": {
+            "action": "steering.raci.update",
+            "module": "steering",
+            "testContract": "steering.raci.update"
+        },
+        "tool:removeReportLayout": {
+            "action": "reports.layout.delete",
+            "module": "reports",
+            "testContract": "reports.layout.delete"
+        },
+        "tool:removeResourceCapacity": {
+            "action": "environment.capacity.update",
+            "module": "environment",
+            "testContract": "environment.capacity.update"
+        },
+        "tool:removeResourceCost": {
+            "action": "environment.cost.update",
+            "module": "environment",
+            "testContract": "environment.cost.update"
+        },
+        "tool:removeResourceSurbooking": {
+            "action": "environment.surbooking.update",
+            "module": "environment",
+            "testContract": "environment.surbooking.update"
+        },
+        "tool:removeTenderEvaluationCriteria": {
+            "action": "financial.tender_criteria.manage",
+            "module": "financial",
+            "testContract": "financial.tender-criteria.manage"
+        },
+        "tool:removeTenderSubmission": {
+            "action": "financial.tender.manage",
+            "module": "financial",
+            "testContract": "financial.tender.manage"
+        },
+        "tool:removeTestCaseRun": {
+            "action": "steering.test_run.execute",
+            "module": "steering",
+            "testContract": "steering.test-run.execute"
+        },
+        "tool:removeVersionCompatibility": {
+            "action": "products.compatibility.update",
+            "module": "products",
+            "testContract": "products.compatibility.update"
+        },
+        "tool:removeVersionProject": {
+            "action": "products.project_links.update",
+            "module": "products",
+            "testContract": "products.project-links.update"
+        },
+        "tool:removeWorkCommand": {
+            "action": "financial.work_command.manage",
+            "module": "financial",
+            "testContract": "financial.work-command.manage"
+        },
+        "tool:removeWorkUnit": {
+            "action": "financial.work_unit.manage",
+            "module": "financial",
+            "testContract": "financial.work-unit.manage"
+        },
+        "tool:removeWorkUnitCatalogPhase": {
+            "action": "financial.work_unit_phase.manage",
+            "module": "financial",
+            "testContract": "financial.work-unit-phase.manage"
+        },
+        "tool:resetAssignment": {
+            "action": "planning.assignment.remove",
+            "module": "planning",
+            "testContract": "planning.assignment.remove"
+        },
+        "tool:resetModuleTablesInSession": {
+            "action": "configuration.module.set_state",
+            "module": "configuration",
+            "testContract": "configuration.module.set_state"
+        },
+        "tool:saveAbacusAffectations": {
+            "action": "financial.abacus.apply_to_project",
+            "module": "financial",
+            "testContract": "financial.abacus.apply"
+        },
+        "tool:saveAbacusAssignments": {
+            "action": "financial.abacus.apply_to_project",
+            "module": "financial",
+            "testContract": "financial.abacus.apply"
+        },
+        "tool:saveAbacusDefinition": {
+            "action": "financial.abacus.manage",
+            "module": "financial",
+            "testContract": "financial.abacus.manage"
+        },
+        "tool:saveAbacusLine": {
+            "action": "financial.abacus.manage",
+            "module": "financial",
+            "testContract": "financial.abacus.manage"
+        },
+        "tool:saveAbacusPhase": {
+            "action": "financial.abacus.manage",
+            "module": "financial",
+            "testContract": "financial.abacus.manage"
+        },
+        "tool:saveAbacusProjectLine": {
+            "action": "financial.abacus.manage",
+            "module": "financial",
+            "testContract": "financial.abacus.manage"
+        },
+        "tool:saveAbacusable": {
+            "action": "financial.abacus.manage",
+            "module": "financial",
+            "testContract": "financial.abacus.manage"
+        },
+        "tool:saveAbsence": {
+            "action": "hr.absence.record",
+            "module": "hr",
+            "testContract": "hr.absence.record"
+        },
+        "tool:saveAcceptedWorkCommand": {
+            "action": "financial.work_command.accept",
+            "module": "financial",
+            "testContract": "financial.work-command.accept"
+        },
+        "tool:saveActivitySkill": {
+            "action": "hr.skill.assign",
+            "module": "hr",
+            "testContract": "hr.skill.assign"
+        },
+        "tool:saveAddVote": {
+            "action": "steering.voting.cast",
+            "module": "steering",
+            "testContract": "steering.voting.cast"
+        },
+        "tool:saveAffectation": {
+            "action": "planning.allocation.upsert",
+            "module": "planning",
+            "testContract": "planning.allocation.upsert"
+        },
+        "tool:saveAffectationReplacement": {
+            "action": "planning.allocation.upsert",
+            "module": "planning",
+            "testContract": "planning.allocation.upsert"
+        },
+        "tool:saveAffectationResourceTeam": {
+            "action": "planning.allocation.upsert",
+            "module": "planning",
+            "testContract": "planning.allocation.upsert"
+        },
+        "tool:saveApprover": {
+            "action": "steering.approver.manage",
+            "module": "steering",
+            "testContract": "steering.approver.manage"
+        },
+        "tool:saveAssetComposition": {
+            "action": "products.asset.composition",
+            "module": "products",
+            "testContract": "products.asset.composition"
+        },
+        "tool:saveAssignment": {
+            "action": "planning.assignment.upsert",
+            "module": "planning",
+            "testContract": "planning.assignment.upsert"
+        },
+        "tool:saveAttachment": {
+            "action": "attachment.upload.commit",
+            "module": "tools",
+            "testContract": "tools.attachment.commit"
+        },
+        "tool:saveAutoSendReport": {
+            "action": "reports.schedule",
+            "module": "reports",
+            "testContract": "reports.schedule"
+        },
+        "tool:saveAutomaticAssignment": {
+            "action": "planning.assignment.automatic",
+            "module": "planning",
+            "testContract": "planning.assignment.automatic"
+        },
+        "tool:saveBillLine": {
+            "action": "financial.bill_line.manage",
+            "module": "financial",
+            "testContract": "financial.bill-line.manage"
+        },
+        "tool:saveBilledWorkCommand": {
+            "action": "financial.work_command.bill",
+            "module": "financial",
+            "testContract": "financial.work-command.bill"
+        },
+        "tool:saveBusinessFeature": {
+            "action": "products.business_feature.update",
+            "module": "products",
+            "testContract": "products.business-feature.update"
+        },
+        "tool:saveCalendar": {
+            "action": "environment.calendar.update",
+            "module": "environment",
+            "testContract": "environment.calendar.update"
+        },
+        "tool:saveChecklist": {
+            "action": "steering.checklist.update",
+            "module": "steering",
+            "testContract": "steering.checklist.update"
+        },
+        "tool:saveChecklistDefinitionLine": {
+            "action": "steering.checklist_definition.manage",
+            "module": "steering",
+            "testContract": "steering.checklist-definition.manage"
+        },
+        "tool:saveConsolidationValidation": {
+            "action": "steering.consolidation.validate",
+            "module": "steering",
+            "testContract": "steering.consolidation.validate"
+        },
+        "tool:saveContact": {
+            "action": "environment.contact.manage",
+            "module": "environment",
+            "testContract": "environment.contact.manage"
+        },
+        "tool:saveCustomEarnedRulesOfEmpContractType": {
+            "action": "hr.leave.permissions.configure",
+            "module": "hr",
+            "testContract": "hr.leave.permissions.configure"
+        },
+        "tool:saveCustomTodayMenuOrder": {
+            "action": "reports.dashboard.configure",
+            "module": "reports",
+            "testContract": "reports.dashboard.configure"
+        },
+        "tool:saveDataCloning": {
+            "action": "tools.clone.schedule",
+            "module": "tools",
+            "testContract": "tools.clone.schedule"
+        },
+        "tool:saveDependency": {
+            "action": "planning.dependency.upsert",
+            "module": "planning",
+            "testContract": "planning.dependency.upsert"
+        },
+        "tool:saveDependencyDnd": {
+            "action": "planning.dependency.upsert",
+            "module": "planning",
+            "testContract": "planning.dependency.upsert"
+        },
+        "tool:saveDependencyRightClick": {
+            "action": "planning.dependency.upsert",
+            "module": "planning",
+            "testContract": "planning.dependency.upsert"
+        },
+        "tool:saveDisableSynchronizationDefinition": {
+            "action": "ticketing.synchronization.disable",
+            "module": "ticketing",
+            "testContract": "ticketing.synchronization.disable"
+        },
+        "tool:saveDispatchWork": {
+            "action": "follow_up.dispatch_work.apply",
+            "module": "follow_up",
+            "testContract": "follow-up.dispatch-work"
+        },
+        "tool:saveDocumentRight": {
+            "action": "tools.document.rights",
+            "module": "tools",
+            "testContract": "tools.document.rights"
+        },
+        "tool:saveDocumentVersion": {
+            "action": "tools.document.version",
+            "module": "tools",
+            "testContract": "tools.document.version"
+        },
+        "tool:saveEditRowObject": {
+            "action": "planning.grid.inline_edit",
+            "module": "planning",
+            "testContract": "planning.grid.inline_edit"
+        },
+        "tool:saveEmployeesManaged": {
+            "action": "hr.employee.manager.assign",
+            "module": "hr",
+            "testContract": "hr.employee.manager.assign"
+        },
+        "tool:saveExpenseDetail": {
+            "action": "financial.expense_detail.manage",
+            "module": "financial",
+            "testContract": "financial.expense-detail.manage"
+        },
+        "tool:saveFilter": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:saveFilterShared": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:saveGlobalParameter": {
+            "action": "configuration.parameter.set",
+            "module": "configuration",
+            "testContract": "configuration.parameter.set"
+        },
+        "tool:saveImputation": {
+            "action": "follow_up.work.record",
+            "module": "follow_up",
+            "testContract": "follow-up.work-record"
+        },
+        "tool:saveImputationValidation": {
+            "action": "follow_up.period.validate",
+            "module": "follow_up",
+            "testContract": "follow-up.period-validation"
+        },
+        "tool:saveInterventionCapacity": {
+            "action": "environment.intervention.capacity.update",
+            "module": "environment",
+            "testContract": "environment.intervention.capacity"
+        },
+        "tool:saveJoblist": {
+            "action": "core.joblist.update",
+            "module": "core",
+            "testContract": "core.joblist.update"
+        },
+        "tool:saveKanbanColumnManagment": {
+            "action": "scrum.kanban.columns.replace",
+            "module": "scrum",
+            "testContract": "scrum.kanban.columns.replace"
+        },
+        "tool:saveKpiThreshold": {
+            "action": "steering.kpi_threshold.manage",
+            "module": "steering",
+            "testContract": "steering.kpi-threshold.manage"
+        },
+        "tool:saveLayout": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:saveLeaveOfCalendar": {
+            "action": "hr.leave.submit",
+            "module": "hr",
+            "testContract": "hr.leave.submit"
+        },
+        "tool:saveLeavesSystemHabilitation": {
+            "action": "hr.leave.permissions.configure",
+            "module": "hr",
+            "testContract": "hr.leave.permissions.configure"
+        },
+        "tool:saveLeftWork": {
+            "action": "follow_up.remaining_work.update",
+            "module": "follow_up",
+            "testContract": "follow-up.remaining-work"
+        },
+        "tool:saveLink": {
+            "action": "tools.link.manage",
+            "module": "tools",
+            "testContract": "tools.link.manage"
+        },
+        "tool:saveLvTypeOfEmpContractType": {
+            "action": "hr.leave.permissions.configure",
+            "module": "hr",
+            "testContract": "hr.leave.permissions.configure"
+        },
+        "tool:saveMessageLegalFollowup": {
+            "action": "user.legal_notice.accept",
+            "module": "core",
+            "testContract": "core.user.legal-notice.accept"
+        },
+        "tool:saveModuleStatus": {
+            "action": "configuration.module.set_state",
+            "module": "configuration",
+            "testContract": "configuration.module.set_state"
+        },
+        "tool:saveNote": {
+            "action": "tools.note.manage",
+            "module": "tools",
+            "testContract": "tools.note.manage"
+        },
+        "tool:saveNoteStream": {
+            "action": "tools.note.manage",
+            "module": "tools",
+            "testContract": "tools.note.manage"
+        },
+        "tool:saveNoteStreamVote": {
+            "action": "steering.voting.cast",
+            "module": "steering",
+            "testContract": "steering.voting.cast"
+        },
+        "tool:saveObjectLinkedByIdToMainObject": {
+            "action": "tools.relationship.link",
+            "module": "tools",
+            "testContract": "tools.relationship.link"
+        },
+        "tool:saveObjectMultiple": {
+            "action": "core.object.bulk_update",
+            "module": "core",
+            "testContract": "core.object.bulk-update"
+        },
+        "tool:saveOrganizationBudgetElement": {
+            "action": "financial.organization_budget.manage",
+            "module": "financial",
+            "testContract": "financial.organization-budget.manage"
+        },
+        "tool:saveOtherVersion": {
+            "action": "products.other_version.update",
+            "module": "products",
+            "testContract": "products.other-version.update"
+        },
+        "tool:saveParameter": {
+            "action": "configuration.access.manage",
+            "module": "configuration",
+            "testContract": "configuration.access.manage"
+        },
+        "tool:saveParentWorkCommand": {
+            "action": "financial.work_command.manage",
+            "module": "financial",
+            "testContract": "financial.work-command.manage"
+        },
+        "tool:savePlanningBaseline": {
+            "action": "planning.baseline.create",
+            "module": "planning",
+            "testContract": "planning.baseline.create"
+        },
+        "tool:savePlanningElementAfterResize": {
+            "action": "planning.element.resize",
+            "module": "planning",
+            "testContract": "planning.element.resize"
+        },
+        "tool:savePokerItem": {
+            "action": "scrum.poker.item.manage",
+            "module": "scrum",
+            "testContract": "scrum.poker.item.manage"
+        },
+        "tool:saveProductAsset": {
+            "action": "products.asset.update",
+            "module": "products",
+            "testContract": "products.asset.update"
+        },
+        "tool:saveProductContext": {
+            "action": "products.context.update",
+            "module": "products",
+            "testContract": "products.context.update"
+        },
+        "tool:saveProductLanguage": {
+            "action": "products.language.update",
+            "module": "products",
+            "testContract": "products.language.update"
+        },
+        "tool:saveProductProject": {
+            "action": "products.project_links.update",
+            "module": "products",
+            "testContract": "products.project-links.update"
+        },
+        "tool:saveProductStructure": {
+            "action": "products.composition.update",
+            "module": "products",
+            "testContract": "products.composition.update"
+        },
+        "tool:saveProductVersionStructure": {
+            "action": "products.version_composition.update",
+            "module": "products",
+            "testContract": "products.version-composition.update"
+        },
+        "tool:saveProspectEvent": {
+            "action": "environment.prospect.event.manage",
+            "module": "environment",
+            "testContract": "environment.prospect.event.manage"
+        },
+        "tool:saveProspectTransform": {
+            "action": "environment.prospect.convert",
+            "module": "environment",
+            "testContract": "environment.prospect.convert"
+        },
+        "tool:saveProviderTerm": {
+            "action": "financial.provider_term.manage",
+            "module": "financial",
+            "testContract": "financial.provider-term.manage"
+        },
+        "tool:saveProviderTermFromProviderBill": {
+            "action": "financial.provider_term.manage",
+            "module": "financial",
+            "testContract": "financial.provider-term.manage"
+        },
+        "tool:saveRaciAssignment": {
+            "action": "steering.raci.update",
+            "module": "steering",
+            "testContract": "steering.raci.update"
+        },
+        "tool:saveReportAsFavorite": {
+            "action": "reports.favorite.manage",
+            "module": "reports",
+            "testContract": "reports.favorite.manage"
+        },
+        "tool:saveReportFavoriteOrder": {
+            "action": "reports.favorite.manage",
+            "module": "reports",
+            "testContract": "reports.favorite.manage"
+        },
+        "tool:saveReportInToday": {
+            "action": "reports.dashboard.pin",
+            "module": "reports",
+            "testContract": "reports.dashboard.pin"
+        },
+        "tool:saveReportLayout": {
+            "action": "reports.layout.manage",
+            "module": "reports",
+            "testContract": "reports.layout.manage"
+        },
+        "tool:saveResourceCapacity": {
+            "action": "environment.capacity.update",
+            "module": "environment",
+            "testContract": "environment.capacity.update"
+        },
+        "tool:saveResourceCost": {
+            "action": "environment.cost.update",
+            "module": "environment",
+            "testContract": "environment.cost.update"
+        },
+        "tool:saveResourceIncompatible": {
+            "action": "environment.incompatibility.update",
+            "module": "environment",
+            "testContract": "environment.incompatibility.update"
+        },
+        "tool:saveResourceSkill": {
+            "action": "hr.skill.assign",
+            "module": "hr",
+            "testContract": "hr.skill.assign"
+        },
+        "tool:saveResourceSupport": {
+            "action": "environment.support.update",
+            "module": "environment",
+            "testContract": "environment.support.update"
+        },
+        "tool:saveResourceSurbooking": {
+            "action": "environment.surbooking.update",
+            "module": "environment",
+            "testContract": "environment.surbooking.update"
+        },
+        "tool:saveRestrictProductList": {
+            "action": "products.restriction.update",
+            "module": "products",
+            "testContract": "products.restriction.update"
+        },
+        "tool:saveSelectedLayoutColumn": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:saveSituation": {
+            "action": "steering.situation.manage",
+            "module": "steering",
+            "testContract": "steering.situation.manage"
+        },
+        "tool:saveSubTask": {
+            "action": "core.subtask.manage",
+            "module": "core",
+            "testContract": "core.subtask.manage"
+        },
+        "tool:saveSubTaskOrder": {
+            "action": "core.subtask.manage",
+            "module": "core",
+            "testContract": "core.subtask.manage"
+        },
+        "tool:saveSubscription": {
+            "action": "tools.notification.subscribe",
+            "module": "tools",
+            "testContract": "tools.notification.subscribe"
+        },
+        "tool:saveSwitchAssignment": {
+            "action": "planning.assignment.upsert",
+            "module": "planning",
+            "testContract": "planning.assignment.upsert"
+        },
+        "tool:saveSynchronizationDefinition": {
+            "action": "ticketing.synchronization.configure",
+            "module": "ticketing",
+            "testContract": "ticketing.synchronization.configure"
+        },
+        "tool:saveTcrData": {
+            "action": "steering.test_run.execute",
+            "module": "steering",
+            "testContract": "steering.test-run.execute"
+        },
+        "tool:saveTenderEvaluationCriteria": {
+            "action": "financial.tender_criteria.manage",
+            "module": "financial",
+            "testContract": "financial.tender-criteria.manage"
+        },
+        "tool:saveTenderSubmission": {
+            "action": "financial.tender.manage",
+            "module": "financial",
+            "testContract": "financial.tender.manage"
+        },
+        "tool:saveTestCaseRun": {
+            "action": "steering.test_run.execute",
+            "module": "steering",
+            "testContract": "steering.test-run.execute"
+        },
+        "tool:saveTodayDeleteReport": {
+            "action": "reports.dashboard.unpin",
+            "module": "reports",
+            "testContract": "reports.dashboard.unpin"
+        },
+        "tool:saveTodayParameters": {
+            "action": "reports.dashboard.configure",
+            "module": "reports",
+            "testContract": "reports.dashboard.configure"
+        },
+        "tool:saveTodayParametersSwitch": {
+            "action": "reports.dashboard.configure",
+            "module": "reports",
+            "testContract": "reports.dashboard.configure"
+        },
+        "tool:saveUserParameter": {
+            "action": "configuration.parameter.set",
+            "module": "configuration",
+            "testContract": "configuration.parameter.set"
+        },
+        "tool:saveUserStory": {
+            "action": "scrum.story.manage",
+            "module": "scrum",
+            "testContract": "scrum.story.manage"
+        },
+        "tool:saveValidOrCancelStatusLeave": {
+            "action": "hr.leave.decide",
+            "module": "hr",
+            "testContract": "hr.leave.decide"
+        },
+        "tool:saveValidateLayoutForOthers": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:saveVersionCompatibility": {
+            "action": "products.compatibility.update",
+            "module": "products",
+            "testContract": "products.compatibility.update"
+        },
+        "tool:saveVersionProject": {
+            "action": "products.project_links.update",
+            "module": "products",
+            "testContract": "products.project-links.update"
+        },
+        "tool:saveVotingAttributionVote": {
+            "action": "steering.voting.attribution_manage",
+            "module": "steering",
+            "testContract": "steering.voting.attribution-manage"
+        },
+        "tool:saveWorkCommand": {
+            "action": "financial.work_command.manage",
+            "module": "financial",
+            "testContract": "financial.work-command.manage"
+        },
+        "tool:saveWorkDetailImputation": {
+            "action": "follow_up.work.record",
+            "module": "follow_up",
+            "testContract": "follow-up.work-record"
+        },
+        "tool:saveWorkTokenClientContract": {
+            "action": "financial.work_token_contract.manage",
+            "module": "financial",
+            "testContract": "financial.work-token-contract.manage"
+        },
+        "tool:saveWorkTokenMarkup": {
+            "action": "financial.work_token_markup.manage",
+            "module": "financial",
+            "testContract": "financial.work-token-markup.manage"
+        },
+        "tool:saveWorkUnit": {
+            "action": "financial.work_unit.manage",
+            "module": "financial",
+            "testContract": "financial.work-unit.manage"
+        },
+        "tool:saveWorkUnitCatalogPhase": {
+            "action": "financial.work_unit_phase.manage",
+            "module": "financial",
+            "testContract": "financial.work-unit-phase.manage"
+        },
+        "tool:saveWorkflowParameter": {
+            "action": "configuration.workflow.manage",
+            "module": "configuration",
+            "testContract": "configuration.workflow.manage"
+        },
+        "tool:saveWorkflowProfileParameter": {
+            "action": "configuration.workflow.manage",
+            "module": "configuration",
+            "testContract": "configuration.workflow.manage"
+        },
+        "tool:scenarioPoolDate": {
+            "action": "planning.scenario.configure",
+            "module": "planning",
+            "testContract": "planning.scenario.configure"
+        },
+        "tool:scenarioPoolSwitch": {
+            "action": "planning.scenario.configure",
+            "module": "planning",
+            "testContract": "planning.scenario.configure"
+        },
+        "tool:scenarioProjectSwitch": {
+            "action": "planning.scenario.configure",
+            "module": "planning",
+            "testContract": "planning.scenario.configure"
+        },
+        "tool:selectInterventionDate": {
+            "action": "environment.intervention.schedule",
+            "module": "environment",
+            "testContract": "environment.intervention.schedule"
+        },
+        "tool:sendMail": {
+            "action": "tools.mail.send",
+            "module": "tools",
+            "testContract": "tools.mail.send"
+        },
+        "tool:sendMailTest": {
+            "action": "tools.mail.send",
+            "module": "tools",
+            "testContract": "tools.mail.send"
+        },
+        "tool:sendRequestResetPassword": {
+            "action": "user.trigger_password_reset",
+            "module": "configuration",
+            "testContract": "configuration.user.reset"
+        },
+        "tool:shareFilter": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:shareLayout": {
+            "action": "configuration.view.manage",
+            "module": "configuration",
+            "testContract": "configuration.view.manage"
+        },
+        "tool:shareReportLayout": {
+            "action": "reports.layout.manage",
+            "module": "reports",
+            "testContract": "reports.layout.manage"
+        },
+        "tool:splitActivity": {
+            "action": "planning.activity.split",
+            "module": "planning",
+            "testContract": "planning.activity.split"
+        },
+        "tool:startPausePokerSession": {
+            "action": "scrum.poker.session.lifecycle",
+            "module": "scrum",
+            "testContract": "scrum.poker.session.lifecycle"
+        },
+        "tool:startPokerSession": {
+            "action": "scrum.poker.session.lifecycle",
+            "module": "scrum",
+            "testContract": "scrum.poker.session.lifecycle"
+        },
+        "tool:startStopWork": {
+            "action": "follow_up.timer.control",
+            "module": "follow_up",
+            "testContract": "follow-up.timer"
+        },
+        "tool:submitWorkPeriod": {
+            "action": "follow_up.period.submit",
+            "module": "follow_up",
+            "testContract": "follow-up.period-submit"
+        },
+        "tool:switchOtherClient": {
+            "action": "environment.client_relationship.promote",
+            "module": "environment",
+            "testContract": "environment.client_relationship.promote"
+        },
+        "tool:switchOtherVersion": {
+            "action": "products.other_version.update",
+            "module": "products",
+            "testContract": "products.other-version.update"
+        },
+        "tool:timesheetAddResult": {
+            "action": "follow_up.timesheet.result",
+            "module": "follow_up",
+            "testContract": "follow-up.timesheet-result"
+        },
+        "tool:updateResourceCost": {
+            "action": "environment.cost.apply_role_defaults",
+            "module": "environment",
+            "testContract": "environment.cost.role-defaults"
+        },
+        "tool:upgradeProductVersionStructure": {
+            "action": "products.version_composition.upgrade",
+            "module": "products",
+            "testContract": "products.version-composition.upgrade"
+        },
+        "tool:uploadImage": {
+            "action": "tools.image.upload.commit",
+            "module": "tools",
+            "testContract": "tools.image.upload.commit"
+        },
+        "tool:voteToPokerItem": {
+            "action": "scrum.poker.vote.cast",
+            "module": "scrum",
+            "testContract": "scrum.poker.vote.cast"
+        },
+        "view:criticalResourcesList": {
+            "action": "planning.critical_resources.evaluate",
+            "module": "planning",
+            "testContract": "planning.critical_resources.evaluate"
+        },
+        "view:importData": {
+            "action": "import.start",
+            "module": "tools",
+            "testContract": "tools.import.start"
+        },
+        "view:kanbanView": {
+            "action": "scrum.kanban.preferences",
+            "module": "scrum",
+            "testContract": "scrum.kanban.preferences"
+        },
+        "view:kanbanViewMain": {
+            "action": "scrum.kanban.preferences",
+            "module": "scrum",
+            "testContract": "scrum.kanban.preferences"
+        },
+        "view:liveMeetingView": {
+            "action": "steering.meeting.live_update",
+            "module": "steering",
+            "testContract": "steering.meeting.live-update"
+        },
+        "view:liveMeetingViewBottom": {
+            "action": "steering.meeting.link",
+            "module": "steering",
+            "testContract": "steering.meeting.link"
+        },
+        "view:main": {
+            "action": "user.legal_notice.view",
+            "module": "core",
+            "testContract": "core.user.legal-notice.view"
+        },
+        "view:menuNewGuiLeft": {
+            "action": "configuration.plugin_update.notify",
+            "module": "configuration",
+            "testContract": "configuration.plugin-update.notify"
+        },
+        "view:menuNotificationRead": {
+            "action": "tools.notification.status",
+            "module": "tools",
+            "testContract": "tools.notification.status"
+        },
+        "view:print": {
+            "action": "reports.render",
+            "module": "reports",
+            "testContract": "reports.render"
+        }
+    }
+}
