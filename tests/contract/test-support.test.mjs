@@ -10,6 +10,7 @@ import { withResourceLock } from '../support/locks.mjs';
 import { McpTestClient } from '../support/mcp-client.mjs';
 import { discoverModules } from '../support/module-discovery.mjs';
 import { sanitize } from '../support/redact.mjs';
+import { verifyWhoami } from '../support/tool-results.mjs';
 
 test('redaction removes credentials, signatures, email addresses, and object payloads', () => {
   const cleaned = sanitize({
@@ -75,6 +76,7 @@ test('MCP test client never sends tokens in JSON payloads or logger events', asy
 test('action discovery reads the canonical action field from MCP list results', () => {
   assert.deepEqual(actionIdsFromListResult({
     structuredContent: {
+      returned: 3, hasMore: false, nextCursor: null,
       items: [
         { action: 'configuration.admin.execute' },
         { action: 'configuration.parameter.set' },
@@ -86,6 +88,29 @@ test('action discovery reads the canonical action field from MCP list results', 
     'configuration.parameter.set',
     'cron.start'
   ]);
+});
+
+test('action discovery fails closed on tool, bridge, malformed, and pagination errors', () => {
+  assert.throws(() => actionIdsFromListResult({
+    isError: true,
+    structuredContent: { ok: false, error: { code: 'api_error', message: 'Bridge unavailable' } }
+  }), /api_error/);
+  assert.throws(() => actionIdsFromListResult({
+    structuredContent: { ok: false, error: { code: 'api_error', message: 'Bridge unavailable' } }
+  }), /api_error/);
+  assert.throws(() => actionIdsFromListResult({ structuredContent: { items: [] } }), /malformed action page/);
+  assert.throws(() => actionIdsFromListResult({
+    structuredContent: { returned: 1, hasMore: true, nextCursor: 'signed', items: [{ action: 'cron.start' }] }
+  }), /incomplete paginated result/);
+});
+
+test('whoami verification fails closed on MCP errors and actor mismatch', () => {
+  assert.deepEqual(verifyWhoami({ structuredContent: { username: 'admin' } }, 'admin'), { username: 'admin' });
+  assert.throws(() => verifyWhoami({
+    isError: true,
+    structuredContent: { ok: false, error: { code: 'api_error', message: 'Bridge unavailable' } }
+  }, 'admin'), /api_error/);
+  assert.throws(() => verifyWhoami({ structuredContent: { username: 'other' } }, 'admin'), /actor mismatch/);
 });
 
 test('all twelve module contracts are discoverable and uniquely owned', async () => {

@@ -21,6 +21,25 @@ test('worker remains backend-only, unprivileged, and capability-free', () => {
   assert.match(worker, /no-new-privileges:true/);
 });
 
+test('app and worker trust exactly the fixed disposable MCP address', () => {
+  const trustedIp = compose.match(/^  PROJEQTOR_MCP_TRUSTED_IP: (.+)$/m)?.[1];
+  const fixedMcpIp = compose.match(/^        ipv4_address: (.+)$/m)?.[1];
+  assert.equal(trustedIp, '${BETA4_MCP_IP:-10.249.0.13}');
+  assert.equal(trustedIp, fixedMcpIp);
+  assert.match(compose, /^    environment: \*app-environment$/m);
+  assert.equal((compose.match(/^    environment: \*app-environment$/gm) ?? []).length, 2);
+});
+
+test('gateway is non-root, capability-free, and has only narrow writable tmpfs mounts', () => {
+  const gateway = compose.slice(compose.indexOf('  gateway:'), compose.indexOf('\n  mail:'));
+  assert.match(gateway, /user: "101:101"/);
+  assert.match(gateway, /cap_drop: \[ALL\]/);
+  assert.match(gateway, /no-new-privileges:true/);
+  assert.match(gateway, /\/var\/cache\/nginx:uid=101,gid=101,mode=0755/);
+  assert.match(gateway, /\/var\/run:uid=101,gid=101,mode=0755/);
+  assert.doesNotMatch(gateway, /^\s+ports:/m);
+});
+
 test('test runner uses the preparing actor and writes only to its artifact mount', () => {
   const runner = compose.slice(compose.indexOf('  test-runner:'), compose.indexOf('\nnetworks:'));
   assert.match(runner, /user: "\$\{BETA4_TEST_UID:[^}]+\}:\$\{BETA4_TEST_GID:[^}]+\}"/);

@@ -10,6 +10,7 @@ x-app-environment: &app-environment
   PROJEQTOR_TIMEZONE: UTC
   PROJEQTOR_MCP_SIGNING_KEY_FILE: /run/secrets/projeqtor_signing_key
   PROJEQTOR_MCP_CURSOR_KEY_FILE: /run/secrets/projeqtor_cursor_key
+  PROJEQTOR_MCP_TRUSTED_IP: ${BETA4_MCP_IP:-10.249.0.13}
   PROJEQTOR_MCP_ARTIFACT_DIR: /var/lib/projeqtor/mcp-jobs
   PROJEQTOR_MCP_UPLOAD_DIR: /var/lib/projeqtor/mcp-uploads
   PROJEQTOR_MCP_WORKER_HEARTBEAT_FILE: /var/lib/projeqtor/mcp-worker-heartbeat
@@ -134,6 +135,7 @@ services:
 
   gateway:
     image: nginx:1.27-alpine
+    user: "101:101"
     depends_on:
       app: {condition: service_healthy}
       mcp: {condition: service_healthy}
@@ -144,8 +146,8 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     tmpfs:
-      - /var/cache/nginx:uid=101,gid=101
-      - /var/run:uid=101,gid=101
+      - /var/cache/nginx:uid=101,gid=101,mode=0755
+      - /var/run:uid=101,gid=101,mode=0755
 
   mail:
     image: axllent/mailpit:v1.27

@@ -7,6 +7,7 @@ import { withResourceLock } from './support/locks.mjs';
 import { actionIdsFromListResult } from './support/action-discovery.mjs';
 import { McpTestClient } from './support/mcp-client.mjs';
 import { discoverModules } from './support/module-discovery.mjs';
+import { verifyWhoami } from './support/tool-results.mjs';
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -26,19 +27,16 @@ async function preflight(client) {
   const listed = await client.tools();
   const toolNames = (listed?.tools ?? []).map(tool => tool.name).sort();
   const whoami = await client.callTool('projeqtor_whoami');
+  verifyWhoami(whoami, process.env.PROJEQTOR_TEST_ACTOR ?? 'admin');
   return {
     health, server: initialized?.serverInfo, toolCount: toolNames.length, toolNames,
-    actorVerified: JSON.stringify(whoami).includes(process.env.PROJEQTOR_TEST_ACTOR ?? 'admin')
+    actorVerified: true
   };
 }
 
 async function actionNames(client, moduleId) {
-  try {
-    const result = await client.callTool('projeqtor_list_actions', { module: moduleId, pageSize: 200, includeTotal: true });
-    return actionIdsFromListResult(result);
-  } catch {
-    return [];
-  }
+  const result = await client.callTool('projeqtor_list_actions', { module: moduleId, pageSize: 200, includeTotal: true });
+  return actionIdsFromListResult(result);
 }
 
 async function runModule(client, descriptor, { required }) {
