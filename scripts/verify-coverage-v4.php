@@ -30,6 +30,7 @@ verify(mkdir($temporary, 0700), 'temporary directory must be created');
 try {
     $inventoryPath = "$temporary/source-inventory-v4.json";
     $catalogPath = "$temporary/module-catalog-v4.json";
+    $classV3Path = "$temporary/class-policy-v3.json";
     $handlersPath = "$temporary/ui-handler-policy-v4.json";
     $classesPath = "$temporary/class-policy-v4.json";
     $output = [];
@@ -38,13 +39,19 @@ try {
     verify(runCommand([PHP_BINARY, "$repo/scripts/generate-source-inventory-v4.php", $source, $inventoryPath], $output) === 0, implode("\n", $output));
     $output = [];
     verify(runCommand([
+        PHP_BINARY, "$repo/scripts/generate-class-policy.php", $source,
+        "$repo/bridge/class-policy-v2.json", "$repo/bridge/active-menu-classes-v3.json", $classV3Path,
+    ], $output) === 0, implode("\n", $output));
+    $output = [];
+    verify(runCommand([
         PHP_BINARY, "$repo/scripts/compile-coverage-v4.php", $inventoryPath,
-        "$repo/bridge/class-policy-v3.json", "$repo/policy/modules", $handlersPath, $classesPath,
+        $classV3Path, "$repo/policy/modules", $handlersPath, $classesPath,
         $catalogPath,
     ], $output) === 0, implode("\n", $output));
 
     foreach ([
         "$repo/bridge/source-inventory-v4.json" => $inventoryPath,
+        "$repo/bridge/class-policy-v3.json" => $classV3Path,
         "$repo/bridge/ui-handler-policy-v4.json" => $handlersPath,
         "$repo/bridge/class-policy-v4.json" => $classesPath,
         "$repo/policy/module-catalog-v4.json" => $catalogPath,
@@ -112,7 +119,7 @@ PHP;
     $output = [];
     verify(runCommand([
         PHP_BINARY, "$repo/scripts/compile-coverage-v4.php", $inventoryPath,
-        "$repo/bridge/class-policy-v3.json", "$repo/policy/modules",
+        $classV3Path, "$repo/policy/modules",
         "$temporary/incomplete-handlers.json", "$temporary/incomplete-classes.json", $invalidCatalogPath,
     ], $output) !== 0, 'runtime catalog with a missing action must fail closed');
 
