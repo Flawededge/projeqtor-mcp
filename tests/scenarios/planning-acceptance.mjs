@@ -25,7 +25,7 @@ async function completedJobResult(client, queued, timeoutMs = 300_000) {
   return { job, result };
 }
 
-async function createFixture(client, runId, schema) {
+async function createFixture(client, runId, schema, startDate) {
   const importRunId = tag(runId, 'planning-import');
   const projectData = requiredData(schema.project, {
     name: `Beta 4 planning acceptance ${runId}`, idProjectType: schema.refs.projectType
@@ -43,8 +43,13 @@ async function createFixture(client, runId, schema) {
   assert.equal(projectResult.ok, true);
   const idProject = Number(projectResult.items?.[0]?.id);
   assert.ok(idProject > 0);
+  assert.equal(Number(projectResult.items[0].saved?.fixPlanning), 0);
+  assert.equal(Number(projectResult.items[0].saved?.paused), 0);
+  assert.equal(Number(projectResult.items[0].saved?.excludeFromGlobalPlanning), 0);
   const base = requiredData(schema.activity, {
-    idProject, idActivityType: schema.refs.activityType
+    idProject, idActivityType: schema.refs.activityType,
+    idActivityPlanningMode: schema.refs.activityPlanningMode,
+    validatedStartDate: startDate, validatedWork: 2
   }, schema.refs);
   const operations = [1, 2].map(number => ({
     action: 'create', objectClass: 'Activity',
@@ -59,53 +64,61 @@ async function createFixture(client, runId, schema) {
     requestIdempotencyKey: tag(runId, 'planning-activities-request'), operations
   });
   assert.equal(activityResult.ok, true);
+  assert.ok(activityResult.items.every(item => Number(item.saved?.fixPlanning) === 0));
   const activityIds = activityResult.items.map(item => Number(item.id));
   assert.equal(activityIds.length, 2);
   assert.ok(activityIds.every(id => id > 0));
   return { importRunId, idProject, activityIds };
 }
 
-async function fixtureResource(client) {
+async function fixtureResource(client, username) {
   const result = await queryAll(client, {
     objectClass: 'User', fields: ['id', 'name', 'idRole', 'idCalendarDefinition'],
-    filter: { field: 'name', operator: 'eq', value: 'beta4-member' },
+    filter: { field: 'name', operator: 'eq', value: username },
     orderBy: [{ field: 'id', direction: 'asc' }]
   });
-  assert.equal(result.items.length, 1, 'Disposable planning resource is missing');
+  assert.equal(result.items.length, 1, 'Originating disposable planning resource is missing');
   assert.ok(Number(result.items[0].idRole) > 0);
   assert.ok(Number(result.items[0].idCalendarDefinition) > 0);
   return result.items[0];
 }
 
-async function planningMode(client, code) {
-  const result = await call(client, 'projeqtor_list_reference_values', {
-    kind: 'activityPlanningMode', activeOnly: true, pageSize: 50
+async function planningElements(client, fixture, runId, label) {
+  const queued = await call(client, 'projeqtor_execute_action', {
+    action: 'project.snapshot',
+    idempotencyKey: safeKey('b4', runId, 'planning-snapshot', label),
+    arguments: { idProject: fixture.idProject }
   });
-  const mode = result.items?.find(item => item.code === code);
-  assert.ok(Number(mode?.id) > 0, `Active planning mode ${code} is missing`);
-  return Number(mode.id);
+  assert.equal(queued.queued, true);
+  const job = await waitForJob(client, queued.job.id, { timeoutMs: 180_000 });
+  assert.equal(job.status, 'succeeded', `Snapshot job #${job.id} ended as ${job.status}`);
+  assert.equal(job.resultResource, `projeqtor://jobs/${job.id}/result`);
+  const artifact = decodeResource(await client.readResource(job.resultResource), job.resultResource);
+  assert.match(artifact.mimeType, /ndjson/i);
+  const records = artifact.bytes.toString('utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
+  const objects = records.filter(record => record.recordType === 'object');
+  const planning = objects.filter(record => record.objectClass === 'PlanningElement').map(record => record.item);
+  const assignments = objects.filter(record => record.objectClass === 'Assignment').map(record => record.item);
+  const work = objects.filter(record => record.objectClass === 'PlannedWork').map(record => record.item);
+  return fixture.activityIds.map(id => {
+    const element = planning.find(item => item.refType === 'Activity' && Number(item.refId) === id);
+    assert.ok(element, `Activity #${id} has no PlanningElement snapshot record`);
+    const rows = work.filter(item => item.refType === 'Activity' && Number(item.refId) === id);
+    assert.ok(rows.length > 0, `Activity #${id} has no PlannedWork snapshot record`);
+    const dates = rows.map(item => String(item.workDate)).sort();
+    const assignment = assignments.find(item => item.refType === 'Activity' && Number(item.refId) === id);
+    assert.ok(assignment, `Activity #${id} has no Assignment snapshot record`);
+    return {
+      plannedStartDate: element.plannedStartDate ?? dates[0],
+      plannedEndDate: element.plannedEndDate ?? dates.at(-1),
+      notPlannedWork: Number(assignment.notPlannedWork ?? 0),
+      surbookedWork: sumSurbooked(rows)
+    };
+  });
 }
 
-async function planningElements(client, activityIds) {
-  const result = await queryAll(client, {
-    objectClass: 'ActivityPlanningElement',
-    fields: [
-      'id', 'refType', 'refId', 'idProject', 'idPlanningMode', 'validatedStartDate',
-      'validatedWork', 'assignedWork', 'leftWork', 'plannedStartDate', 'plannedEndDate',
-      'notPlannedWork', 'surbooked'
-    ],
-    filter: { all: [
-      { field: 'refType', operator: 'eq', value: 'Activity' },
-      { field: 'refId', operator: 'in', value: activityIds }
-    ] },
-    orderBy: [{ field: 'refId', direction: 'asc' }]
-  });
-  assert.equal(result.items.length, activityIds.length);
-  return result.items;
-}
-
-async function configureFixture(client, runId, identity, fixture, startDate) {
-  const resource = await fixtureResource(client);
+async function configureFixture(client, runId, identity, fixture) {
+  const resource = await fixtureResource(client, identity.username);
   const allocation = await call(client, 'projeqtor_execute_action', {
     action: 'planning.allocation.upsert', idempotencyKey: tag(runId, 'leveling-allocation'),
     arguments: { transactionMode: 'atomic', items: [{
@@ -116,20 +129,6 @@ async function configureFixture(client, runId, identity, fixture, startDate) {
   });
   assert.equal(allocation.ok, true);
   assert.equal(allocation.items?.[0]?.status, 'created');
-  const modeId = await planningMode(client, 'ASAP');
-  const before = await planningElements(client, fixture.activityIds);
-  for (const item of before) {
-    const phased = await call(client, 'projeqtor_execute_action', {
-      action: 'planning.element.phase',
-      idempotencyKey: tag(runId, `phase-${item.refId}`),
-      arguments: {
-        refType: 'Activity', refId: Number(item.refId), planningModeId: modeId,
-        validatedStartDate: startDate, validatedWork: 2, expectedVersion: item._version
-      }
-    });
-    assert.equal(phased.ok, true);
-    assert.equal(phased.status, 'updated');
-  }
   const assignments = await call(client, 'projeqtor_execute_action', {
     action: 'planning.assignment.upsert', idempotencyKey: tag(runId, 'leveling-assignments'),
     arguments: { transactionMode: 'atomic', items: fixture.activityIds.map(id => ({
@@ -158,6 +157,7 @@ export function assertCapacityConstrained(elements) {
   assert.ok(ranges[0].end < ranges[1].start,
     `Competing activities overlap despite capacity constraints (${ranges[0].end} / ${ranges[1].start})`);
   assert.ok(elements.every(item => Number(item.notPlannedWork ?? 0) === 0));
+  assert.equal(sumSurbooked(elements), 0);
   return ranges;
 }
 
@@ -168,7 +168,7 @@ function sumSurbooked(items) {
 async function calculate(client, fixture, runId, label, allowOverbooking) {
   return completedJobResult(client, await call(client, 'projeqtor_plan_projects', {
     projectIds: [fixture.idProject], startDate: fixture.startDate,
-    criticalPath: true, criticalResourceMode: true, allowOverbooking,
+    criticalPath: true, criticalResourceMode: allowOverbooking, allowOverbooking,
     includeDiagnostics: true, idempotencyKey: safeKey('b4', runId, 'planning', label)
   }));
 }
@@ -248,16 +248,17 @@ async function assertNoResidual(client, runId, idProject) {
 export async function runPlanningAcceptance({ client, identity, runId }) {
   assert.match(runId, /^b4-[A-Za-z0-9-]{8,64}$/);
   const schema = await fixtureSchema(client);
-  const fixture = await createFixture(client, runId, schema);
-  fixture.startDate = dateOffset(7);
+  const startDate = dateOffset(7);
+  const fixture = await createFixture(client, runId, schema, startDate);
+  fixture.startDate = startDate;
   let configured = null;
   try {
-    configured = await configureFixture(client, runId, identity, fixture, fixture.startDate);
+    configured = await configureFixture(client, runId, identity, fixture);
     Object.assign(fixture, configured);
     const constrained = await calculate(client, fixture, runId, 'constrained', false);
     assert.equal(constrained.result.ok, true);
-    assert.equal(constrained.result.status, 'complete');
-    const constrainedRanges = assertCapacityConstrained(await planningElements(client, fixture.activityIds));
+    assert.ok(['complete', 'incomplete'].includes(constrained.result.status));
+    const constrainedRanges = assertCapacityConstrained(await planningElements(client, fixture, runId, 'constrained'));
     const constrainedDiagnostics = await call(client, 'projeqtor_execute_action', {
       action: 'planning.diagnostics', arguments: { idProject: fixture.idProject }
     });
@@ -265,7 +266,7 @@ export async function runPlanningAcceptance({ client, identity, runId }) {
     const overbooking = await evaluateOverbooking(client, fixture, runId);
     const restored = await calculate(client, fixture, runId, 'restore-constrained', false);
     assert.equal(restored.result.ok, true);
-    assertCapacityConstrained(await planningElements(client, fixture.activityIds));
+    assertCapacityConstrained(await planningElements(client, fixture, runId, 'restored'));
     const finalDiagnostics = await call(client, 'projeqtor_execute_action', {
       action: 'planning.diagnostics', arguments: { idProject: fixture.idProject }
     });

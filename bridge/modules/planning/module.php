@@ -22,10 +22,38 @@ $batchResult=mcpObjectSchema(array(
   'ok'=>array('type'=>'boolean'),'rolledBack'=>array('type'=>'boolean'),'transactionMode'=>$transaction,
   'items'=>array('type'=>'array','maxItems'=>200,'items'=>$itemResult),'effects'=>array('type'=>'array','items'=>$effect)
 ),array('ok','rolledBack','transactionMode','items','effects'),false);
-$jobResult=mcpObjectSchema(array(
-  'ok'=>array('type'=>'boolean'),'queued'=>array('type'=>'boolean'),
-  'job'=>mcpObjectSchema(array('id'=>array('type'=>'integer','minimum'=>1),'type'=>array('type'=>'string'),'status'=>array('type'=>'string'),'progress'=>array('type'=>'integer','minimum'=>0),'resultResource'=>array('type'=>'string')),array('id','type','status','progress','resultResource'),true)
-),array('ok','queued','job'),true);
+$diagnosticsResult=mcpObjectSchema(array(
+  'ok'=>array('type'=>'boolean'),'idProject'=>array('type'=>'integer','minimum'=>1),'needsReplan'=>array('type'=>'boolean'),
+  'elements'=>array('type'=>'array','items'=>array('type'=>'object')),'assignments'=>array('type'=>'array','items'=>array('type'=>'object')),
+  'overloads'=>array('type'=>'array','items'=>array('type'=>'object')),'counts'=>array('type'=>'object')
+),array('ok','idProject','needsReplan','elements','assignments','overloads','counts'),true);
+$planningResult=mcpObjectSchema(array(
+  'ok'=>array('type'=>'boolean'),'status'=>array('type'=>'string'),'message'=>array('type'=>'string'),'projects'=>$projectIds,
+  'diagnostics'=>array('type'=>'array','maxItems'=>200,'items'=>$diagnosticsResult)
+),array('ok','status','message','projects'),false);
+$criticalResource=mcpObjectSchema(array(
+  'idResource'=>array('type'=>'integer','minimum'=>1),'name'=>array('type'=>array('string','null')),
+  'plannedWork'=>array('type'=>'number','minimum'=>0),'surbookedWork'=>array('type'=>'number','minimum'=>0),
+  'overloadedDays'=>array('type'=>'integer','minimum'=>0),'firstDate'=>$nullableDate,'lastDate'=>$nullableDate,
+  'notPlannedWork'=>array('type'=>'number','minimum'=>0)
+),array('idResource','name','plannedWork','surbookedWork','overloadedDays','firstDate','lastDate'),false);
+$criticalResult=mcpObjectSchema(array(
+  'ok'=>array('type'=>'boolean'),'status'=>array('type'=>'string'),'message'=>array('type'=>'string'),'projects'=>$projectIds,
+  'startDate'=>$nullableDate,'endDate'=>$nullableDate,'resources'=>array('type'=>'array','maxItems'=>200,'items'=>$criticalResource),
+  'counts'=>mcpObjectSchema(array('resources'=>array('type'=>'integer','minimum'=>0),'overloaded'=>array('type'=>'integer','minimum'=>0)),array('resources','overloaded'),false),
+  'effects'=>array('type'=>'array','items'=>$effect)
+),array('ok','status','message','projects','startDate','endDate','resources','counts','effects'),false);
+$snapshotResult=mcpObjectSchema(array(
+  'ok'=>array('type'=>'boolean'),'idProject'=>array('type'=>'integer','minimum'=>1),'historyWatermark'=>array('type'=>'string'),
+  'counts'=>array('type'=>'object'),'resource'=>array('type'=>'string','pattern'=>'^projeqtor://jobs/[0-9]+/result$')
+),array('ok','idProject','historyWatermark','counts','resource'),false);
+$baselineResult=mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'baseline'=>$saved),array('ok','baseline'),false);
+$wbsEffect=mcpObjectSchema(array('action'=>array('type'=>'string'),'objectClass'=>array('type'=>'string'),'count'=>array('type'=>'integer','minimum'=>0)),array('action','objectClass','count'),false);
+$wbsResult=mcpObjectSchema(array(
+  'ok'=>array('type'=>'boolean'),'status'=>array('type'=>'string','enum'=>array('renumbered')),
+  'priorityChanges'=>array('type'=>'integer','minimum'=>0),'structureChanges'=>array('type'=>'integer','minimum'=>0),
+  'effects'=>array('type'=>'array','items'=>$wbsEffect)
+),array('ok','status','priorityChanges','structureChanges','effects'),false);
 $singleResult=mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'status'=>array('type'=>'string'),'saved'=>$saved,'effects'=>array('type'=>'array','items'=>$effect)),array('ok','status','saved','effects'),true);
 $assignmentItem=mcpObjectSchema(array(
   'id'=>array('type'=>'integer','minimum'=>1),'refType'=>array('type'=>'string','minLength'=>1,'maxLength'=>80),'refId'=>array('type'=>'integer','minimum'=>1),
@@ -64,7 +92,7 @@ $inlinePlanningFields=mcpObjectSchema(array(
 $inlineItem=mcpObjectSchema(array('refType'=>array('type'=>'string','minLength'=>1,'maxLength'=>80),'refId'=>array('type'=>'integer','minimum'=>1),'planningElementId'=>array('type'=>'integer','minimum'=>1),'expectedVersion'=>$version,'expectedPlanningVersion'=>$version,'objectFields'=>$inlineObjectFields,'planningFields'=>$inlinePlanningFields,'dependencyChanges'=>array('type'=>'array','maxItems'=>200,'items'=>$dependencyChange)),array('expectedPlanningVersion'),false);
 
 return array('id'=>'planning','version'=>'4.0.0','dependencies'=>array('core','configuration','environment'),'actions'=>array(
-  'project.snapshot'=>mcpActionSpec(mcpObjectSchema(array('idProject'=>array('type'=>'integer','minimum'=>1),'sections'=>array('type'=>'array','items'=>array('type'=>'string'))),array('idProject'),false),$jobResult,'read',true,'mcpPlanningSnapshotWorker',array(),'planning.project.snapshot',array('retryPolicy'=>'safe','batchLimit'=>1)),
+  'project.snapshot'=>mcpActionSpec(mcpObjectSchema(array('idProject'=>array('type'=>'integer','minimum'=>1),'sections'=>array('type'=>'array','items'=>array('type'=>'string'))),array('idProject'),false),$snapshotResult,'read',true,'mcpPlanningSnapshotWorker',array(),'planning.project.snapshot',array('retryPolicy'=>'safe','batchLimit'=>1)),
   'planning.assignment.upsert'=>mcpActionSpec(mcpObjectSchema(array('items'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$assignmentItem),'transactionMode'=>$transaction),array('items'),false),$batchResult,'write',false,'mcpPlanningAssignmentUpsert',array('tool:saveAssignment','tool:saveSwitchAssignment'),'planning.assignment.upsert',array('batchLimit'=>200,'units'=>array('rate'=>'percent','assignedWork'=>'work_days','leftWork'=>'work_days','dailyCost'=>'currency_per_work_day'))),
   'planning.assignment.remove'=>mcpActionSpec(mcpObjectSchema(array('items'=>array('type'=>'array','minItems'=>1,'maxItems'=>200,'items'=>$deleteItem),'transactionMode'=>$transaction),array('items'),false),$batchResult,'destructive',false,'mcpPlanningAssignmentRemove',array('tool:removeAssignment','tool:purgeAssignment','tool:resetAssignment'),'planning.assignment.remove',array('preview'=>'mcpPlanningAssignmentRemovePreview','batchLimit'=>200)),
   'planning.assignment.automatic'=>mcpActionSpec(mcpObjectSchema(array('refType'=>array('type'=>'string','minLength'=>1,'maxLength'=>80),'refId'=>array('type'=>'integer','minimum'=>1),'enabled'=>array('type'=>'boolean'),'expectedVersion'=>$version),array('refType','refId','enabled'),false),$singleResult,'write',false,'mcpPlanningAutomaticAssignment',array('tool:saveAutomaticAssignment'),'planning.assignment.automatic'),
@@ -89,10 +117,10 @@ return array('id'=>'planning','version'=>'4.0.0','dependencies'=>array('core','c
     'projectAdjustments'=>array('type'=>'array','maxItems'=>200,'items'=>mcpObjectSchema(array('projectId'=>array('type'=>'integer','minimum'=>1),'proposal'=>array('type'=>'string','enum'=>array('default','include','exclude')),'monthDelay'=>array('type'=>array('integer','null'))),array('projectId'),false)),
     'transactionMode'=>$transaction
   ),array(),false),$batchResult,'write',false,'mcpPlanningScenarioConfigure',array('tool:scenarioPoolDate','tool:scenarioPoolSwitch','tool:scenarioProjectSwitch'),'planning.scenario.configure',array('batchLimit'=>200,'units'=>array('extraCapacity'=>'capacity_equivalent','monthDelay'=>'months'))),
-  'planning.critical_resources.evaluate'=>mcpActionSpec(mcpObjectSchema(array('projectIds'=>$projectIds,'startDate'=>$date,'endDate'=>$date,'allowOverbooking'=>array('type'=>'boolean'),'scenarioId'=>array('type'=>'integer','minimum'=>1),'maxResources'=>array('type'=>'integer','minimum'=>1)),array('projectIds'),false),$jobResult,'write',true,'mcpPlanningCriticalResourcesWorker',array('tool:refreshCriticalResources','view:criticalResourcesList'),'planning.critical_resources.evaluate',array('batchLimit'=>200,'units'=>array('plannedWork'=>'work_days','surbookedWork'=>'work_days','notPlannedWork'=>'work_days'))),
-  'planning.calculate'=>mcpActionSpec(mcpObjectSchema(array('projectIds'=>$projectIds,'startDate'=>$date,'criticalPath'=>array('type'=>'boolean'),'allowOverbooking'=>array('type'=>'boolean'),'criticalResourceMode'=>array('type'=>'boolean'),'includeDiagnostics'=>array('type'=>'boolean')),array('projectIds'),false),$jobResult,'write',true,'mcpPlanningCalculateWorker',array('tool:plan'),'planning.calculate',array('batchLimit'=>200,'units'=>array('diagnosticWork'=>'work_days'))),
-  'planning.wbs.renumber'=>mcpActionSpec(mcpObjectSchema(array('fixProjectOrder'=>array('type'=>'boolean')),array(),false),$jobResult,'administrative',true,'mcpPlanningWbsRenumberWorker',array(),'planning.wbs.renumber',array('confirmationRequired'=>true,'retryPolicy'=>'recovery_required','transaction'=>'worker')),
-  'planning.diagnostics'=>mcpActionSpec(mcpObjectSchema(array('idProject'=>array('type'=>'integer','minimum'=>1)),array('idProject'),false),mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'idProject'=>array('type'=>'integer','minimum'=>1),'needsReplan'=>array('type'=>'boolean'),'elements'=>array('type'=>'array'),'assignments'=>array('type'=>'array'),'overloads'=>array('type'=>'array'),'counts'=>array('type'=>'object')),array('ok','idProject','needsReplan','elements','assignments','overloads','counts'),true),'read',false,'mcpPlanningDiagnosticsAction',array(),'planning.diagnostics',array('transaction'=>'none')),
-  'planning.baseline.create'=>mcpActionSpec(mcpObjectSchema(array('idProject'=>array('type'=>'integer','minimum'=>1),'name'=>array('type'=>'string','minLength'=>1,'maxLength'=>200),'date'=>$date,'privacy'=>array('type'=>'integer','minimum'=>1)),array('idProject','name'),false),$jobResult,'write',true,'mcpPlanningBaselineWorker',array('tool:savePlanningBaseline'),'planning.baseline.create'),
+  'planning.critical_resources.evaluate'=>mcpActionSpec(mcpObjectSchema(array('projectIds'=>$projectIds,'startDate'=>$date,'endDate'=>$date,'allowOverbooking'=>array('type'=>'boolean'),'scenarioId'=>array('type'=>'integer','minimum'=>1),'maxResources'=>array('type'=>'integer','minimum'=>1)),array('projectIds'),false),$criticalResult,'write',true,'mcpPlanningCriticalResourcesWorker',array('tool:refreshCriticalResources','view:criticalResourcesList'),'planning.critical_resources.evaluate',array('batchLimit'=>200,'units'=>array('plannedWork'=>'work_days','surbookedWork'=>'work_days','notPlannedWork'=>'work_days'))),
+  'planning.calculate'=>mcpActionSpec(mcpObjectSchema(array('projectIds'=>$projectIds,'startDate'=>$date,'criticalPath'=>array('type'=>'boolean'),'allowOverbooking'=>array('type'=>'boolean'),'criticalResourceMode'=>array('type'=>'boolean'),'includeDiagnostics'=>array('type'=>'boolean')),array('projectIds'),false),$planningResult,'write',true,'mcpPlanningCalculateWorker',array('tool:plan'),'planning.calculate',array('batchLimit'=>200,'units'=>array('diagnosticWork'=>'work_days'))),
+  'planning.wbs.renumber'=>mcpActionSpec(mcpObjectSchema(array('fixProjectOrder'=>array('type'=>'boolean')),array(),false),$wbsResult,'administrative',true,'mcpPlanningWbsRenumberWorker',array(),'planning.wbs.renumber',array('confirmationRequired'=>true,'retryPolicy'=>'recovery_required','transaction'=>'worker')),
+  'planning.diagnostics'=>mcpActionSpec(mcpObjectSchema(array('idProject'=>array('type'=>'integer','minimum'=>1)),array('idProject'),false),$diagnosticsResult,'read',false,'mcpPlanningDiagnosticsAction',array(),'planning.diagnostics',array('transaction'=>'none')),
+  'planning.baseline.create'=>mcpActionSpec(mcpObjectSchema(array('idProject'=>array('type'=>'integer','minimum'=>1),'name'=>array('type'=>'string','minLength'=>1,'maxLength'=>200),'date'=>$date,'privacy'=>array('type'=>'integer','minimum'=>1)),array('idProject','name'),false),$baselineResult,'write',true,'mcpPlanningBaselineWorker',array('tool:savePlanningBaseline'),'planning.baseline.create'),
   'planning.baseline.delete'=>mcpActionSpec(mcpObjectSchema(array('id'=>array('type'=>'integer','minimum'=>1),'expectedVersion'=>$version),array('id'),false),mcpObjectSchema(array('ok'=>array('type'=>'boolean'),'id'=>array('type'=>'integer','minimum'=>1),'status'=>array('type'=>'string'),'effects'=>array('type'=>'array','items'=>$effect)),array('ok','id','status','effects'),false),'destructive',false,'mcpPlanningBaselineDelete',array('tool:removePlanningBaseline'),'planning.baseline.delete',array('preview'=>'mcpPlanningBaselineDeletePreview'))
 ));

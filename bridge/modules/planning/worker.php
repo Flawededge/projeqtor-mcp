@@ -2,7 +2,9 @@
 declare(strict_types=1);
 
 function mcpPlanningSnapshotWorker(int $jobId,array $arguments,string $username): array {
-  return workerSnapshot($jobId,$arguments);
+  $result=workerSnapshot($jobId,$arguments);
+  unset($result['path']);
+  return $result;
 }
 
 function mcpPlanningCalculateWorker(int $jobId,array $arguments,string $username): array {

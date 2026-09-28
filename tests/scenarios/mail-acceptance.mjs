@@ -20,7 +20,7 @@ async function apiFetch(base, path, options = {}) {
     ...options, signal: AbortSignal.timeout(10_000)
   });
   if (!response.ok) throw new Error(`Mailpit ${options.method ?? 'GET'} ${path} returned HTTP ${response.status}`);
-  if (response.status === 204) return null;
+  if (response.status === 204 || options.method === 'DELETE') return null;
   const text = await response.text();
   return text ? JSON.parse(text) : null;
 }
@@ -104,8 +104,11 @@ export async function runMailAcceptance({ client, runId }) {
     };
   } finally {
     const created = (await messages(base)).filter(message => !priorIds.has(String(message.ID)));
-    for (const message of created) {
-      await apiFetch(base, `messages/${encodeURIComponent(message.ID)}`, { method: 'DELETE' });
+    if (created.length) {
+      await apiFetch(base, 'messages', {
+        method: 'DELETE', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ IDs: created.map(message => String(message.ID)) })
+      });
     }
     const residual = (await messages(base)).filter(message => !priorIds.has(String(message.ID)));
     assert.equal(residual.length, 0, 'Disposable mail fixture remains in the private sink');

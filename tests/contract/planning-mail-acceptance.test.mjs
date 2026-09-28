@@ -37,6 +37,9 @@ test('planning scenario proves exact overload diagnostics and reversible cleanup
   assert.match(planning, /planning\.allocation\.remove/);
   assert.match(planning, /import\.cleanup/);
   assert.match(planning, /PlannedWork/);
+  assert.match(planning, /saved\?\.fixPlanning/);
+  assert.match(planning, /fixtureResource\(client, identity\.username\)/);
+  assert.match(planning, /action: 'project\.snapshot'/);
 });
 
 test('mail scenario is pinned to the internal sink and redacts retained payloads', () => {
@@ -46,4 +49,5 @@ test('mail scenario is pinned to the internal sink and redacts retained payloads
   assert.match(mail, /payloadRedacted/);
   assert.match(mail, /serialized\.includes\(recipient\), false/);
   assert.match(mail, /method: 'DELETE'/);
+  assert.match(mail, /IDs: created\.map/);
 });

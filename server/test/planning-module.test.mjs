@@ -186,3 +186,22 @@ test('Planning batches roll back atomically and isolate best-effort failures', (
     assert.ok(Array.isArray(item.ignoredFields));
   }
 });
+test('Planning async worker result schemas accept executor output without filesystem paths', () => {
+  const script = [
+    `require ${JSON.stringify(registryPath)};`,
+    `$module=require ${JSON.stringify(modulePath)};`,
+    '$actions=$module["actions"];$cases=array(',
+    '"project.snapshot"=>array("ok"=>true,"idProject"=>1,"historyWatermark"=>"2026-09-28T00:00:00+00:00","counts"=>array("Project"=>1),"resource"=>"projeqtor://jobs/7/result"),',
+    '"planning.calculate"=>array("ok"=>true,"status"=>"complete","message"=>"OK","projects"=>array(1),"diagnostics"=>array(array("ok"=>true,"idProject"=>1,"needsReplan"=>false,"elements"=>array(),"assignments"=>array(),"overloads"=>array(),"counts"=>array()))),',
+    '"planning.critical_resources.evaluate"=>array("ok"=>true,"status"=>"complete","message"=>"OK","projects"=>array(1),"startDate"=>null,"endDate"=>null,"resources"=>array(array("idResource"=>2,"name"=>"Resource","plannedWork"=>2.0,"surbookedWork"=>1.0,"overloadedDays"=>1,"firstDate"=>"2026-09-28","lastDate"=>"2026-09-28")),"counts"=>array("resources"=>1,"overloaded"=>1),"effects"=>array()),',
+    '"planning.wbs.renumber"=>array("ok"=>true,"status"=>"renumbered","priorityChanges"=>1,"structureChanges"=>2,"effects"=>array(array("action"=>"update","objectClass"=>"PlanningElement","count"=>3))),',
+    '"planning.baseline.create"=>array("ok"=>true,"baseline"=>array("id"=>9,"_version"=>"v2:9:test"))',
+    ');$errors=array();foreach($cases as $id=>$result)$errors[$id]=mcpValidateSchemaValue($result,$actions[$id]["resultSchema"]);',
+    'echo json_encode(array("errors"=>$errors,"snapshotHasPath"=>array_key_exists("path",$actions["project.snapshot"]["resultSchema"]["properties"])),JSON_THROW_ON_ERROR);'
+  ].join('');
+  const result = JSON.parse(php(script));
+  for (const [action, errors] of Object.entries(result.errors)) {
+    assert.deepEqual(errors, [], action);
+  }
+  assert.equal(result.snapshotHasPath, false);
+});
