@@ -43,7 +43,15 @@ test('Steering contracts are closed, bounded, typed, and permission-aware', () =
     const arrays = Object.values(action.schema.properties).filter(property => property?.type === 'array');
     for (const array of arrays) assert.equal(array.maxItems, 200, id);
     if (['destructive', 'administrative', 'external'].includes(action.risk)) assert.equal(action.preview, 'mcpSteeringPreview', id);
+    const resultItem = action.resultSchema.properties.items?.items;
+    if (resultItem?.properties?.saved && resultItem?.properties?.error) {
+      assert.equal(resultItem.properties.saved.additionalProperties, false, id);
+      assert.equal(resultItem.properties.error.additionalProperties, false, id);
+    }
   }
+  const stateItem = descriptor.actions['steering.state.query'].resultSchema.properties.items.items;
+  assert.equal(stateItem.additionalProperties, false);
+  assert.deepEqual(stateItem.required, ['id', '_version', 'objectClass']);
 });
 
 test('existing Steering writes require optimistic concurrency at schema and executor layers', () => {
@@ -57,6 +65,10 @@ test('existing Steering writes require optimistic concurrency at schema and exec
   assert.match(source, /version_conflict/);
   assert.match(source, /mcpSteeringTarget\(\(string\)\$approver->refType,\(int\)\$approver->refId,'update'\)/);
   assert.match(source, /HabilitationOther/);
+  assert.match(source, /\$result\['saved'\]=array\('id'/);
+  assert.match(source, /'rolled_back'/);
+  assert.match(source, /\$GLOBALS\['mcpCaptureErrors'\]=\$previousCapture/);
+  assert.match(source, /mcpSteeringFields\(\$details/);
 });
 
 test('long and external Steering work is cancellable and never silently replayed', () => {
@@ -79,7 +91,8 @@ test('state discovery is parent-permission scoped and redacts secret-like fields
   assert.equal(state.transaction, 'none');
   const source = readFileSync(new URL('../../bridge/modules/steering/actions.php', import.meta.url), 'utf8');
   assert.match(source, /mcpSteeringTarget\(\$parentClass,\$parentId,'read'\)/);
-  assert.match(source, /password\|token\|secret\|credential/);
+  assert.match(source, /mcpSteeringStateRow\(\$row\)/);
+  assert.doesNotMatch(source, /foreach\(array_keys\(\$data\).*preg_match/);
 });
 
 test('Steering schemas never accept credential material', () => {
