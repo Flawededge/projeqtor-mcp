@@ -250,6 +250,46 @@ function pqV4KnownGenericCrud(string $name): bool
     return in_array($name, ['saveObject', 'deleteObject', 'deleteObjectMultiple', 'deleteObjectMultipleControl'], true);
 }
 
+/**
+ * A runtime action may only claim an installed native surface. Included PHP
+ * libraries are not HTTP handlers, so claiming one requires an explicit,
+ * reviewable exception in the generated catalog rather than being accepted
+ * merely because the file happens to exist.
+ */
+function pqV4ValidateCatalogHandlerClaims(array $inventoryFiles, array $catalogHandlers): void
+{
+    $inventoryById = [];
+    foreach ($inventoryFiles as $file) {
+        if (!is_array($file) || !is_string($file['id'] ?? null) || !is_string($file['sourceRole'] ?? null)) {
+            pqV4Fail('Source inventory contains an invalid file record');
+        }
+        $id = $file['id'];
+        if (isset($inventoryById[$id])) {
+            pqV4Fail("Source inventory contains duplicate handler id: $id");
+        }
+        $inventoryById[$id] = $file;
+    }
+
+    foreach ($catalogHandlers as $handler => $mapping) {
+        if (!is_string($handler) || $handler === '' || !is_array($mapping)) {
+            pqV4Fail('Module catalog contains an invalid handler claim');
+        }
+        $source = $inventoryById[$handler] ?? null;
+        if ($source === null) {
+            pqV4Fail("Runtime handler claim is absent from source inventory: $handler");
+        }
+        if ($source['sourceRole'] === 'http_entrypoint') {
+            continue;
+        }
+        $reason = $mapping['includedLibraryReason'] ?? null;
+        if ($source['sourceRole'] !== 'included_library'
+            || ($mapping['allowIncludedLibrary'] ?? false) !== true
+            || !is_string($reason) || trim($reason) === '') {
+            pqV4Fail("Runtime handler claim is not an HTTP entrypoint: $handler");
+        }
+    }
+}
+
 function pqV4ValidateCatalog(array $handlers, array $catalog): array
 {
     if (!is_array($catalog['actions'] ?? null) || array_is_list($catalog['actions'])) pqV4Fail('Module catalog actions must be an object map');

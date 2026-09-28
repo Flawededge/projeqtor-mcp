@@ -15,7 +15,7 @@ export const CORE_ACTIONS = Object.freeze([
 
 export const CORE_HANDLERS = Object.freeze([
   'tool:copyObject', 'tool:copyObjectTo', 'tool:copyProjectTo',
-  'tool:changeObjectStatus', 'tool:saveStatus',
+  'tool:changeObjectStatus',
   'tool:disconnectSession', 'tool:hackMessage', 'tool:loginCheck',
   'tool:saveJoblist', 'tool:saveMessageLegalFollowup', 'tool:saveObjectMultiple',
   'tool:saveSubTask', 'tool:saveSubTaskOrder', 'view:main'

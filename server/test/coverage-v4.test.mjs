@@ -30,10 +30,17 @@ test('Beta 4 coverage manifests are complete and module-owned', async () => {
 
 test('Beta 4 policy fixes known unsafe and false classifications', async () => {
   const handlers = await readJson('bridge/ui-handler-policy-v4.json');
+  const inventory = await readJson('bridge/source-inventory-v4.json');
+  const classes = await readJson('bridge/class-policy-v4.json');
   const byPath = new Map(handlers.handlers.map((handler) => [handler.path, handler]));
-  for (const path of ['tool/backupFilter.php', 'tool/backupLayout.php', 'tool/backupReportLayout.php']) {
-    assert.equal(byPath.get(path)?.classification, 'registered_action', path);
+  const inventoryByPath = new Map(inventory.files.map((entry) => [entry.path, entry]));
+  for (const path of ['tool/backupFilter.php', 'tool/backupLayout.php']) {
+    assert.equal(byPath.get(path)?.classification, 'read_only', path);
+    assert.equal(byPath.get(path)?.mappingSource, 'explicit_session_or_library', path);
   }
+  assert.equal(byPath.get('tool/backupReportLayout.php')?.classification, 'registered_action');
+  assert.equal(byPath.has('tool/file.php'), false, 'included file helper is not an executable handler');
+  assert.equal(inventoryByPath.get('tool/file.php')?.sourceRole, 'included_library');
   for (const path of ['tool/saveWorkTokenClientContract.php', 'tool/saveWorkTokenMarkup.php']) {
     assert.equal(byPath.get(path)?.module, 'financial', path);
     assert.equal(byPath.get(path)?.classification, 'registered_action', path);
@@ -41,7 +48,24 @@ test('Beta 4 policy fixes known unsafe and false classifications', async () => {
   assert.equal(byPath.get('tool/saveObjectMultiplePwd.php')?.exclusionReason, 'secrets_or_credentials');
   assert.equal(byPath.get('tool/installAutoInstall.php')?.exclusionReason, 'plugin_installation');
   assert.equal(byPath.get('tool/sendRequestResetPassword.php')?.mappedActions[0], 'user.trigger_password_reset');
+  assert.deepEqual(byPath.get('tool/deleteOAuthClient.php')?.mappedClasses, ['OAuthClient']);
+  assert.equal(byPath.get('tool/deleteOAuthClient.php')?.mappingSource, 'explicit_fixed_class_crud');
+  assert.equal(byPath.get('tool/commonFilter.php')?.mappedActions[0], 'configuration.view.manage');
+  assert.equal(byPath.get('tool/commonFilter.php')?.mappingSource, 'explicit_action_equivalence');
   assert.equal(byPath.get('api/index.php')?.classification, 'generic_crud');
   assert.equal(byPath.get('report/ticketReport.php')?.module, 'reports');
   assert.ok(!byPath.has('report/header.php'), 'included report helpers are not executable handlers');
+  assert.ok(handlers.handlers.every((handler) => handler.coverageStatus === 'covered'));
+
+  const expectedClassModules = {
+    RaciAssignment: 'steering',
+    Phase: 'financial',
+    ProjectExpense: 'financial',
+    TicketDelayPerProject: 'ticketing',
+    Complexity: 'financial',
+    ComplexityValues: 'financial'
+  };
+  for (const [className, module] of Object.entries(expectedClassModules)) {
+    assert.equal(classes.classes[className]?.module, module, className);
+  }
 });

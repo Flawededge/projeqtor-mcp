@@ -22,6 +22,7 @@ if (($catalog['catalogVersion'] ?? null) !== 4 || !is_array($catalog['actions'] 
     || !is_array($catalog['handlers'] ?? null) || !is_array($catalog['tests'] ?? null)) {
     pqV4Fail('Invalid v4 runtime module catalog', 2);
 }
+pqV4ValidateCatalogHandlerClaims($inventory['files'], $catalog['handlers']);
 $modulePolicies = [];
 foreach ($fragments as $module => $fragment) {
     unset($fragment['_path']);

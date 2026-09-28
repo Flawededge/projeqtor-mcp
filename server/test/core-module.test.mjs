@@ -29,7 +29,8 @@ test('Core maps both termination paths and all seven requested native workflow f
   const descriptor = phpDescriptor();
   const mapped = new Set(Object.values(descriptor.actions).flatMap(action => action.mappedHandlers));
   assert.deepEqual(mapped, new Set(CORE_HANDLERS));
-  assert.equal(mapped.size, 14);
+  assert.equal(mapped.size, 13);
+  assert.equal(mapped.has('tool:saveStatus'), false);
   assert.deepEqual(descriptor.actions['user.session.terminate'].mappedHandlers, ['tool:disconnectSession', 'tool:hackMessage']);
   assert.deepEqual(descriptor.actions['core.subtask.manage'].mappedHandlers, ['tool:saveSubTask', 'tool:saveSubTaskOrder']);
   for (const handler of policy.ownedHandlers) assert.ok(mapped.has(handler), handler);

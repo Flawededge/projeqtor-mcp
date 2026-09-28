@@ -123,6 +123,19 @@ PHP;
         "$temporary/incomplete-handlers.json", "$temporary/incomplete-classes.json", $invalidCatalogPath,
     ], $output) !== 0, 'runtime catalog with a missing action must fail closed');
 
+    $phantomCatalog = $catalog;
+    $firstMapping = reset($phantomCatalog['handlers']);
+    verify(is_array($firstMapping), 'runtime catalog contains a reusable handler mapping');
+    $phantomCatalog['handlers']['tool:doesNotExist'] = $firstMapping;
+    $phantomCatalogPath = "$temporary/phantom-handler-module-catalog-v4.json";
+    pqV4WriteJson($phantomCatalogPath, $phantomCatalog);
+    $output = [];
+    verify(runCommand([
+        PHP_BINARY, "$repo/scripts/compile-coverage-v4.php", $inventoryPath,
+        $classV3Path, "$repo/policy/modules",
+        "$temporary/phantom-handlers.json", "$temporary/phantom-classes.json", $phantomCatalogPath,
+    ], $output) !== 0, 'runtime catalog with a phantom handler must fail closed');
+    verify(str_contains(implode("\n", $output), 'absent from source inventory: tool:doesNotExist'), 'phantom handler failure identifies the invalid claim');
 
     fwrite(STDOUT, json_encode([
         'ok' => true,
