@@ -44,6 +44,11 @@ test('Follow-up contracts are exact, bounded, result-typed, and permission-aware
     for (const property of Object.values(action.schema.properties)) {
       if (property?.type === 'array' && property.items?.type === 'object') assert.equal(property.maxItems, 200, id);
     }
+    const resultItem = action.resultSchema.properties.items?.items;
+    if (resultItem?.properties?.saved && resultItem?.properties?.error) {
+      assert.equal(resultItem.properties.saved.additionalProperties, false, id);
+      assert.equal(resultItem.properties.error.additionalProperties, false, id);
+    }
   }
 });
 
@@ -62,6 +67,10 @@ test('Follow-up existing mutations fail closed on versions and native permission
   assert.match(actionsSource, /ImputationLine::getValidationRight/);
   assert.match(actionsSource, /mcpFollowUpTarget\(\(string\)\$assignment->refType/);
   assert.doesNotMatch(actionsSource, /\?\?\s*mcpObjectVersion/);
+  assert.doesNotMatch(actionsSource, /mcpObjectArray/);
+  assert.match(actionsSource, /mcpRequireClassOperation\('Assignment','update'\)/);
+  assert.match(actionsSource, /'rolled_back'/);
+  assert.match(actionsSource, /\$GLOBALS\['mcpCaptureErrors'\]=\$previousCapture/);
 });
 
 test('Follow-up destructive and external actions always have permission-safe previews', () => {

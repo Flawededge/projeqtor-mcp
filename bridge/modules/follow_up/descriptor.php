@@ -5,9 +5,9 @@ function mcpFollowUpModuleDescriptor(): array {
   $id=array('type'=>'integer','minimum'=>1);$nullableId=array('type'=>array('integer','null'),'minimum'=>1);$version=array('type'=>'string','minLength'=>1,'maxLength'=>200);
   $date=array('type'=>'string','pattern'=>'^\\d{4}-\\d{2}-\\d{2}$');$text=array('type'=>array('string','null'),'maxLength'=>4000);$boolean=array('type'=>'boolean');
   $transaction=array('type'=>'string','enum'=>array('atomic','best_effort'));$work=array('type'=>'number','minimum'=>0);
-  $saved=mcpObjectSchema(array(),array(),true);$error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string')),array('code','message'),true);
+  $saved=mcpObjectSchema(array('id'=>$id,'_version'=>$version),array(),false);$error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string'),'objectClass'=>array('type'=>'string'),'id'=>$id,'expectedVersion'=>$version,'actualVersion'=>$version,'missingFields'=>array('type'=>'array','items'=>array('type'=>'string')),'invalidFields'=>array('type'=>'array','items'=>array('type'=>'string')),'workTotal'=>array('type'=>'number'),'detailTotal'=>array('type'=>'number')),array('code','message'),false);
   $item=mcpObjectSchema(array(
-    'index'=>array('type'=>'integer','minimum'=>0),'status'=>array('type'=>'string','enum'=>array('created','updated','deleted','existing','submitted','unsubmitted','validated','rejected','cancelled','started','stopped','error')),
+    'index'=>array('type'=>'integer','minimum'=>0),'status'=>array('type'=>'string','enum'=>array('created','updated','deleted','existing','submitted','unsubmitted','validated','rejected','cancelled','started','stopped','rolled_back','error')),
     'objectClass'=>array('type'=>'string'),'id'=>array('type'=>array('integer','null')),'relatedIds'=>array('type'=>'array','maxItems'=>400,'items'=>$id),
     'requestedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'appliedFields'=>array('type'=>'array','items'=>array('type'=>'string')),
     'recalculatedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'ignoredFields'=>array('type'=>'array','items'=>array('type'=>'string')),
