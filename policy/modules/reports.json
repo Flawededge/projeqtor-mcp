@@ -1,8 +1,35 @@
 {
   "module": "reports",
   "version": "4.0.0",
-  "dependsOn": ["core"],
+  "dependsOn": ["core", "configuration", "tools"],
   "legacyAliases": ["steering_reports"],
-  "pathPatterns": ["#^report/#i", "#(?:^|/)[^/]*(?:report|dashboard|chart)#i"],
-  "classPatterns": ["/(?:Report|Dashboard)/i"]
+  "pathPatterns": ["#^report/#i", "#(?:^|/)[^/]*(?:report|dashboard|chart|favorite)#i"],
+  "classPatterns": ["/(?:Report|Dashboard|Favorite|Today)/i"],
+  "ownedClasses": [
+    "AutoSendReport", "Favorite", "FavoriteParameter", "HabilitationReport",
+    "ModuleReport", "Report", "ReportCategory", "ReportLayout", "ReportParameter",
+    "Today", "TodayParameter"
+  ],
+  "handlerMappings": {
+    "tool/backupReportLayout.php": {"action": "reports.layout.manage", "test": "coverage.reports.layout.backup"},
+    "tool/getParamDashboard.php": {"action": "reports.dashboard.read", "test": "coverage.reports.dashboard.parameters"},
+    "tool/jsonProjectDashboard.php": {"action": "reports.dashboard.read", "test": "coverage.reports.dashboard.project"},
+    "tool/jsonProjectDashboardDetail.php": {"action": "reports.dashboard.read", "test": "coverage.reports.dashboard.project_detail"},
+    "tool/moveReportLayoutColumn.php": {"action": "reports.layout.manage", "test": "coverage.reports.layout.order"},
+    "tool/removeFavoriteReport.php": {"action": "reports.favorite.delete", "test": "coverage.reports.favorite.delete"},
+    "tool/removeReportLayout.php": {"action": "reports.layout.delete", "test": "coverage.reports.layout.delete"},
+    "tool/saveAutoSendReport.php": {"action": "reports.schedule", "test": "coverage.reports.schedule"},
+    "tool/saveReportAsFavorite.php": {"action": "reports.favorite.manage", "test": "coverage.reports.favorite.create"},
+    "tool/saveReportFavoriteOrder.php": {"action": "reports.favorite.manage", "test": "coverage.reports.favorite.order"},
+    "tool/saveReportInToday.php": {"action": "reports.dashboard.pin", "test": "coverage.reports.dashboard.pin"},
+    "tool/saveReportLayout.php": {"action": "reports.layout.manage", "test": "coverage.reports.layout.save"},
+    "tool/saveTodayDeleteReport.php": {"action": "reports.dashboard.unpin", "test": "coverage.reports.dashboard.unpin"},
+    "tool/shareReportLayout.php": {"action": "reports.layout.manage", "test": "coverage.reports.layout.share"}
+  },
+  "handlerHandoffs": {
+    "tool/exportLeaveCalendarOfDashboardEmployeeManager.php": "hr",
+    "view/dashboardEmployeeManager.php": "hr",
+    "view/dashboardRequirementMain.php": "configuration",
+    "view/dashboardTicketMain.php": "configuration"
+  }
 }
