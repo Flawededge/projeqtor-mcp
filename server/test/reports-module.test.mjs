@@ -80,7 +80,11 @@ test('renderer enforces permissions, safe paths, cancellation, bounds, and atomi
   assert.match(source, /workerCancelled\(\$jobId\)/);
   assert.match(source, /proc_open\(array\(PHP_BINARY,'\/usr\/local\/lib\/projeqtor\/report-render\.php'/);
   assert.match(source, /report_capture_size/);
-  assert.match(source, /imagecreatetruecolor\(1600,900\)/);
+  assert.match(source, /MCP_REPORT_RENDER_TIMEOUT_SECONDS/);
+  assert.match(source, /workerCancelled\(\$jobId\).*proc_terminate/s);
+  assert.match(source, /workerUpdate\(\$jobId,'running',20\)/);
+  assert.match(source, /maximumLines=900/);
+  assert.match(source, /Output truncated at the bounded image limit/);
   assert.match(source, /str_contains\(\$native,'\.render-'\)&&is_file\(\$native\)\)unlink\(\$native\)/);
   assert.match(source, /rename\(\$temporary,\$path\)/);
   assert.match(source, /finally\{if\(\$copy&&str_contains\(\$copy,'\.render-'\)\)@unlink\(\$copy\);\}/);

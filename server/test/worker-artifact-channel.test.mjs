@@ -87,6 +87,15 @@ test('durable worker clears ProjeQtOr authorization and reference caches before 
   assert.match(worker, /workerResetRequestCaches\(\);\$user=SqlElement::getSingleSqlElementFromCriteria/);
 });
 
+test('durable worker removes all incomplete report staging files after failure and staleness', () => {
+  const worker = readFileSync(workerPath, 'utf8');
+  assert.match(worker, /function workerCleanupJobTemporary\(int \$jobId\): void/);
+  assert.match(worker, /'job-'\.\$jobId\.'\.\*\.render-\*'/);
+  assert.match(worker, /'job-'\.\$jobId\.'\.\*\.capture-\*'/);
+  assert.match(worker, /workerCleanupStaleTemporary\(\)/);
+  assert.match(worker, /workerCleanupJobTemporary\(\(int\)\$row\['id'\]\)/);
+});
+
 test('artifact channel fails closed on traversal, mismatches, missing files, and multiple artifacts', () => {
   const script = [
     '$root=sys_get_temp_dir()."/mcp-artifact-channel-".bin2hex(random_bytes(5));define("MCP_WORKER_ARTIFACT_ROOT",$root);',

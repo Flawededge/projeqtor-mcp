@@ -23,7 +23,15 @@ function mcpReportsCaptureIsolated(int $jobId,Report $report,array $parameters,s
     $descriptors=array(0=>array('file','/dev/null','r'),1=>array('file','/dev/null','a'),2=>array('file','/dev/null','a'));
     $process=proc_open(array(PHP_BINARY,'/usr/local/lib/projeqtor/report-render.php',$inputPath,$capture),$descriptors,$pipes,null,null,array('bypass_shell'=>true));
     if(!is_resource($process))mcpReportsError('report_runner_unavailable','Native report runner could not be started');
-    $exit=proc_close($process);
+    $timeout=max(15,min(600,(int)(getenv('MCP_REPORT_RENDER_TIMEOUT_SECONDS')?:120)));$deadline=microtime(true)+$timeout;$lastHeartbeat=0.0;$exit=-1;
+    while(true){
+      $status=proc_get_status($process);if(!$status['running']){$exit=(int)$status['exitcode'];break;}
+      if(workerCancelled($jobId)){proc_terminate($process,15);usleep(250000);$status=proc_get_status($process);if($status['running'])proc_terminate($process,9);proc_close($process);throw new RuntimeException('cancelled');}
+      if(microtime(true)>=$deadline){proc_terminate($process,15);usleep(250000);$status=proc_get_status($process);if($status['running'])proc_terminate($process,9);proc_close($process);mcpReportsError('report_timeout','Native report exceeded the configured execution limit');}
+      if(microtime(true)-$lastHeartbeat>=5){workerUpdate($jobId,'running',20);$lastHeartbeat=microtime(true);}
+      usleep(250000);
+    }
+    $closed=proc_close($process);if($exit<0)$exit=$closed;
     error_log(json_encode(array('operationId'=>$jobId,'component'=>'report-runner','phase'=>'child_exited','exitCode'=>$exit)));
     $status=is_file($statusPath)?json_decode((string)file_get_contents($statusPath),true):null;
     if($exit!==0||!is_array($status)||($status['ok']??false)!==true||!is_file($capture)){
@@ -59,15 +67,14 @@ function mcpReportsNativeImage(string $html,int $jobId,string $artifactFormat): 
   if(!function_exists('imagecreatetruecolor')||!function_exists('imagepng'))mcpReportsError('native_image_unavailable','GD image rendering is unavailable');
   $final=workerArtifactPath($jobId,$artifactFormat);
   $temporary=$final.'.render-'.bin2hex(random_bytes(6)).'.png';
-  $image=imagecreatetruecolor(1600,900);
-  if(!$image)mcpReportsError('native_image_unavailable','Report canvas could not be created');
-  $white=imagecolorallocate($image,255,255,255);
-  $black=imagecolorallocate($image,25,31,38);
-  imagefilledrectangle($image,0,0,1599,899,$white);
   $plain=trim(preg_replace('/\s+/u',' ',html_entity_decode(strip_tags(str_ireplace(array('<br>','<br/>','<br />','</tr>','</p>'),"\n",$html)),ENT_QUOTES|ENT_HTML5,'UTF-8')));
   $lines=preg_split('/\R/u',wordwrap($plain,150,"\n",true))?:array();
+  $maximumLines=900;$truncated=count($lines)>$maximumLines;$lines=array_slice($lines,0,$maximumLines);
+  $height=min(16384,max(900,90+count($lines)*17+($truncated?34:0)));$image=imagecreatetruecolor(1600,$height);
+  if(!$image)mcpReportsError('native_image_unavailable','Report canvas could not be created');
+  $white=imagecolorallocate($image,255,255,255);$black=imagecolorallocate($image,25,31,38);imagefilledrectangle($image,0,0,1599,$height-1,$white);
   imagestring($image,5,24,20,'ProjeQtOr report',$black);
-  $y=52;foreach(array_slice($lines,0,48) as $line){imagestring($image,3,24,$y,mb_substr($line,0,180),$black);$y+=17;}
+  $y=52;foreach($lines as $line){imagestring($image,3,24,$y,mb_substr($line,0,180),$black);$y+=17;}if($truncated)imagestring($image,3,24,$y,'[Output truncated at the bounded image limit]',$black);
   if(!imagepng($image,$temporary,6)){imagedestroy($image);mcpReportsError('native_image_unavailable','Report image could not be written');}
   imagedestroy($image);
   return $temporary;
