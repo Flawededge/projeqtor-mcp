@@ -71,28 +71,63 @@ $acceptanceModuleNames = array(
   'moduleProjectAnalysis','moduleCrmProspect','moduleAbacus'
 );
 $moduleSnapshotPath='/var/lib/projeqtor/mcp-harness-module-state.json';
-$moduleSnapshot=array('version'=>1,'modules'=>array());
-foreach($acceptanceModuleNames as $moduleName){
-  $module=SqlElement::getSingleSqlElementFromCriteria('Module',array('name'=>$moduleName));
-  if(!$module->id)bootstrapFail("required acceptance module $moduleName is missing",77);
-  $moduleSnapshot['modules'][$moduleName]=(int)$module->active;
-}
-if(!is_file($moduleSnapshotPath)){
-  $temporary=$moduleSnapshotPath.'.tmp';
-  if(file_put_contents($temporary,json_encode($moduleSnapshot,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n",LOCK_EX)===false||!rename($temporary,$moduleSnapshotPath))bootstrapFail('could not capture initial module state',78);
-}
+$acceptanceParameterValues=array(
+  'paramMailerType'=>'phpmailer',
+  'paramMailSmtpServer'=>'mail',
+  'paramMailSmtpPort'=>'1025',
+  'paramMailSender'=>'beta4@beta4.invalid',
+  'paramMailReplyTo'=>'beta4@beta4.invalid',
+  'paramMailReplyToName'=>'Beta 4 Disposable',
+  'paramMailSmtpUseUnsecureSsl'=>'YES'
+);
+$acceptanceModules=array();
 $parentModuleIds=array();
 foreach($acceptanceModuleNames as $moduleName){
   $module=SqlElement::getSingleSqlElementFromCriteria('Module',array('name'=>$moduleName));
+  if(!$module->id)bootstrapFail("required acceptance module $moduleName is missing",77);
+  $acceptanceModules[$moduleName]=$module;
+  if((int)$module->idModule>0)$parentModuleIds[(int)$module->idModule]=true;
+}
+foreach(array_keys($parentModuleIds) as $parentModuleId){
+  $parent=new Module((int)$parentModuleId);
+  if(!$parent->id)bootstrapFail("acceptance parent module $parentModuleId is missing",80);
+  $acceptanceModules[$parent->name]=$parent;
+}
+$moduleSnapshot=null;
+if(is_file($moduleSnapshotPath)){
+  $decoded=json_decode((string)file_get_contents($moduleSnapshotPath),true);
+  if(!is_array($decoded)||!isset($decoded['modules'])||!is_array($decoded['modules']))bootstrapFail('initial state snapshot is malformed',78);
+  $moduleSnapshot=$decoded;
+}
+if($moduleSnapshot===null)$moduleSnapshot=array('version'=>2,'modules'=>array(),'parameters'=>array());
+foreach($acceptanceModules as $moduleName=>$module){
+  if(!array_key_exists($moduleName,$moduleSnapshot['modules']))$moduleSnapshot['modules'][$moduleName]=(int)$module->active;
+}
+if(!isset($moduleSnapshot['parameters'])||!is_array($moduleSnapshot['parameters']))$moduleSnapshot['parameters']=array();
+$parameterLookup=$pdo->prepare('SELECT parameterValue FROM parameter WHERE idUser IS NULL AND idProject IS NULL AND parameterCode=:code ORDER BY id LIMIT 1');
+foreach(array_keys($acceptanceParameterValues) as $parameterCode){
+  if(array_key_exists($parameterCode,$moduleSnapshot['parameters']))continue;
+  $parameterLookup->execute(array(':code'=>$parameterCode));
+  $parameterValue=$parameterLookup->fetchColumn();
+  $moduleSnapshot['parameters'][$parameterCode]=array('exists'=>$parameterValue!==false,'value'=>$parameterValue===false?null:(string)$parameterValue);
+}
+$moduleSnapshot['version']=2;
+$temporary=$moduleSnapshotPath.'.tmp';
+if(file_put_contents($temporary,json_encode($moduleSnapshot,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n",LOCK_EX)===false||!chmod($temporary,0600)||!rename($temporary,$moduleSnapshotPath))bootstrapFail('could not capture initial disposable state',78);
+
+foreach($acceptanceModules as $moduleName=>$module){
   $module->active=1;$result=$module->save();
   if(!in_array(getLastOperationStatus($result),array('OK','NO_CHANGE'),true))bootstrapFail("could not enable acceptance module $moduleName",79);
-  if((int)$module->idModule>0)$parentModuleIds[(int)$module->idModule]=true;
 }
 foreach(array_keys($parentModuleIds) as $parentModuleId){
   $parent=new Module((int)$parentModuleId);
   if(!$parent->id)bootstrapFail("acceptance parent module $parentModuleId is missing",80);
   $parent->active=1;$result=$parent->save();
   if(!in_array(getLastOperationStatus($result),array('OK','NO_CHANGE'),true))bootstrapFail("could not refresh acceptance parent module $parentModuleId",81);
+}
+foreach($acceptanceParameterValues as $parameterCode=>$parameterValue){
+  Parameter::storeGlobalParameter($parameterCode,$parameterValue);
+  if((string)Parameter::getGlobalParameter($parameterCode)!==$parameterValue)bootstrapFail("could not isolate disposable mail setting $parameterCode",82);
 }
 
 $identityProfiles = array('beta4-admin' => 'ADM', 'beta4-manager' => 'PL', 'beta4-member' => 'TM', 'beta4-denied' => 'G');

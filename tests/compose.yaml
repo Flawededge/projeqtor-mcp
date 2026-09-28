@@ -72,6 +72,21 @@ services:
     restart: "no"
     security_opt: [no-new-privileges:true]
 
+  state-cleanup:
+    image: ${BETA4_APP_IMAGE:-projeqtor-app:beta4-test}
+    pull_policy: never
+    depends_on:
+      db: {condition: service_healthy}
+    environment: *app-environment
+    command: [sh, -ceu, "exec su -s /bin/sh www-data -c 'php /cleanup.php'"]
+    networks: [backend]
+    volumes:
+      - app-data:/var/lib/projeqtor
+      - app-cache:/var/www/html/cache
+      - ./support/cleanup.php:/cleanup.php:ro
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+
   app:
     build:
       context: ..

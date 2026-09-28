@@ -27,7 +27,7 @@ test('app and worker trust exactly the fixed disposable MCP address', () => {
   assert.equal(trustedIp, '${BETA4_MCP_IP:-10.249.0.13}');
   assert.equal(trustedIp, fixedMcpIp);
   assert.match(compose, /^    environment: \*app-environment$/m);
-  assert.equal((compose.match(/^    environment: \*app-environment$/gm) ?? []).length, 3);
+  assert.equal((compose.match(/^    environment: \*app-environment$/gm) ?? []).length, 4);
 });
 
 test('gateway is non-root, capability-free, and has only narrow writable tmpfs mounts', () => {
@@ -53,4 +53,22 @@ test('restore seed is explicit, read-only, and isolated from fresh mode', () => 
   assert.match(restore, /restore\.dump:ro/);
   assert.match(restore, /--no-owner/);
   assert.match(restore, /--no-privileges/);
+});
+
+test('state cleanup is backend-only and uses the private application volumes', () => {
+  const cleanup = compose.slice(compose.indexOf('  state-cleanup:'), compose.indexOf('\n  app:'));
+  assert.match(cleanup, /networks: \[backend\]/);
+  assert.match(cleanup, /support\/cleanup\.php:\/cleanup\.php:ro/);
+  assert.match(cleanup, /app-data:\/var\/lib\/projeqtor/);
+  assert.match(cleanup, /app-cache:\/var\/www\/html\/cache/);
+  assert.match(cleanup, /no-new-privileges:true/);
+  assert.doesNotMatch(cleanup, /^\s+ports:/m);
+});
+
+test('harness stops processes and restores state before volume removal', async () => {
+  const harness = await readFile(new URL('../support/harness.mjs', import.meta.url), 'utf8');
+  const stop = harness.indexOf("['stop', 'test-runner', 'gateway', 'mcp', 'worker', 'app', 'mail']");
+  const cleanup = harness.indexOf("['run', '--rm', 'state-cleanup']");
+  const down = harness.indexOf("['down', '--volumes', '--remove-orphans']");
+  assert.ok(stop >= 0 && cleanup > stop && down > cleanup);
 });

@@ -144,6 +144,12 @@ async function main() {
     return;
   }
   if (command === 'down') {
+    const initialized = compose(run, ['ps', '-a', '-q', 'db-bootstrap'], { capture: true }).trim();
+    if (initialized) {
+      compose(run, ['stop', 'test-runner', 'gateway', 'mcp', 'worker', 'app', 'mail']);
+      compose(run, ['up', '-d', '--wait', 'db']);
+      compose(run, ['run', '--rm', 'state-cleanup']);
+    }
     compose(run, ['down', '--volumes', '--remove-orphans']);
     if (await currentRunId() === run.runId) await rm(currentFile, { force: true });
     await rm(run.runRoot, { recursive: true, force: true });
