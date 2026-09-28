@@ -79,6 +79,14 @@ test('artifact channel supports legacy and schema-clean workers while persisting
   assert.equal(value.plain.resultPath, null);
 });
 
+test('durable worker clears ProjeQtOr authorization and reference caches before each actor job', () => {
+  const worker = readFileSync(workerPath, 'utf8');
+  assert.match(worker, /function workerResetRequestCaches\(\): void/);
+  assert.match(worker, /SqlList::cleanAllLists\(\)/);
+  assert.match(worker, /foreach\(array_keys\(SqlElement::\$_cachedQuery\) as \$class\)SqlElement::\$_cachedQuery\[\$class\]=array\(\)/);
+  assert.match(worker, /workerResetRequestCaches\(\);\$user=SqlElement::getSingleSqlElementFromCriteria/);
+});
+
 test('artifact channel fails closed on traversal, mismatches, missing files, and multiple artifacts', () => {
   const script = [
     '$root=sys_get_temp_dir()."/mcp-artifact-channel-".bin2hex(random_bytes(5));define("MCP_WORKER_ARTIFACT_ROOT",$root);',
