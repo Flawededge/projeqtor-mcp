@@ -8,6 +8,7 @@ function mcpReportsCron(array $entry): string {
 }
 
 function mcpReportsScheduleAction(array $arguments,string $username,string $actionId): array {
+  if(($bestEffort=mcpReportsBestEffort($arguments,$username,$actionId,__FUNCTION__))!==null)return $bestEffort;
   if(!securityCheckDisplayMenu(null,'AutoSendReport'))mcpReportsError('schedule_access_denied','Auto-send report access is denied');
   $items=array();$effects=array();Sql::beginTransaction();
   try{foreach($arguments['items'] as $index=>$entry){$operation=(string)$entry['operation'];
@@ -19,6 +20,6 @@ function mcpReportsScheduleAction(array $arguments,string $username,string $acti
     else{$schedule=new AutoSendReport((int)$entry['id'],true);mcpReportsRequireOwned($schedule,(string)($entry['expectedVersion']??''));if((int)$schedule->idReceiver!==(int)getSessionUser()->id)mcpReportsError('recipient_not_actor','Recipient must be the actor');}
     $schedule->name=(string)$entry['name'];$schedule->idReport=$report->id;$schedule->idResource=getSessionUser()->id;$schedule->idReceiver=getSessionUser()->id;$schedule->otherReceiver='';$schedule->sendFrequency=(string)$entry['frequency'];$schedule->cron=mcpReportsCron($entry);$schedule->reportParameter=json_encode(mcpReportsValidateParameters($entry['parameters']??array()),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);$schedule->idle=!empty($entry['idle'])?1:0;mcpReportsSave($schedule);$schedule->calculNextTime($schedule->cron);
     $saved=new AutoSendReport($schedule->id,true);$status=$operation==='create'?'created':'updated';$items[]=array('index'=>$index,'status'=>$status,'id'=>(int)$saved->id,'version'=>mcpObjectVersion($saved));$effects[]=array('action'=>$status,'objectClass'=>'AutoSendReport','id'=>(int)$saved->id,'externalDelivery'=>true);
-  }Sql::commitTransaction();}catch(Throwable $error){Sql::rollbackTransaction();throw $error;}
-  return array('ok'=>true,'items'=>$items,'effects'=>$effects);
+  }Sql::commitTransaction();}catch(Throwable $error){Sql::rollbackTransaction();return mcpReportsFailure($items,$index,$entry,$error,$actionId);}
+  return mcpReportsSuccess($items,$effects);
 }

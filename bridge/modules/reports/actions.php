@@ -51,6 +51,15 @@ function mcpReportsRequireOwned(object $object,string $version): void {
 function mcpReportsSave(object $object): void {$raw=$object->save();if(getLastOperationStatus($raw)!=='OK')mcpReportsError('native_save_failed',cleanApiMessage($raw));}
 function mcpReportsDelete(object $object): void {$raw=$object->delete();if(getLastOperationStatus($raw)!=='OK')mcpReportsError('native_delete_failed',cleanApiMessage($raw));}
 function mcpReportsEffect(string $action,string $class,int $id): array{return array('action'=>$action,'objectClass'=>$class,'id'=>$id);}
+function mcpReportsClassForAction(string $actionId): string {return str_contains($actionId,'layout')?'ReportLayout':(str_contains($actionId,'dashboard')?'Today':(str_contains($actionId,'schedule')?'AutoSendReport':'Favorite'));}
+function mcpReportsErrorPayload(Throwable $error): array {$code=$error instanceof McpBridgeException?$error->errorCode:'reports_operation_failed';return array('code'=>(string)$code,'message'=>cleanApiMessage($error->getMessage()));}
+function mcpReportsSuccess(array $items,array $effects,string $mode='atomic'): array {return array('ok'=>true,'rolledBack'=>false,'transactionMode'=>$mode,'items'=>$items,'effects'=>$effects);}
+function mcpReportsFailure(array $items,int $index,array $entry,Throwable $error,string $actionId): array {foreach($items as &$item){$item['status']='rolled_back';unset($item['version']);}unset($item);$items[]=array('index'=>$index,'status'=>'error','objectClass'=>mcpReportsClassForAction($actionId),'id'=>isset($entry['id'])?(int)$entry['id']:null,'error'=>mcpReportsErrorPayload($error));return array('ok'=>false,'rolledBack'=>true,'transactionMode'=>'atomic','items'=>$items,'effects'=>array());}
+function mcpReportsBestEffort(array $arguments,string $username,string $actionId,callable $callable): ?array {
+  $mode=(string)($arguments['transactionMode']??'atomic');if($mode!=='best_effort')return null;$items=array();$effects=array();$ok=true;
+  foreach($arguments['items'] as $index=>$entry){try{$result=$callable(array('items'=>array($entry),'transactionMode'=>'atomic'),$username,$actionId);$item=$result['items'][0]??array('status'=>'error','error'=>array('code'=>'missing_result','message'=>'The operation returned no item result'));if(!($result['ok']??false))$ok=false;foreach($result['effects']??array() as $effect)$effects[]=$effect;}catch(Throwable $error){$ok=false;$item=array('status'=>'error','objectClass'=>mcpReportsClassForAction($actionId),'id'=>isset($entry['id'])?(int)$entry['id']:null,'error'=>mcpReportsErrorPayload($error));}$item['index']=$index;$items[]=$item;}
+  return array('ok'=>$ok,'rolledBack'=>false,'transactionMode'=>'best_effort','items'=>$items,'effects'=>$effects);
+}
 
 function mcpReportsCatalogAction(array $arguments,string $username,string $actionId): array {
   $requested=(int)($arguments['idReport']??0);$reports=array();$source=new HabilitationReport();
@@ -74,4 +83,4 @@ function mcpReportsDashboardAction(array $arguments,string $username,string $act
 function mcpReportsPreview(array $arguments,string $username,string $actionId): array {
   return array('action'=>$actionId,'actor'=>$username,'itemCount'=>count($arguments['items']??array()),'externalDelivery'=>str_contains($actionId,'schedule')||str_contains($actionId,'delivery'),'payloadRedacted'=>true);
 }
-function mcpReportsRenderAvailable(array $action): bool{return class_exists('Report')&&class_exists('HabilitationReport');}
+function mcpReportsRenderAvailable(array $action): bool {if(!class_exists('Report')||!class_exists('HabilitationReport'))return false;try{$user=getSessionUser();return (new HabilitationReport())->countSqlElementsFromCriteria(array('idProfile'=>(int)$user->idProfile,'allowAccess'=>'1'))>0;}catch(Throwable $error){return false;}}

@@ -13,6 +13,8 @@ const root = path.dirname(serverRoot);
 const registryPath = path.join(root, 'bridge/core/module-registry.php');
 const modulePath = path.join(root, 'bridge/modules/reports/module.php');
 const rendererPath = path.join(root, 'bridge/modules/reports/renderer.php');
+const personalPath = path.join(root, 'bridge/modules/reports/personal.php');
+const schedulingPath = path.join(root, 'bridge/modules/reports/scheduling.php');
 const php = expression => execFileSync('php', ['-r', expression], { encoding: 'utf8' });
 const descriptor = () => JSON.parse(php('require '+JSON.stringify(registryPath)+';$m=require '+JSON.stringify(modulePath)+';echo json_encode($m,JSON_THROW_ON_ERROR);'));
 
@@ -43,6 +45,14 @@ test('Reports bridge replaces row export with native rendering and exact schemas
   assert.equal(module.actions['reports.render'].retryPolicy, 'safe');
   assert.equal(module.actions['reports.delivery.send'].retryPolicy, 'recovery_required');
   assert.equal(module.actions['reports.schedule'].risk, 'external');
+  for (const id of ['reports.favorite.manage', 'reports.favorite.delete', 'reports.layout.manage', 'reports.layout.delete', 'reports.dashboard.pin', 'reports.dashboard.unpin', 'reports.schedule']) {
+    assert.deepEqual(module.actions[id].schema.properties.transactionMode.enum, ['atomic', 'best_effort'], id);
+    assert.ok(module.actions[id].resultSchema.required.includes('rolledBack'), id);
+    assert.ok(module.actions[id].resultSchema.required.includes('transactionMode'), id);
+    assert.equal(module.actions[id].resultSchema.properties.items.items.additionalProperties, false, id);
+    assert.equal(module.actions[id].resultSchema.properties.items.items.properties.error.additionalProperties, false, id);
+  }
+  assert.equal('path' in module.actions['reports.render'].resultSchema.properties, false);
 });
 
 test('render tool accepts only bounded native formats and closed input', () => {
@@ -66,9 +76,35 @@ test('renderer enforces permissions, safe paths, cancellation, bounds, and atomi
   assert.match(source, /MCP_JOB_ARTIFACT_MAX_BYTES/);
   assert.match(source, /workerCancelled\(\$jobId\)/);
   assert.match(source, /rename\(\$temporary,\$path\)/);
+  assert.match(source, /finally\{if\(\$copy&&str_contains\(\$copy,'\.render-'\)\)@unlink\(\$copy\);\}/);
+  assert.doesNotMatch(source, /'path'=>\$path/);
   assert.match(source, /%PDF-/);
   assert.match(source, /\\x89PNG/);
   assert.match(source, /recipient_not_actor/);
+});
+
+test('Reports batches isolate best-effort failures and report atomic rollback', () => {
+  const actions = readFileSync(path.join(root, 'bridge/modules/reports/actions.php'), 'utf8');
+  const personal = readFileSync(personalPath, 'utf8');
+  const scheduling = readFileSync(schedulingPath, 'utf8');
+  const mutations = personal + scheduling;
+  assert.match(actions, /function mcpReportsBestEffort/);
+  assert.match(actions, /\['status'\]='rolled_back'/);
+  assert.match(mutations, /Sql::beginTransaction\(\)/);
+  assert.match(mutations, /Sql::rollbackTransaction\(\)/);
+  assert.match(personal, /mcpReportsBestEffort\(\$arguments,\$username,\$actionId,__FUNCTION__\)/);
+  assert.match(scheduling, /mcpReportsBestEffort\(\$arguments,\$username,\$actionId,__FUNCTION__\)/);
+});
+
+test('saved report layouts are runnable only by the actor profile and clean up their native records', () => {
+  const source = readFileSync(personalPath, 'utf8');
+  assert.match(source, /function mcpReportsEnsureLayoutReport/);
+  assert.match(source, /function mcpReportsDeleteLayoutRelations/);
+  assert.match(source, /new HabilitationReport\(\)/);
+  assert.match(source, /\$right->idProfile=\(int\)\$user->idProfile/);
+  assert.match(source, /reportObjectList\.php\?reportLayoutId=/);
+  assert.doesNotMatch(source, /getSqlElementsFromCriteria\(array\('idle'=>'0'\)\)/);
+  assert.doesNotMatch(source, /_skipRightControl/);
 });
 
 test('artifact signatures and structured content are executable contracts', () => {
