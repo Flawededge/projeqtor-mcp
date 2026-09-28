@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
 
 const root = new URL('../../', import.meta.url);
 const readJson = async (relative) => JSON.parse(await readFile(new URL(relative, root), 'utf8'));
@@ -68,4 +71,27 @@ test('Beta 4 policy fixes known unsafe and false classifications', async () => {
   for (const [className, module] of Object.entries(expectedClassModules)) {
     assert.equal(classes.classes[className]?.module, module, className);
   }
+});
+
+test('runtime loads v4 manifests and recursively inventories every installed PHP surface', async t => {
+  const policyPath = new URL('../../bridge/policy.php', import.meta.url);
+  const source = await readFile(policyPath, 'utf8');
+  assert.match(source, /MCP_POLICY_VERSION = 4/);
+  for (const manifest of ['source-inventory-v4.json', 'class-policy-v4.json', 'ui-handler-policy-v4.json']) assert.match(source, new RegExp(manifest.replace('.', '\\.')));
+  assert.match(source, /RecursiveDirectoryIterator/);
+  for (const surface of ['api', 'plugin', 'report', 'sso', 'tool', 'view']) assert.match(source, new RegExp(`'${surface}'`));
+  assert.doesNotMatch(source, /class-policy-v3|ui-handler-policy-v3/);
+
+  const fixture = await mkdtemp(resolve(tmpdir(), 'projeqtor-v4-inventory-'));
+  t.after(() => rm(fixture, { recursive: true, force: true }));
+  await mkdir(resolve(fixture, 'sso/nested'), { recursive: true });
+  await mkdir(resolve(fixture, 'tool'), { recursive: true });
+  await mkdir(resolve(fixture, 'untracked'), { recursive: true });
+  await writeFile(resolve(fixture, 'sso/nested/entry.php'), '<?php');
+  await writeFile(resolve(fixture, 'tool/entry.php'), '<?php');
+  await writeFile(resolve(fixture, 'tool/parametersLocation.php'), '<?php');
+  await writeFile(resolve(fixture, 'untracked/ignored.php'), '<?php');
+  const php = `require ${JSON.stringify(policyPath.pathname)}; echo json_encode(mcpInstalledSourceFiles(${JSON.stringify(fixture)}), JSON_THROW_ON_ERROR);`;
+  const files = JSON.parse(execFileSync('php', ['-r', php], { encoding: 'utf8' }));
+  assert.deepEqual(Object.keys(files), ['sso/nested/entry.php', 'tool/entry.php']);
 });

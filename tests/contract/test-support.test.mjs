@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
-import { actionIdsFromListResult } from '../support/action-discovery.mjs';
+import { actionIdsFromListResult, actionsFromListResult } from '../support/action-discovery.mjs';
 import { writeSanitizedArtifact } from '../support/artifacts.mjs';
 import { FixtureLedger } from '../support/ledger.mjs';
 import { withResourceLock } from '../support/locks.mjs';
@@ -88,6 +88,12 @@ test('action discovery reads the canonical action field from MCP list results', 
     'configuration.parameter.set',
     'cron.start'
   ]);
+});
+
+test('action discovery preserves runtime availability metadata', () => {
+  assert.deepEqual(actionsFromListResult({
+    structuredContent: { returned: 1, hasMore: false, nextCursor: null, items: [{ action: 'planning.calculate', available: false }] }
+  }), [{ action: 'planning.calculate', available: false }]);
 });
 
 test('action discovery fails closed on tool, bridge, malformed, and pagination errors', () => {

@@ -1,6 +1,6 @@
 import { structuredToolResult } from './tool-results.mjs';
 
-export function actionIdsFromListResult(result) {
+export function actionsFromListResult(result) {
   const document = structuredToolResult(result, 'projeqtor_list_actions');
   const items = document.items ?? document.actions;
   if (!Array.isArray(items) || !Number.isInteger(document.returned) || document.returned !== items.length) {
@@ -16,5 +16,9 @@ export function actionIdsFromListResult(result) {
   if (new Set(actionIds).size !== actionIds.length) {
     throw new Error('projeqtor_list_actions returned duplicate action identifiers');
   }
-  return actionIds;
+  return items.map((item, index) => ({ ...item, action: actionIds[index] }));
+}
+
+export function actionIdsFromListResult(result) {
+  return actionsFromListResult(result).map(item => item.action);
 }

@@ -4,19 +4,16 @@ import { resolve } from 'node:path';
 import { writeSanitizedArtifact } from './support/artifacts.mjs';
 import { FixtureLedger, createRunId } from './support/ledger.mjs';
 import { withResourceLock } from './support/locks.mjs';
-import { actionIdsFromListResult } from './support/action-discovery.mjs';
+import { actionsFromListResult } from './support/action-discovery.mjs';
 import { McpTestClient } from './support/mcp-client.mjs';
 import { discoverModules } from './support/module-discovery.mjs';
-import { verifyWhoami } from './support/tool-results.mjs';
+import { structuredToolResult, verifyWhoami } from './support/tool-results.mjs';
 
 function argument(name) {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-function structured(result) {
-  return result?.structuredContent ?? result?.content?.find(item => item.type === 'text' && item.text)?.text;
-}
 
 async function preflight(client) {
   const healthUrl = new URL('/health', process.env.PROJEQTOR_MCP_URL);
@@ -28,6 +25,7 @@ async function preflight(client) {
   const toolNames = (listed?.tools ?? []).map(tool => tool.name).sort();
   const whoami = await client.callTool('projeqtor_whoami');
   verifyWhoami(whoami, process.env.PROJEQTOR_TEST_ACTOR ?? 'admin');
+  if (toolNames.length !== 36) throw new Error(`Expected 36 MCP tools, received ${toolNames.length}`);
   return {
     health, server: initialized?.serverInfo, toolCount: toolNames.length, toolNames,
     actorVerified: true
@@ -36,21 +34,23 @@ async function preflight(client) {
 
 async function actionNames(client, moduleId) {
   const result = await client.callTool('projeqtor_list_actions', { module: moduleId, pageSize: 200, includeTotal: true });
-  return actionIdsFromListResult(result);
+  return actionsFromListResult(result);
 }
 
 async function runModule(client, descriptor, { required }) {
   const listed = await client.tools();
   const tools = new Set((listed?.tools ?? []).map(tool => tool.name));
-  const actions = new Set(await actionNames(client, descriptor.id));
+  const actionItems = await actionNames(client, descriptor.id);
+  const actions = new Map(actionItems.map(item => [item.action, item]));
   const missingTools = descriptor.requiredTools.filter(name => !tools.has(name));
   const missingActions = descriptor.requiredActions.filter(name => !actions.has(name));
-  const status = missingTools.length || missingActions.length ? 'pending' : 'ready';
+  const unavailableActions = descriptor.requiredActions.filter(name => actions.has(name) && actions.get(name).available !== true);
+  const status = missingTools.length || missingActions.length || unavailableActions.length ? 'pending' : 'ready';
   const result = {
     module: descriptor.id, status, workflowFamilies: descriptor.workflowFamilies,
-    missingTools, missingActions, locks: descriptor.locks
+    missingTools, missingActions, unavailableActions, locks: descriptor.locks
   };
-  if (required && status !== 'ready') throw new Error(`${descriptor.id} module coverage is incomplete: ${[...missingTools, ...missingActions].join(', ')}`);
+  if (required && status !== 'ready') throw new Error(`${descriptor.id} module coverage is incomplete: ${[...missingTools, ...missingActions, ...unavailableActions.map(name => `${name} (unavailable)`)].join(', ')}`);
   return result;
 }
 
@@ -89,12 +89,21 @@ async function main() {
 
   if (mode === 'acceptance') {
     const capabilitiesResult = await client.callTool('projeqtor_get_capabilities');
-    const value = structured(capabilitiesResult);
-    const capabilities = typeof value === 'string' ? JSON.parse(value) : value;
-    const unknown = capabilities?.coverage?.unknown ?? capabilities?.unknownCount ?? 0;
-    const deferred = capabilities?.coverage?.deferred ?? capabilities?.deferredCount ?? 0;
-    if (unknown !== 0 || deferred !== 0) throw new Error(`Coverage closure failed: unknown=${unknown} deferred=${deferred}`);
-    summary.coverage = { unknown, deferred };
+    const capabilities = structuredToolResult(capabilitiesResult, 'projeqtor_get_capabilities');
+    const expectedModules = ['configuration', 'core', 'environment', 'financial', 'follow_up', 'hr', 'planning', 'products', 'reports', 'scrum', 'steering', 'ticketing', 'tools'];
+    const moduleIds = (capabilities.modules ?? []).map(module => module.id).sort();
+    const actionCount = (capabilities.modules ?? []).reduce((total, module) => total + (module.actionCount ?? 0), 0);
+    const classPolicy = capabilities.classPolicy ?? {};
+    const handlerPolicy = capabilities.handlerPolicy ?? {};
+    const worker = capabilities.workerCompatibility ?? {};
+    const hashFields = [classPolicy.hash, classPolicy.manifestHash, handlerPolicy.hash, handlerPolicy.manifestHash, handlerPolicy.sourceInventoryHash, handlerPolicy.sourceTreeHash];
+    if (capabilities.serverVersion !== '2.0.0-beta.4' || capabilities.schemaVersion !== 4) throw new Error('Beta 4 server/schema capability mismatch');
+    if (JSON.stringify(moduleIds) !== JSON.stringify(expectedModules) || actionCount !== 212) throw new Error(`Module/action capability mismatch: modules=${moduleIds.length} actions=${actionCount}`);
+    if (classPolicy.version !== 4 || classPolicy.installed !== 640 || classPolicy.unknown !== 0) throw new Error(`Class policy closure failed: version=${classPolicy.version} installed=${classPolicy.installed} unknown=${classPolicy.unknown}`);
+    if (handlerPolicy.version !== 4 || handlerPolicy.installed !== 899 || handlerPolicy.installedSourceFiles !== 944 || handlerPolicy.includedLibraries !== 45 || handlerPolicy.mutationCandidates !== 337 || handlerPolicy.unknown !== 0 || handlerPolicy.deferred !== 0) throw new Error(`Handler policy closure failed: version=${handlerPolicy.version} installed=${handlerPolicy.installed} sources=${handlerPolicy.installedSourceFiles} unknown=${handlerPolicy.unknown} deferred=${handlerPolicy.deferred}`);
+    if (hashFields.some(value => typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value))) throw new Error('Coverage capability hashes are missing or malformed');
+    if (worker.compatible !== true || worker.schemaVersion !== 4 || worker.workerVersion !== '2.0.0-beta.4' || worker.heartbeatFresh !== true) throw new Error('Worker capability compatibility or heartbeat check failed');
+    summary.coverage = { modules: moduleIds.length, actions: actionCount, classes: classPolicy.installed, handlers: handlerPolicy.installed, sourceFiles: handlerPolicy.installedSourceFiles, unknown: 0, deferred: 0 };
   }
 
   summary.cleanupPlanCount = (await ledger.cleanupPlan()).length;
