@@ -2,7 +2,15 @@
 declare(strict_types=1);
 
 function mcpScrumActionAvailable(array $action): bool {
-  foreach($action['permissionClasses']??array() as $class)if(!class_exists((string)$class))return false;
+  foreach($action['permissionClasses']??array() as $class){
+    if(!SqlElement::class_exists((string)$class))return false;
+    $policy=mcpClassPolicy((string)$class);if(!($policy['supported']??false))return false;
+    try{
+      if(Security::checkValidAccessForUser(null,'read',(string)$class,null,false))continue;
+      if(in_array('create',$policy['operations']??array(),true)&&Security::checkValidAccessForUser(new $class(),'create',null,null,false))continue;
+    }catch(Throwable $error){}
+    return false;
+  }
   return true;
 }
 function mcpScrumFields(array $entry,array $allowed): array { $data=array();foreach($allowed as $field)if(array_key_exists($field,$entry))$data[$field]=$entry[$field];return $data; }
@@ -18,12 +26,12 @@ function mcpScrumTarget(string $class,int $id,string $operation='update'): objec
   Security::checkValidClass($class);$object=new $class($id);if(!$object->id)mcpJsonError(404,'scrum_target_not_found','The requested Scrum object was not found');mcpScrumRequireDirect($object,$operation);return $object;
 }
 function mcpScrumResult(object $object,string $status,array $requested,array $applied=array(),array $recalculated=array()): array {
-  return array('status'=>$status,'objectClass'=>get_class($object),'id'=>(int)($object->id??0),'requestedFields'=>$requested,'appliedFields'=>$applied,'recalculatedFields'=>$recalculated,'ignoredFields'=>array_values(array_diff($requested,$applied,$recalculated)),'rejectedFields'=>array(),'saved'=>mcpObjectArray($object),'concurrencyUnchecked'=>false);
+  return array('status'=>$status,'objectClass'=>get_class($object),'id'=>(int)($object->id??0),'requestedFields'=>$requested,'appliedFields'=>$applied,'recalculatedFields'=>$recalculated,'ignoredFields'=>array_values(array_diff($requested,$applied,$recalculated)),'rejectedFields'=>array(),'saved'=>array('id'=>(int)$object->id,'_version'=>mcpObjectVersion($object)),'concurrencyUnchecked'=>false);
 }
 function mcpScrumSave(object $object,string $operation,array $entry,array $data,bool $internal=false): array {
   $class=get_class($object);$create=$operation==='create';if(!$internal)mcpRequireClassOperation($class,$operation);if(!$create){mcpScrumRequireVersion($object,$entry);if(!$internal)mcpScrumRequireDirect($object,$operation);}
   $requested=array_keys($data);
-  if($operation==='delete'){$id=(int)$object->id;SqlElement::setDeleteConfirmed();$raw=$object->delete();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'delete_failed',cleanApiMessage($raw));return array('status'=>'deleted','objectClass'=>$class,'id'=>$id,'requestedFields'=>array(),'appliedFields'=>array(),'recalculatedFields'=>array(),'ignoredFields'=>array(),'rejectedFields'=>array(),'saved'=>array(),'concurrencyUnchecked'=>false);}
+  if($operation==='delete'){$id=(int)$object->id;SqlElement::setDeleteConfirmed();$raw=$object->delete();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'delete_failed',cleanApiMessage($raw));return array('status'=>'deleted','objectClass'=>$class,'id'=>$id,'requestedFields'=>array(),'appliedFields'=>array(),'recalculatedFields'=>array(),'ignoredFields'=>array(),'rejectedFields'=>array(),'saved'=>null,'concurrencyUnchecked'=>false);}
   foreach($data as $field=>$value){if(!property_exists($object,$field))mcpJsonError(400,'unsupported_field',"$class does not expose $field",array('invalidFields'=>array($field)));$object->$field=is_bool($value)?($value?1:0):$value;}
   if($create&&!$internal)mcpScrumRequireDirect($object,'create');
   $raw=$object->save();if(getLastOperationStatus($raw)!=='OK')mcpJsonError(400,'save_failed',cleanApiMessage($raw));$saved=new $class($object->id);return mcpScrumResult($saved,$create?'created':'updated',$requested,$requested);
@@ -33,12 +41,16 @@ function mcpScrumEffects(array $items): array {
 }
 function mcpScrumBatch(array $entries,string $mode,callable $executor): array {
   if(count($entries)<1||count($entries)>200)mcpJsonError(400,'invalid_batch','Scrum actions require 1 to 200 items');if(!in_array($mode,array('atomic','best_effort'),true))mcpJsonError(400,'invalid_transaction_mode','transactionMode must be atomic or best_effort');
-  $items=array();if($mode==='atomic')Sql::beginTransaction();
+  $items=array();$previousCapture=$GLOBALS['mcpCaptureErrors']??false;if($mode==='atomic')Sql::beginTransaction();
   foreach($entries as $index=>$entry){
     if($mode==='best_effort')Sql::beginTransaction();$GLOBALS['mcpCaptureErrors']=true;
     try{$item=$executor($entry,$index);$item['index']=$index;$items[]=$item;if($mode==='best_effort')Sql::commitTransaction();}
-    catch(Throwable $error){if($mode==='best_effort')Sql::rollbackTransaction();$details=$error instanceof McpBridgeException?array_merge(array('code'=>$error->errorCode,'message'=>$error->getMessage()),$error->details):array('code'=>'scrum_operation_failed','message'=>cleanApiMessage($error->getMessage()));$items[]=array('index'=>$index,'status'=>'error','objectClass'=>$entry['objectClass']??'ScrumInternal','id'=>$entry['id']??$entry['idPokerItem']??null,'error'=>$details);if($mode==='atomic'){Sql::rollbackTransaction();$GLOBALS['mcpCaptureErrors']=false;return array('ok'=>false,'rolledBack'=>true,'transactionMode'=>$mode,'items'=>$items,'effects'=>array());}}
-    finally{$GLOBALS['mcpCaptureErrors']=false;}
+    catch(Throwable $error){
+      if($mode==='best_effort')Sql::rollbackTransaction();$details=$error instanceof McpBridgeException?array_merge(array('code'=>$error->errorCode,'message'=>cleanApiMessage($error->getMessage())),$error->details):array('code'=>'scrum_operation_failed','message'=>cleanApiMessage($error->getMessage()));
+      $details=mcpScrumFields($details,array('code','message','objectClass','id','expectedVersion','actualVersion','actualVoteSetVersion','missingFields','invalidFields'));
+      $items[]=array('index'=>$index,'status'=>'error','objectClass'=>$entry['objectClass']??'ScrumInternal','id'=>$entry['id']??$entry['idPokerItem']??null,'error'=>$details);
+      if($mode==='atomic'){Sql::rollbackTransaction();foreach($items as &$rolledBack)if(($rolledBack['status']??'')!=='error'){$rolledBack['status']='rolled_back';$rolledBack['rejectedFields']=array_values(array_unique(array_merge($rolledBack['rejectedFields']??array(),$rolledBack['appliedFields']??array())));$rolledBack['appliedFields']=array();$rolledBack['recalculatedFields']=array();$rolledBack['saved']=null;}unset($rolledBack);return array('ok'=>false,'rolledBack'=>true,'transactionMode'=>$mode,'items'=>$items,'effects'=>array());}
+    }finally{$GLOBALS['mcpCaptureErrors']=$previousCapture;}
   }
   if($mode==='atomic')Sql::commitTransaction();$ok=!count(array_filter($items,fn($item)=>($item['status']??'')==='error'));return array('ok'=>$ok,'rolledBack'=>false,'transactionMode'=>$mode,'items'=>$items,'effects'=>mcpScrumEffects($items));
 }

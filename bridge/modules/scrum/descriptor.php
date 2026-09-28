@@ -3,10 +3,12 @@ declare(strict_types=1);
 $id=array('type'=>'integer','minimum'=>1);$nullableId=array('type'=>array('integer','null'),'minimum'=>1);$version=array('type'=>'string','minLength'=>1,'maxLength'=>200);
 $short=array('type'=>array('string','null'),'maxLength'=>400);$text=array('type'=>array('string','null'),'maxLength'=>4000);$bool=array('type'=>'boolean');
 $transaction=array('type'=>'string','enum'=>array('atomic','best_effort'));$operation=array('type'=>'string','enum'=>array('create','update','delete'));
-$saved=mcpObjectSchema(array(),array(),true);$error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string')),array('code','message'),true);
+$savedBase=mcpObjectSchema(array('id'=>$id,'_version'=>$version),array('id','_version'),false);
+$saved=array('type'=>array('object','null'),'properties'=>array('id'=>$id,'_version'=>$version,'target'=>$savedBase),'required'=>array('id','_version'),'additionalProperties'=>false);
+$error=mcpObjectSchema(array('code'=>array('type'=>'string'),'message'=>array('type'=>'string'),'objectClass'=>array('type'=>'string'),'id'=>$id,'expectedVersion'=>$version,'actualVersion'=>$version,'actualVoteSetVersion'=>$version,'missingFields'=>array('type'=>'array','items'=>array('type'=>'string')),'invalidFields'=>array('type'=>'array','items'=>array('type'=>'string'))),array('code','message'),false);
 $effect=mcpObjectSchema(array('action'=>array('type'=>'string','enum'=>array('create','update','delete')),'objectClass'=>array('type'=>'string'),'id'=>$id),array('action','objectClass','id'),false);
 $itemResult=mcpObjectSchema(array(
-  'index'=>array('type'=>'integer','minimum'=>0),'status'=>array('type'=>'string','enum'=>array('created','updated','deleted','existing','invalid','error')),'objectClass'=>array('type'=>'string'),'id'=>array('type'=>array('integer','null')),
+  'index'=>array('type'=>'integer','minimum'=>0),'status'=>array('type'=>'string','enum'=>array('created','updated','deleted','existing','invalid','rolled_back','error')),'objectClass'=>array('type'=>'string'),'id'=>array('type'=>array('integer','null')),
   'requestedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'appliedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'recalculatedFields'=>array('type'=>'array','items'=>array('type'=>'string')),
   'ignoredFields'=>array('type'=>'array','items'=>array('type'=>'string')),'rejectedFields'=>array('type'=>'array','items'=>array('type'=>'string')),'saved'=>$saved,'error'=>$error,'concurrencyUnchecked'=>$bool
 ),array('status','objectClass'),false);

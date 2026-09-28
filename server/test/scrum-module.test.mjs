@@ -58,6 +58,11 @@ test('Scrum action contracts are closed, bounded, typed, and permission-aware', 
         assert.equal(property.maxItems, 200, id);
       }
     }
+    const resultItem = action.resultSchema.properties.items?.items;
+    if (resultItem?.properties?.saved && resultItem?.properties?.error) {
+      assert.equal(resultItem.properties.saved.additionalProperties, false, id);
+      assert.equal(resultItem.properties.error.additionalProperties, false, id);
+    }
     if (action.risk === 'destructive') assert.equal(typeof action.preview, 'string', id);
   }
 });
@@ -78,6 +83,9 @@ test('Scrum requires caller versions for every existing-object mutation', () => 
   assert.match(source, /expected_version_required/);
   assert.match(source, /version_conflict/);
   assert.match(source, /vote_set_conflict/);
+  assert.doesNotMatch(source, /mcpObjectArray\(\$object\)/);
+  assert.match(source, /'rolled_back'/);
+  assert.match(source, /\$GLOBALS\['mcpCaptureErrors'\]=\$previousCapture/);
 });
 
 test('Scrum private model state has permission-checked semantic readbacks', () => {
