@@ -73,7 +73,8 @@ test('Core existing-object schemas require optimistic versions and bound batches
 
 test('Core actor attribution and least-privilege checks are enforced in executors and previews', () => {
   assert.match(source, /actor_mismatch/);
-  assert.match(source, /Only the session owner or an Audit administrator/);
+  assert.match(source, /securityGetAccessRightYesNo\('menuAdmin','read'\)/);
+  assert.match(source, /securityGetAccessRightYesNo\('menuAudit','update',\$audit\)/);
   assert.match(source, /Security::checkValidAccessForUser/);
   assert.match(source, /idUser!==\(int\)\$actor\['id'\]/);
   assert.match(source, /\$task->idUser=\$actor\['id'\]/);

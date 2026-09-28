@@ -55,8 +55,8 @@ function mcpCoreTransition(array $arguments,string $username,string $action): ar
 
 function mcpCoreSessionAudit(array $arguments,array $actor): Audit {
   $audit=new Audit((int)$arguments['auditId']);if(!$audit->id)mcpJsonError(404,'audit_not_found','The requested session audit was not found');
-  $self=(int)$audit->idUser===(int)$actor['id'];$admin=false;try{$admin=securityGetAccessRightYesNo('menuAudit','read',$audit)==='YES';}catch(Throwable $error){}
-  if(!$self&&!$admin)mcpJsonError(403,'forbidden','Only the session owner or an Audit administrator may terminate this session');
+  $admin=false;$canUpdate=false;try{$admin=securityGetAccessRightYesNo('menuAdmin','read')==='YES';$canUpdate=securityGetAccessRightYesNo('menuAudit','update',$audit)==='YES';}catch(Throwable $error){}
+  if(!$admin&&!$canUpdate)mcpJsonError(403,'forbidden','Administration or Audit update access is required to terminate a session');
   mcpCoreRequireVersion($audit,(string)$arguments['expectedVersion'],'Audit #'.$audit->id);return $audit;
 }
 

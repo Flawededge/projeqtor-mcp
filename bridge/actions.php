@@ -153,13 +153,32 @@ function mcpHandlePrepareAction(array $input,string $username): never {
   $token=mcpSignConfirmation($username,'action',array('operationId'=>$id,'action'=>$action,'arguments'=>$args),$nonce,$expires);
   mcpJsonResponse(array('ok'=>true,'operationId'=>$id,'action'=>$action,'risk'=>$registry[$action]['risk'],'arguments'=>$args,'preview'=>$preview,'expiresAt'=>date(DATE_ATOM,$expires),'confirmationToken'=>$token));
 }
+
+function mcpPersistGuardedActionResult(int $operationId,array $result): string {
+  $succeeded=($result['ok']??false)===true;$status=$succeeded?'succeeded':'failed';$effects=$result['effects']??array();
+  $errorCode=$succeeded?null:(string)($result['error']['code']??'guarded_action_failed');
+  Sql::query('UPDATE mcpoperation SET status='.Sql::str($status).',progress=100,result_json='.Sql::str(json_encode($result)).
+    ',effects_json='.Sql::str(json_encode($effects)).',error_code='.($errorCode===null?'NULL':Sql::str($errorCode)).
+    ',completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($operationId)." AND status='running'");
+  return $status;
+}
+
+function mcpPersistGuardedActionFailure(int $operationId,Throwable $error): array {
+  $code=$error instanceof McpBridgeException?$error->errorCode:'action_failed';
+  $failure=array('ok'=>false,'error'=>array('code'=>$code,'message'=>cleanApiMessage($error->getMessage())),'operationId'=>$operationId);
+  mcpPersistGuardedActionResult($operationId,$failure);return $failure;
+}
 function mcpHandleCommitAction(array $input,string $username): never {
   @set_time_limit(900);mcpRequireKeys($input,array('confirmationToken'));
   $verified=mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'action');$payload=$verified['document']['payload'];
-  $result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);
-  $effects=$result['effects']??array();
-  Sql::query('UPDATE mcpoperation SET status=' . Sql::str('succeeded') . ', progress=100, result_json=' . Sql::str(json_encode($result)) .
-    ', effects_json=' . Sql::str(json_encode($effects)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' .
-    $verified['operationId'] . " AND status='running'");
+  $previousCapture=$GLOBALS['mcpCaptureErrors']??false;$GLOBALS['mcpCaptureErrors']=true;
+  try{
+    $result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);
+    mcpPersistGuardedActionResult($verified['operationId'],$result);
+  }catch(Throwable $error){
+    mcpPersistGuardedActionFailure($verified['operationId'],$error);$GLOBALS['mcpCaptureErrors']=$previousCapture;
+    if($error instanceof McpBridgeException)mcpJsonError($error->httpStatus,$error->errorCode,$error->getMessage(),$error->details);
+    mcpJsonError(500,'action_failed','Guarded action failed');
+  }finally{$GLOBALS['mcpCaptureErrors']=$previousCapture;}
   mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId'])));
 }
