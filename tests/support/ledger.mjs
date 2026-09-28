@@ -36,6 +36,14 @@ export class FixtureLedger {
     await appendFile(this.path, `${JSON.stringify(entry)}\n`, { encoding: 'utf8', mode: 0o600 });
     return entry;
   }
+  async complete({ objectClass, id }) {
+    if (!SAFE_CLASS.test(objectClass)) throw new Error('Invalid fixture object class');
+    if (!Number.isSafeInteger(id) || id < 1) throw new Error('Fixture IDs must be positive integers');
+    const entry = { runId: this.runId, event: 'cleaned', objectClass, id, cleanedAt: new Date().toISOString() };
+    await appendFile(this.path, `${JSON.stringify(entry)}\n`, { encoding: 'utf8', mode: 0o600 });
+    return entry;
+  }
+
 
   async entries() {
     let text = '';
@@ -44,6 +52,8 @@ export class FixtureLedger {
   }
 
   async cleanupPlan() {
-    return (await this.entries()).reverse();
+    const entries = await this.entries();
+    const cleaned = new Set(entries.filter(entry => entry.event === 'cleaned').map(entry => `${entry.objectClass}:${entry.id}`));
+    return entries.filter(entry => entry.event !== 'cleaned' && !cleaned.has(`${entry.objectClass}:${entry.id}`)).reverse();
   }
 }

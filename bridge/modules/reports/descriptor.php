@@ -28,7 +28,7 @@ function mcpReportsDescriptor(): array {
   return array(
     'report.start'=>mcpActionSpec($render,$renderResult,'read',true,'mcpReportsStartWorker',array(),'reports.render.legacy',array('retryPolicy'=>'safe','availability'=>'mcpReportsRenderAvailable')),
     'reports.render'=>mcpActionSpec($render,$renderResult,'read',true,'mcpReportsRenderWorker',array('view:print'),'reports.render',array('retryPolicy'=>'safe','availability'=>'mcpReportsRenderAvailable')),
-    'reports.catalog.read'=>mcpActionSpec(mcpObjectSchema(array('idReport'=>$id)),$catalogResult,'read',false,'mcpReportsCatalogAction',array(),'reports.catalog.read'),
+    'reports.catalog.read'=>mcpActionSpec(mcpObjectSchema(array('idReport'=>$id),array()),$catalogResult,'read',false,'mcpReportsCatalogAction',array(),'reports.catalog.read'),
     'reports.dashboard.read'=>mcpActionSpec(mcpObjectSchema(array('dashboard'=>array('type'=>'string','enum'=>array('project','ticket','requirement')),'projectId'=>$id),array('dashboard')),$dashboardResult,'read',false,'mcpReportsDashboardAction',array('tool:getParamDashboard','tool:jsonProjectDashboard','tool:jsonProjectDashboardDetail'),'reports.dashboard.read'),
     'reports.favorite.manage'=>mcpActionSpec($batch($favorite),$batchResult,'write',false,'mcpReportsFavoriteAction',array('tool:saveReportAsFavorite','tool:saveReportFavoriteOrder'),'reports.favorite.manage'),
     'reports.favorite.delete'=>mcpActionSpec($delete,$batchResult,'destructive',false,'mcpReportsDeleteOwnedAction',array('tool:removeFavoriteReport'),'reports.favorite.delete',$guard),

@@ -43,6 +43,8 @@ test('fixture ledger records only bounded identity metadata and reverses cleanup
   await ledger.record({ module: 'planning', kind: 'activity', objectClass: 'Activity', id: 10 });
   await ledger.record({ module: 'planning', kind: 'project', objectClass: 'Project', id: 9, cleanupAction: 'close' });
   assert.deepEqual((await ledger.cleanupPlan()).map(entry => entry.id), [9, 10]);
+  await ledger.complete({ objectClass: 'Project', id: 9 });
+  assert.deepEqual((await ledger.cleanupPlan()).map(entry => entry.id), [10]);
   await assert.rejects(ledger.record({ module: 'planning', kind: 'activity', objectClass: 'Activity', id: 0 }), /positive/);
 });
 
@@ -71,6 +73,8 @@ test('MCP test client never sends tokens in JSON payloads or logger events', asy
   assert.equal(observed[0].headers.Authorization, 'Bearer never-log-this');
   assert.doesNotMatch(observed[0].body, /never-log-this/);
   assert.doesNotMatch(JSON.stringify(logged), /never-log-this/);
+  await client.readResource('projeqtor://attachments/7');
+  assert.deepEqual(JSON.parse(observed[1].body).params, { uri: 'projeqtor://attachments/7' });
 });
 
 test('action discovery reads the canonical action field from MCP list results', () => {

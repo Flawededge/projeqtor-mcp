@@ -88,4 +88,5 @@ export class McpTestClient {
 
   tools() { return this.request('tools/list'); }
   callTool(name, args = {}) { return this.request('tools/call', { name, arguments: args }); }
+  readResource(uri) { return this.request('resources/read', { uri }); }
 }

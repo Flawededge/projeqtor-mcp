@@ -27,6 +27,23 @@ function mcpUploadMetaPath(string $id): string { if(!preg_match('/^[a-f0-9]{48}$
 function mcpUploadDataPath(string $id): string { return mcpUploadDirectory().'/'.$id.'.part'; }
 function mcpReadUpload(string $id,string $username): array { $path=mcpUploadMetaPath($id); if(!is_file($path))mcpJsonError(404,'upload_not_found','Upload session was not found'); $meta=json_decode((string)file_get_contents($path),true); if(!is_array($meta)||($meta['username']??'')!==$username||strtotime((string)$meta['expiresAt'])<time())mcpJsonError(403,'upload_unavailable','Upload session is unavailable'); return $meta; }
 
+function mcpAttachmentMetadata(Attachment $attachment): array {
+  return array(
+    'id'=>(int)$attachment->id,
+    'refType'=>(string)$attachment->refType,
+    'refId'=>(int)$attachment->refId,
+    'fileName'=>(string)$attachment->fileName,
+    'description'=>(string)$attachment->description,
+    'type'=>(string)$attachment->type,
+    'idUser'=>(int)$attachment->idUser,
+    'creationDate'=>(string)$attachment->creationDate,
+    'subDirectory'=>(string)$attachment->subDirectory,
+    'fileSize'=>(int)$attachment->fileSize,
+    'mimeType'=>(string)$attachment->mimeType,
+    '_version'=>mcpObjectVersion($attachment)
+  );
+}
+
 function mcpExecuteUploadAction(string $action,array $arguments,string $username): array {
   if($action==='attachment.upload.begin'){
     mcpRequireKeys($arguments,array('refType','refId','fileName','expectedBytes')); $refType=(string)$arguments['refType']; $refId=(int)$arguments['refId']; Security::checkValidClass($refType); $ref=new $refType($refId);
@@ -49,7 +66,7 @@ function mcpExecuteUploadAction(string $action,array $arguments,string $username
     $directory=rtrim(Parameter::getGlobalParameter('paramAttachmentDirectory'),'/').'/attachment_'.$attachment->id.'/'; if(!is_dir($directory))mkdir($directory,0770,true); $target=$directory.$meta['fileName'];
     if(!rename($source,$target)){Sql::rollbackTransaction();mcpJsonError(500,'attachment_move_failed','Unable to commit uploaded file');} try{Security::checkEvilFile($target);}catch(Throwable $error){Sql::rollbackTransaction();@unlink($target);mcpJsonError(400,'unsafe_attachment',cleanApiMessage($error->getMessage()));}
     $attachment->subDirectory=str_replace(Parameter::getGlobalParameter('paramAttachmentDirectory'),'${attachmentDirectory}',$directory); $attachment->fileSize=$size; $attachment->mimeType=$meta['mimeType']; $raw=$attachment->save(); if(getLastOperationStatus($raw)!=='OK'){Sql::rollbackTransaction();@unlink($target);mcpJsonError(400,'attachment_save_failed',cleanApiMessage($raw));}
-    Sql::commitTransaction(); @unlink(mcpUploadMetaPath($id)); return array('ok'=>true,'attachment'=>mcpObjectArray(new Attachment($attachment->id)),'resource'=>'projeqtor://attachments/'.$attachment->id);
+    Sql::commitTransaction(); @unlink(mcpUploadMetaPath($id)); $saved=new Attachment($attachment->id); return array('ok'=>true,'attachment'=>mcpAttachmentMetadata($saved),'resource'=>'projeqtor://attachments/'.$saved->id);
   }
   mcpJsonError(404,'action_not_found','Unknown upload action');
 }

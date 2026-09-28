@@ -9,6 +9,8 @@ import { runImportIdentityScenario } from './scenarios/import-identity.mjs';
 import { McpTestClient } from './support/mcp-client.mjs';
 import { discoverModules } from './support/module-discovery.mjs';
 import { structuredToolResult, verifyWhoami } from './support/tool-results.mjs';
+import { runAttachmentAcceptance } from './scenarios/attachment-acceptance.mjs';
+import { runReportAcceptance } from './scenarios/report-acceptance.mjs';
 
 function argument(name) {
   const index = process.argv.indexOf(name);
@@ -106,6 +108,14 @@ async function main() {
     if (worker.compatible !== true || worker.schemaVersion !== 4 || worker.workerVersion !== '2.0.0-beta.4' || worker.heartbeatFresh !== true) throw new Error('Worker capability compatibility or heartbeat check failed');
     summary.coverage = { modules: moduleIds.length, actions: actionCount, classes: classPolicy.installed, handlers: handlerPolicy.installed, sourceFiles: handlerPolicy.installedSourceFiles, unknown: 0, deferred: 0 };
     summary.importIdentity = await runImportIdentityScenario({ runId });
+    const identity = verifyWhoami(
+      await client.callTool('projeqtor_whoami'),
+      process.env.PROJEQTOR_TEST_ACTOR ?? 'admin'
+    );
+    summary.artifacts = await withLocks(['document-storage'], async () => ({
+      attachment: await runAttachmentAcceptance({ client, identity, ledger, runId }),
+      reports: await runReportAcceptance(client, runId)
+    }));
   }
 
   summary.cleanupPlanCount = (await ledger.cleanupPlan()).length;

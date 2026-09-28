@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import tools from '../src/modules/tools/index.mjs';
 import {
   TOOLS_ACTIONS, TOOLS_HANDLERS, TOOLS_JOBS, TOOLS_WORKFLOW_FAMILIES
 } from '../src/modules/tools/contracts.mjs';
+
+const bridgeActions = await readFile(new URL('../../bridge/actions.php', import.meta.url), 'utf8');
 import { createProjeqtorServer } from '../src/tools.mjs';
 
 test('Tools module reserves all semantic workflow families without expanding the 36-tool surface', () => {
@@ -43,4 +46,10 @@ test('existing import, export, and attachment action IDs stay reserved', () => {
     'attachment.upload.begin', 'attachment.upload.chunk',
     'attachment.upload.commit', 'attachment.upload.abort'
   ]) assert.ok(TOOLS_ACTIONS.includes(action));
+});
+
+test('attachment commit serializes only its declared bounded metadata', () => {
+  assert.match(bridgeActions, /function mcpAttachmentMetadata/);
+  assert.match(bridgeActions, /attachment'=>mcpAttachmentMetadata\(\$saved\)/);
+  assert.doesNotMatch(bridgeActions, /attachment'=>mcpObjectArray\(new Attachment/);
 });

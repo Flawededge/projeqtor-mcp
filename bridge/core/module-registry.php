@@ -135,7 +135,7 @@ function mcpValidateSchemaValue(mixed $value,array $schema,string $path='$'): ar
   if(is_string($value)){
     if(isset($schema['minLength'])&&mb_strlen($value)<(int)$schema['minLength'])$errors[]=array('path'=>$path,'code'=>'minLength');
     if(isset($schema['maxLength'])&&mb_strlen($value)>(int)$schema['maxLength'])$errors[]=array('path'=>$path,'code'=>'maxLength');
-    if(isset($schema['pattern'])&&!preg_match('/'.$schema['pattern'].'/D',$value))$errors[]=array('path'=>$path,'code'=>'pattern');
+    if(isset($schema['pattern'])&&!preg_match('~'.str_replace('~','\\~',(string)$schema['pattern']).'~D',$value))$errors[]=array('path'=>$path,'code'=>'pattern');
   }
   if((is_int($value)||is_float($value))&&isset($schema['minimum'])&&$value<$schema['minimum'])$errors[]=array('path'=>$path,'code'=>'minimum');
   $isDeclaredArray=in_array('array',$types,true);$isDeclaredObject=in_array('object',$types,true);

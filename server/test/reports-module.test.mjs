@@ -43,6 +43,7 @@ test('Reports bridge replaces row export with native rendering and exact schemas
     if (['destructive', 'administrative', 'external'].includes(action.risk)) assert.equal(action.preview, 'mcpReportsPreview', id);
   }
   assert.equal(module.actions['reports.render'].retryPolicy, 'safe');
+  assert.deepEqual(module.actions['reports.catalog.read'].schema.required, []);
   assert.equal(module.actions['reports.delivery.send'].retryPolicy, 'recovery_required');
   assert.equal(module.actions['reports.schedule'].risk, 'external');
   for (const id of ['reports.favorite.manage', 'reports.favorite.delete', 'reports.layout.manage', 'reports.layout.delete', 'reports.dashboard.pin', 'reports.dashboard.unpin', 'reports.dashboard.configure', 'reports.schedule']) {
