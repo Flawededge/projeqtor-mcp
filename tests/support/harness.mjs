@@ -39,7 +39,7 @@ async function prepare() {
   const dbPassword = secret(30);
   const signingKey = secret(48);
   const cursorKey = secret(48);
-  const actorToken = secret(48);
+  const actorTokens = Object.fromEntries(['beta4-admin', 'beta4-manager', 'beta4-member', 'beta4-denied'].map(actor => [actor, secret(48)]));
   const paths = {
     signing: resolve(secretRoot, 'signing.key'), cursor: resolve(secretRoot, 'cursor.key'),
     users: resolve(secretRoot, 'users.json'), token: resolve(secretRoot, 'admin.token')
@@ -47,8 +47,9 @@ async function prepare() {
   await Promise.all([
     writeFile(paths.signing, `${signingKey}\n`, { mode: 0o644 }),
     writeFile(paths.cursor, `${cursorKey}\n`, { mode: 0o644 }),
-    writeFile(paths.token, `${actorToken}\n`, { mode: 0o644 }),
-    writeFile(paths.users, `${JSON.stringify({ version: 1, users: [{ username: 'admin', tokenSha256: sha256(actorToken) }] }, null, 2)}\n`, { mode: 0o644 })
+    writeFile(paths.token, `${actorTokens['beta4-admin']}\n`, { mode: 0o644 }),
+    writeFile(paths.users, `${JSON.stringify({ version: 1, users: Object.entries(actorTokens).map(([username, token]) => ({ username, tokenSha256: sha256(token) })) }, null, 2)}\n`, { mode: 0o644 }),
+    ...Object.entries(actorTokens).filter(([actor]) => actor !== 'beta4-admin').map(([actor, token]) => writeFile(resolve(secretRoot, `${actor}.token`), `${token}\n`, { mode: 0o644 }))
   ]);
 
   const seedMode = process.env.BETA4_SEED_MODE ?? 'fresh';
@@ -129,7 +130,10 @@ async function main() {
       compose(run, ['up', '-d', 'db']);
       compose(run, ['run', '--rm', 'restore-seed']);
     }
-    compose(run, ['up', '-d', '--build', 'db', 'app', 'worker', 'mcp', 'gateway', 'mail']);
+    compose(run, ['build', 'app', 'mcp']);
+    compose(run, ['up', '-d', 'db']);
+    compose(run, ['up', '--abort-on-container-exit', '--exit-code-from', 'db-bootstrap', 'db-bootstrap']);
+    compose(run, ['up', '-d', 'app', 'worker', 'mcp', 'gateway', 'mail']);
     process.stdout.write(`${JSON.stringify({ ok: true, runId: run.runId, seedMode: run.environment.BETA4_SEED_MODE })}\n`);
     return;
   }

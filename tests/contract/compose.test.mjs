@@ -27,7 +27,7 @@ test('app and worker trust exactly the fixed disposable MCP address', () => {
   assert.equal(trustedIp, '${BETA4_MCP_IP:-10.249.0.13}');
   assert.equal(trustedIp, fixedMcpIp);
   assert.match(compose, /^    environment: \*app-environment$/m);
-  assert.equal((compose.match(/^    environment: \*app-environment$/gm) ?? []).length, 2);
+  assert.equal((compose.match(/^    environment: \*app-environment$/gm) ?? []).length, 3);
 });
 
 test('gateway is non-root, capability-free, and has only narrow writable tmpfs mounts', () => {
