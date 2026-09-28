@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { writeSanitizedArtifact } from './support/artifacts.mjs';
 import { FixtureLedger, createRunId } from './support/ledger.mjs';
 import { withResourceLock } from './support/locks.mjs';
+import { actionIdsFromListResult } from './support/action-discovery.mjs';
 import { McpTestClient } from './support/mcp-client.mjs';
 import { discoverModules } from './support/module-discovery.mjs';
 
@@ -34,9 +35,7 @@ async function preflight(client) {
 async function actionNames(client, moduleId) {
   try {
     const result = await client.callTool('projeqtor_list_actions', { module: moduleId, pageSize: 200, includeTotal: true });
-    const value = structured(result);
-    const document = typeof value === 'string' ? JSON.parse(value) : value;
-    return (document?.items ?? document?.actions ?? []).map(item => item.id ?? item.name).filter(Boolean);
+    return actionIdsFromListResult(result);
   } catch {
     return [];
   }

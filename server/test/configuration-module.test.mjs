@@ -24,7 +24,7 @@ test('Configuration pack owns its semantic actions, native handlers, classes, an
   assert.equal(configuration.version, '2.0.0-beta.4');
   assert.deepEqual(configuration.dependencies, ['core']);
   assert.deepEqual(configuration.enabledStateRequirements, ['moduleConfiguration']);
-  assert.deepEqual(configuration.claims.actions, presentationActions);
+  assert.deepEqual(configuration.claims.actions, expectedActions);
   assert.deepEqual(configuration.claims.jobs, ['configuration.module.set_state', 'cron.start', 'cron.restart']);
   assert.ok(configuration.claims.classes.includes('User'));
   assert.ok(configuration.claims.classes.includes('WorkflowStatus'));

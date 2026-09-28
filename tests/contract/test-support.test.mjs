@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { actionIdsFromListResult } from '../support/action-discovery.mjs';
 import { writeSanitizedArtifact } from '../support/artifacts.mjs';
 import { FixtureLedger } from '../support/ledger.mjs';
 import { withResourceLock } from '../support/locks.mjs';
@@ -69,6 +70,22 @@ test('MCP test client never sends tokens in JSON payloads or logger events', asy
   assert.equal(observed[0].headers.Authorization, 'Bearer never-log-this');
   assert.doesNotMatch(observed[0].body, /never-log-this/);
   assert.doesNotMatch(JSON.stringify(logged), /never-log-this/);
+});
+
+test('action discovery reads the canonical action field from MCP list results', () => {
+  assert.deepEqual(actionIdsFromListResult({
+    structuredContent: {
+      items: [
+        { action: 'configuration.admin.execute' },
+        { action: 'configuration.parameter.set' },
+        { action: 'cron.start' }
+      ]
+    }
+  }), [
+    'configuration.admin.execute',
+    'configuration.parameter.set',
+    'cron.start'
+  ]);
 });
 
 test('all twelve module contracts are discoverable and uniquely owned', async () => {

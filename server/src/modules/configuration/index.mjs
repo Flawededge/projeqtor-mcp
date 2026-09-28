@@ -1,6 +1,7 @@
 import { defineModule } from '../runtime.mjs';
 
 const actions = [
+  'configuration.admin.execute',
   'configuration.user.manage',
   'user.trigger_password_reset',
   'configuration.profile.manage',
@@ -9,6 +10,12 @@ const actions = [
   'configuration.module.set_state',
   'configuration.parameter.set',
   'configuration.view.manage',
+  'configuration.maintenance.run',
+  'configuration.consistency.check',
+  'configuration.consistency.repair',
+  'configuration.deferred_updates.execute',
+  'configuration.plugin_update.notify',
+  'cron.configure',
   'cron.check', 'cron.start', 'cron.stop', 'cron.restart'
 ];
 
