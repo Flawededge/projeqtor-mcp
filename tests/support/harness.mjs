@@ -109,6 +109,23 @@ async function loadRun() {
     const split = line.indexOf('=');
     return [line.slice(0, split), line.slice(split + 1)];
   }));
+  const actorTokenFiles = {
+    BETA4_MANAGER_TOKEN_FILE: ['manager.token', 'beta4-manager.token'],
+    BETA4_MEMBER_TOKEN_FILE: ['member.token', 'beta4-member.token'],
+    BETA4_DENIED_TOKEN_FILE: ['denied.token', 'beta4-denied.token']
+  };
+  for (const [key, names] of Object.entries(actorTokenFiles)) {
+    if (environment[key]) continue;
+    for (const name of names) {
+      const candidate = resolve(runRoot, 'secrets', name);
+      try {
+        if ((await stat(candidate)).isFile()) {
+          environment[key] = candidate;
+          break;
+        }
+      } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    }
+  }
   return { runId, runRoot, envPath, environment };
 }
 
@@ -116,7 +133,7 @@ function compose(run, args, options = {}) {
   const command = ['compose', '--env-file', run.envPath, '-f', resolve(testRoot, 'compose.yaml')];
   if (run.environment.BETA4_SEED_MODE === 'restore') command.push('--profile', 'restore');
   command.push(...args);
-  const outcome = spawnSync('docker', command, { cwd: testRoot, stdio: options.capture ? 'pipe' : 'inherit', encoding: 'utf8' });
+  const outcome = spawnSync('docker', command, { cwd: testRoot, env: { ...process.env, ...run.environment }, stdio: options.capture ? 'pipe' : 'inherit', encoding: 'utf8' });
   if (outcome.status !== 0) {
     const message = options.capture ? `${outcome.stderr ?? ''}\n${outcome.stdout ?? ''}`.trim() : 'Docker Compose command failed';
     throw new Error(message);

@@ -31,6 +31,8 @@ foreach(array('tools.document.version.delete','tools.attachment.delete','tools.n
   expect($module['actions'][$id]['risk']==='destructive',"$id is guarded destructive");
   expect(isset($module['actions'][$id]['preview']),"$id has a preview callback");
 }
+expect($module['actions']['import.cleanup']['async']===true,'import cleanup executes in the worker');
+expect($module['actions']['import.cleanup']['retryPolicy']==='recovery_required','interrupted import cleanup is never silently replayed');
 foreach(array('tools.notification.send','tools.mail.send') as $id){
   expect($module['actions'][$id]['risk']==='external',"$id is guarded external");
   expect($module['actions'][$id]['async']===true,"$id executes in the worker");

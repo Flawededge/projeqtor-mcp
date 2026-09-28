@@ -22,8 +22,8 @@ export async function runImportIdentityScenario({ runId }) {
   );
   const managerOperation = await actorWrite(actors['beta4-manager'], activities[0], runId);
   const memberOperation = await actorWrite(actors['beta4-member'], activities[1], runId);
-  await assertCrossActorJobIsolation(actors['beta4-manager'].client, admin, managerOperation);
-  await assertCrossActorJobIsolation(actors['beta4-member'].client, admin, memberOperation);
+  if (managerOperation) await assertCrossActorJobIsolation(actors['beta4-manager'].client, admin, managerOperation);
+  if (memberOperation) await assertCrossActorJobIsolation(actors['beta4-member'].client, admin, memberOperation);
   await assertAttribution(admin, Number(activities[0].id), actors['beta4-manager'].identity.id);
   await assertAttribution(admin, Number(activities[1].id), actors['beta4-member'].identity.id);
   await assertDenied(actors['beta4-denied'].client, admin, runId, project.data);

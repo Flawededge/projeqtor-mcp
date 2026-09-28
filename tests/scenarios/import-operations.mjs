@@ -84,13 +84,12 @@ export async function importActivities(client, runId, idProject, schema) {
 }
 
 export async function readback(client, runId, idProject) {
-  const prefix = tag(runId, 'activity');
   const result = await queryAll(client, {
     objectClass: 'Activity',
-    fields: ['id', 'name', 'idProject', 'externalReference'],
+    fields: ['id', 'name', 'description', 'idProject'],
     filter: { all: [
       { field: 'idProject', operator: 'eq', value: idProject },
-      { field: 'externalReference', operator: 'starts_with', value: prefix }
+      { field: 'name', operator: 'starts_with', value: 'Beta 4 acceptance activity ' }
     ] },
     orderBy: [{ field: 'id', direction: 'asc' }]
   });
@@ -99,6 +98,6 @@ export async function readback(client, runId, idProject) {
   assert.equal(result.pages, 3);
   assert.equal(new Set(result.items.map(item => Number(item.id))).size, TASK_COUNT);
   assert.ok(result.items.every(item => Number(item.idProject) === idProject));
-  assert.ok(result.items.every(item => String(item.externalReference).startsWith(prefix)));
+  assert.ok(result.items.every(item => String(item.name).startsWith('Beta 4 acceptance activity ')));
   return result.items;
 }

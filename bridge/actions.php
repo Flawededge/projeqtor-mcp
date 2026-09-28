@@ -80,13 +80,15 @@ function mcpImportCleanupPreview(string $username,array $arguments): array {
   return array('ok'=>true,'importRunId'=>$runId,'journalOperationId'=>(int)$journal['row']['id'],'force'=>$force,'counts'=>$counts,'truncated'=>$counts['total']>count($items),'items'=>$items);
 }
 
-function mcpCleanupImportRun(string $username,array $arguments): array {
+function mcpCleanupImportRun(string $username,array $arguments,?callable $progress=null): array {
   mcpRequireKeys($arguments,array('importRunId'));$runId=(string)$arguments['importRunId'];$force=!empty($arguments['force']);
   $preview=mcpImportCleanupPreview($username,$arguments);
   if($preview['counts']['inaccessible']>0)mcpJsonError(403,'cleanup_inaccessible','One or more import objects cannot be deleted',array('preview'=>$preview));
   if($preview['counts']['modified']>0&&!$force)mcpJsonError(409,'cleanup_modified','Objects changed after import; prepare a second cleanup with force=true to remove them',array('preview'=>$preview));
   $journal=mcpImportJournal($username,$runId);$document=$journal['document'];$results=array();Sql::beginTransaction();
-  foreach(array_reverse($document['items']??array()) as $entry){
+  $entries=array_reverse($document['items']??array());$total=count($entries);
+  foreach($entries as $index=>$entry){
+    if($progress)$progress($index,$total);
     $class=(string)($entry['objectClass']??'');$id=(int)($entry['id']??0);mcpRequireClassOperation($class,'delete');$object=new $class($id);
     if(!$object->id){$results[]=array('objectClass'=>$class,'id'=>$id,'status'=>'missing');continue;}
     if(!Security::checkValidAccessForUser($object,'delete',null,null,false)){Sql::rollbackTransaction();mcpJsonError(403,'cleanup_inaccessible',"Delete access is denied for $class #$id");}
@@ -94,6 +96,7 @@ function mcpCleanupImportRun(string $username,array $arguments): array {
     SqlElement::setDeleteConfirmed();$raw=$object->delete();if(getLastOperationStatus($raw)!=='OK'){Sql::rollbackTransaction();mcpJsonError(400,'cleanup_delete_failed',cleanApiMessage($raw),array('objectClass'=>$class,'id'=>$id));}
     $results[]=array('objectClass'=>$class,'id'=>$id,'status'=>'deleted');
   }
+  if($progress)$progress($total,$total);
   $document['cleanup']=array('completedAt'=>date(DATE_ATOM),'force'=>$force,'deleted'=>count(array_filter($results,fn($item)=>$item['status']==='deleted')),'actor'=>$username);
   Sql::query('UPDATE mcpoperation SET result_json='.Sql::str(json_encode($document)).',updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($journal['row']['id']));
   Sql::commitTransaction();

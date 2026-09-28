@@ -34,7 +34,7 @@ test('every async module publishes a result schema without worker filesystem fie
     'echo json_encode($items,JSON_THROW_ON_ERROR);'
   ].join('');
   const actions = JSON.parse(php(script));
-  assert.equal(Object.keys(actions).length, 27);
+  assert.equal(Object.keys(actions).length, 28);
   assert.deepEqual(Object.entries(actions).filter(([, schemas]) => reservedSchemaFields(schemas.internal).length).map(([id]) => id), [
     'tools.document.extract', 'export.start', 'hr.leave.calendar.export'
   ]);
@@ -99,5 +99,8 @@ test('artifact channel fails closed on traversal, mismatches, missing files, and
   const worker = readFileSync(workerPath, 'utf8');
   assert.match(worker, /workerArtifactChannelFinish\(\$id,mcpValidateActionResult/);
   assert.match(worker, /workerUpdate\([^\n]+\$output\['result'\],\$output\['resultPath'\]/);
+  assert.match(worker, /\$GLOBALS\['mcpCaptureErrors'\]=true/);
+  assert.match(worker, /finally\{\$GLOBALS\['mcpCaptureErrors'\]=\$previousCapture;\}/);
+  assert.match(worker, /\$error instanceof McpBridgeException\?\$error->errorCode/);
   assert.doesNotMatch(worker, /\$path=\$output\['path'\]/);
 });

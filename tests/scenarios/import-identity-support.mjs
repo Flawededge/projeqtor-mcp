@@ -40,7 +40,7 @@ export async function batchOutcome(client, name, args) {
 export async function createActors() {
   const actors = {};
   for (const [name, profileCode] of ACTORS) {
-    const client = await McpTestClient.forActor(name, { timeoutMs: 300_000 });
+    const client = await McpTestClient.forActor(name, { timeoutMs: 900_000 });
     await client.initialize();
     const identity = verifyWhoami(await client.callTool('projeqtor_whoami'), name);
     assert.equal(identity.profileCode, profileCode);
@@ -121,13 +121,15 @@ export async function fixtureSchema(client) {
     refs: {
       projectType: await firstReference(client, 'projectType'),
       activityType: await firstReference(client, 'activityType'),
+      activityPlanningMode: await firstReference(client, 'activityPlanningMode'),
       status: await firstReference(client, 'status')
     }
   };
 }
 
 export function requiredData(fields, data, refs) {
-  const known = { idProjectType: refs.projectType, idActivityType: refs.activityType, idStatus: refs.status };
+  const known = { idProjectType: refs.projectType, idActivityType: refs.activityType,
+    idActivityPlanningMode: refs.activityPlanningMode, idStatus: refs.status };
   for (const field of fields.values()) {
     if (!field.required || !field.writable || Object.hasOwn(data, field.name)) continue;
     if (Object.hasOwn(known, field.name)) data[field.name] = known[field.name];

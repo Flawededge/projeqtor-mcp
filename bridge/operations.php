@@ -178,7 +178,8 @@ function mcpHandleExecuteOperations(array $input,string $username): never {
 function mcpEnsureOperationTable(): void {
   static $ready = false;
   if ($ready) return;
-  Sql::query("CREATE TABLE IF NOT EXISTS mcpoperation (
+  $tableResult=Sql::query("SELECT to_regclass('mcpoperation') AS table_name");$tableRow=Sql::fetchLine($tableResult);
+  if(!$tableRow||empty($tableRow['table_name']))Sql::query("CREATE TABLE mcpoperation (
     id bigserial PRIMARY KEY,
     username varchar(100) NOT NULL,
     operation_type varchar(120) NOT NULL,
@@ -208,11 +209,14 @@ function mcpEnsureOperationTable(): void {
     completed_at timestamp NULL,
     expires_at timestamp NULL
   )");
+  $columnResult=Sql::query("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='mcpoperation'");
+  $existingColumns=array();while($columnRow=Sql::fetchLine($columnResult))$existingColumns[$columnRow['column_name']]=true;
   foreach(array(
     'request_hash'=>'varchar(64)','idempotency_key'=>'varchar(255)','attempts'=>'integer NOT NULL DEFAULT 0','max_attempts'=>'integer NOT NULL DEFAULT 1',
     'retry_policy'=>"varchar(30) NOT NULL DEFAULT 'never'",'lease_owner'=>'varchar(120)','lease_expires_at'=>'timestamp NULL','heartbeat_at'=>'timestamp NULL','error_code'=>'varchar(100)','recovery_state'=>'varchar(40)','module_id'=>'varchar(60)','action_version'=>'varchar(30)','effects_json'=>'text'
-  ) as $column=>$definition)Sql::query("ALTER TABLE mcpoperation ADD COLUMN IF NOT EXISTS $column $definition");
-  Sql::query('CREATE UNIQUE INDEX IF NOT EXISTS mcpoperation_actor_idempotency ON mcpoperation(username,idempotency_key) WHERE idempotency_key IS NOT NULL');
+  ) as $column=>$definition)if(!isset($existingColumns[$column]))Sql::query("ALTER TABLE mcpoperation ADD COLUMN $column $definition");
+  $indexResult=Sql::query("SELECT 1 AS present FROM pg_indexes WHERE schemaname=current_schema() AND indexname='mcpoperation_actor_idempotency'");
+  if(!Sql::fetchLine($indexResult))Sql::query('CREATE UNIQUE INDEX mcpoperation_actor_idempotency ON mcpoperation(username,idempotency_key) WHERE idempotency_key IS NOT NULL');
   $ready = true;
 }
 

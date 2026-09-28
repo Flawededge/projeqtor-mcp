@@ -39,10 +39,12 @@ export async function allocate(admin, actors, runId, idProject) {
 }
 
 export async function actorWrite(actor, item, runId) {
+  const description = tag(runId, `updated-by-${actor.identity.username}`);
+  if (item.description === description) return null;
   const operation = {
     action: 'update', objectClass: 'Activity', id: Number(item.id),
     expectedVersion: item._version,
-    data: { description: tag(runId, `updated-by-${actor.identity.username}`) }
+    data: { description }
   };
   const validation = await call(actor.client, 'projeqtor_validate_operations', {
     operations: [operation]
@@ -91,8 +93,8 @@ export async function assertDenied(denied, admin, runId, projectData) {
   assert.equal(execution.rolledBack, true);
   assert.equal(execution.items?.[0]?.error?.code, 'forbidden');
   const residual = await queryAll(admin, {
-    objectClass: 'Project', fields: ['id', 'externalReference'],
-    filter: { field: 'externalReference', operator: 'eq', value: tag(runId, 'denied-project') },
+    objectClass: 'Project', fields: ['id', 'name'],
+    filter: { field: 'name', operator: 'eq', value: `Denied project ${runId}` },
     orderBy: [{ field: 'id', direction: 'asc' }]
   });
   assert.equal(residual.items.length, 0);

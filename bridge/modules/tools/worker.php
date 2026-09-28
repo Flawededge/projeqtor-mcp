@@ -7,6 +7,12 @@ require_once __DIR__.'/document-extract.php';
 require_once __DIR__.'/document-copy.php';
 function mcpToolsImportWorker(int $jobId,array $arguments,string $username): array { return workerImport($arguments,$username); }
 function mcpToolsExportWorker(int $jobId,array $arguments,string $username): array { return mcpToolsFilteredExport($jobId,$arguments); }
+function mcpToolsCleanupImportWorker(int $jobId,array $arguments,string $username): array {
+  return mcpCleanupImportRun($username,$arguments,function(int $completed,int $total)use($jobId): void {
+    if(workerCancelled($jobId))throw new RuntimeException('cancelled');
+    workerUpdate($jobId,'running',min(95,5+(int)(90*$completed/max(1,$total))));
+  });
+}
 
 function mcpToolsDocumentVersionWorker(int $jobId,array $arguments,string $username): array {
   $uploadId=(string)$arguments['uploadId'];$meta=mcpReadUpload($uploadId,$username);
