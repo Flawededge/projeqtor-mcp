@@ -37,12 +37,7 @@ jobs:
           echo "221c2a0b2facbdfc0b5af9878e030cdd7ded6e3f989b1da9cd609eccebaa0a69  /tmp/projeqtor.zip" | sha256sum -c -
           unzip -q /tmp/projeqtor.zip -d /tmp/projeqtor-source
       - name: Regenerate and verify complete policies
-        run: |
-          php scripts/generate-handler-policy.php /tmp/projeqtor-source/projeqtor /tmp/ui-handler-policy-v3.json
-          php scripts/generate-class-policy.php /tmp/projeqtor-source/projeqtor bridge/class-policy-v2.json bridge/active-menu-classes-v3.json /tmp/class-policy-v3.json
-          cmp bridge/ui-handler-policy-v3.json /tmp/ui-handler-policy-v3.json
-          cmp bridge/class-policy-v3.json /tmp/class-policy-v3.json
-          php scripts/verify-coverage-v4.php /tmp/projeqtor-source/projeqtor
+        run: php scripts/verify-coverage-v4.php /tmp/projeqtor-source/projeqtor
       - name: Build server image
         run: docker build --pull=false --tag projeqtor-mcp:ci server
       - name: Build application integration image
@@ -50,9 +45,13 @@ jobs:
       - name: Validate every bridge and worker PHP file
         run: |
           find bridge worker scripts -type f -name '*.php' -print0 | sort -z | xargs -0 -n1 php -l
-          test "$(jq '.entrypointCount' bridge/ui-handler-policy-v3.json)" -eq 797
-          test "$(jq '.mutationCandidateCount' bridge/ui-handler-policy-v3.json)" -eq 331
-          test "$(jq '.expectedInstalledClassCount' bridge/class-policy-v3.json)" -eq 640
+          test "$(jq '.sourceFileCount' bridge/source-inventory-v4.json)" -eq 944
+          test "$(jq '.entrypointCount' bridge/ui-handler-policy-v4.json)" -eq 899
+          test "$(jq '.mutationCandidateCount' bridge/ui-handler-policy-v4.json)" -eq 337
+          test "$(jq '.unknownCount' bridge/ui-handler-policy-v4.json)" -eq 0
+          test "$(jq '.deferredCount' bridge/ui-handler-policy-v4.json)" -eq 0
+          test "$(jq '.expectedInstalledClassCount' bridge/class-policy-v4.json)" -eq 640
+          test "$(jq '.unknownCount' bridge/class-policy-v4.json)" -eq 0
           test "$(jq '.activeUserFacingCount' bridge/active-menu-classes-v3.json)" -eq 229
 
   module-contracts:

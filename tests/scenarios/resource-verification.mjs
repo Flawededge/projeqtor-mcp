@@ -49,8 +49,9 @@ export function reportArguments(report, format) {
   const parameters = {};
   for (const parameter of report.parameters ?? []) {
     if (!parameter || typeof parameter.name !== 'string') return null;
-    if (parameter.defaultValue !== null && parameter.defaultValue !== undefined) parameters[parameter.name] = parameter.defaultValue;
-    else if (parameter.required) return null;
+    if (!parameter.required) continue;
+    if (parameter.defaultValue === null || parameter.defaultValue === undefined) return null;
+    parameters[parameter.name] = parameter.defaultValue;
   }
   return { idReport: report.id, format, parameters };
 }

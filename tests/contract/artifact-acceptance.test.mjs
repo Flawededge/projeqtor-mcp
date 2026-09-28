@@ -53,6 +53,11 @@ test('report candidate selection uses defaults and rejects unresolved required p
     parameters: [{ name: 'idProject', required: true, defaultValue: 2 }]
   };
   assert.deepEqual(reportArguments(report, 'pdf'), { idReport: 4, format: 'pdf', parameters: { idProject: 2 } });
+  assert.deepEqual(reportArguments({ ...report, parameters: [
+    ...report.parameters,
+    { name: 'currentProject', required: false, defaultValue: 'allProjects' },
+    { name: 'currentWeek', required: false, defaultValue: 39 }
+  ] }, 'pdf'), { idReport: 4, format: 'pdf', parameters: { idProject: 2 } });
   assert.equal(reportArguments({ ...report, parameters: [{ name: 'idProject', required: true, defaultValue: null }] }, 'pdf'), null);
   assert.equal(reportArguments(report, 'png'), null);
 });

@@ -917,7 +917,7 @@
             "testContract": "tools.import.cleanup",
             "mappedHandlers": [],
             "risk": "destructive",
-            "async": false
+            "async": true
         },
         "import.start": {
             "module": "tools",

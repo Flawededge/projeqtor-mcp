@@ -13,6 +13,8 @@ const root = path.dirname(serverRoot);
 const registryPath = path.join(root, 'bridge/core/module-registry.php');
 const modulePath = path.join(root, 'bridge/modules/reports/module.php');
 const rendererPath = path.join(root, 'bridge/modules/reports/renderer.php');
+const runnerPath = path.join(root, 'worker/report-render.php');
+const dockerfilePath = path.join(root, 'deployment/app/Dockerfile');
 const personalPath = path.join(root, 'bridge/modules/reports/personal.php');
 const schedulingPath = path.join(root, 'bridge/modules/reports/scheduling.php');
 const php = expression => execFileSync('php', ['-r', expression], { encoding: 'utf8' });
@@ -76,12 +78,19 @@ test('renderer enforces permissions, safe paths, cancellation, bounds, and atomi
   assert.match(actions, /jsonPlanning\.php/);
   assert.match(source, /MCP_JOB_ARTIFACT_MAX_BYTES/);
   assert.match(source, /workerCancelled\(\$jobId\)/);
+  assert.match(source, /proc_open\(array\(PHP_BINARY,'\/usr\/local\/lib\/projeqtor\/report-render\.php'/);
+  assert.match(source, /report_capture_size/);
+  assert.match(source, /imagecreatetruecolor\(1600,900\)/);
+  assert.match(source, /str_contains\(\$native,'\.render-'\)&&is_file\(\$native\)\)unlink\(\$native\)/);
   assert.match(source, /rename\(\$temporary,\$path\)/);
   assert.match(source, /finally\{if\(\$copy&&str_contains\(\$copy,'\.render-'\)\)@unlink\(\$copy\);\}/);
   assert.doesNotMatch(source, /'path'=>\$path/);
   assert.match(source, /%PDF-/);
   assert.match(source, /\\x89PNG/);
   assert.match(source, /recipient_not_actor/);
+  assert.match(readFileSync(runnerPath, 'utf8'), /mcpReportsCaptureHtml/);
+  assert.match(readFileSync(runnerPath, 'utf8'), /native_report_failed/);
+  assert.match(readFileSync(dockerfilePath, 'utf8'), /COPY worker\/report-render\.php \/usr\/local\/lib\/projeqtor\/report-render\.php/);
 });
 
 test('Reports batches isolate best-effort failures and report atomic rollback', () => {

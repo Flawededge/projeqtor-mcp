@@ -38,7 +38,7 @@ async function cancellationRecovery(client, runId) {
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const queued = await callTool(client, 'projeqtor_execute_action', {
       action: 'export.start',
-      arguments: { objectClass: 'History', format: 'json' },
+      arguments: { objectClass: 'Activity', format: 'json' },
       idempotencyKey: safeKey('b4', runId, 'cancel-export', attempt)
     });
     if (queued.queued !== true || !Number.isSafeInteger(queued.job?.id)) throw new Error('Safe export job was not queued');
@@ -60,5 +60,5 @@ export async function runReportAcceptance(client, runId) {
   const pdf = await renderFirst(client, reports, ['pdf'], runId, 'pdf');
   const image = await renderFirst(client, reports, ['png', 'jpeg'], runId, 'image');
   const file = await renderFirst(client, reports, ['json', 'csv'], runId, 'structured');
-  return { catalogCount: reports.length, pdf, image, file, cancellationRecovery: await cancellationRecovery(client, runId) };
+  return { catalogCount: reports.length, pdf, image, file, cancellationRecovery: recovered };
 }
