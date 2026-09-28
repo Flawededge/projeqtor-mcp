@@ -1,6 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { redactString, sanitize } from './redact.mjs';
 
+export const TEST_ACTOR_TOKEN_ENV = Object.freeze({
+  'beta4-admin': 'PROJEQTOR_TEST_ADMIN_TOKEN_FILE',
+  'beta4-manager': 'PROJEQTOR_TEST_MANAGER_TOKEN_FILE',
+  'beta4-member': 'PROJEQTOR_TEST_MEMBER_TOKEN_FILE',
+  'beta4-denied': 'PROJEQTOR_TEST_DENIED_TOKEN_FILE'
+});
+
 function parseSse(text) {
   const data = text.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).trim()).join('');
   return data ? JSON.parse(data) : null;
@@ -19,11 +26,27 @@ export class McpTestClient {
   }
 
   static async fromEnvironment() {
-    const tokenFile = process.env.PROJEQTOR_TEST_TOKEN_FILE;
+    const tokenFile = process.env.PROJEQTOR_TEST_TOKEN_FILE ?? process.env.PROJEQTOR_TEST_ADMIN_TOKEN_FILE;
     if (!tokenFile) throw new Error('PROJEQTOR_TEST_TOKEN_FILE is required');
     const token = (await readFile(tokenFile, 'utf8')).trim();
     if (!token) throw new Error('MCP test token file is empty');
     return new McpTestClient({ url: process.env.PROJEQTOR_MCP_URL, token });
+  }
+
+  static async forActor(actor, options = {}) {
+    const environmentName = TEST_ACTOR_TOKEN_ENV[actor];
+    if (!environmentName) throw new Error(`Unsupported disposable MCP actor ${actor}`);
+    const tokenFile = options.tokenFile ?? process.env[environmentName];
+    if (!tokenFile) throw new Error(`${environmentName} is required`);
+    const token = (await readFile(tokenFile, 'utf8')).trim();
+    if (!token) throw new Error(`Disposable MCP token file for ${actor} is empty`);
+    return new McpTestClient({
+      url: options.url ?? process.env.PROJEQTOR_MCP_URL,
+      token,
+      fetchImpl: options.fetchImpl,
+      timeoutMs: options.timeoutMs,
+      logger: options.logger
+    });
   }
 
   async request(method, params = {}, notification = false) {

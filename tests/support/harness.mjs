@@ -42,14 +42,20 @@ async function prepare() {
   const actorTokens = Object.fromEntries(['beta4-admin', 'beta4-manager', 'beta4-member', 'beta4-denied'].map(actor => [actor, secret(48)]));
   const paths = {
     signing: resolve(secretRoot, 'signing.key'), cursor: resolve(secretRoot, 'cursor.key'),
-    users: resolve(secretRoot, 'users.json'), token: resolve(secretRoot, 'admin.token')
+    users: resolve(secretRoot, 'users.json'),
+    adminToken: resolve(secretRoot, 'admin.token'),
+    managerToken: resolve(secretRoot, 'manager.token'),
+    memberToken: resolve(secretRoot, 'member.token'),
+    deniedToken: resolve(secretRoot, 'denied.token')
   };
   await Promise.all([
     writeFile(paths.signing, `${signingKey}\n`, { mode: 0o644 }),
     writeFile(paths.cursor, `${cursorKey}\n`, { mode: 0o644 }),
-    writeFile(paths.token, `${actorTokens['beta4-admin']}\n`, { mode: 0o644 }),
+    writeFile(paths.adminToken, `${actorTokens['beta4-admin']}\n`, { mode: 0o644 }),
+    writeFile(paths.managerToken, `${actorTokens['beta4-manager']}\n`, { mode: 0o644 }),
+    writeFile(paths.memberToken, `${actorTokens['beta4-member']}\n`, { mode: 0o644 }),
+    writeFile(paths.deniedToken, `${actorTokens['beta4-denied']}\n`, { mode: 0o644 }),
     writeFile(paths.users, `${JSON.stringify({ version: 1, users: Object.entries(actorTokens).map(([username, token]) => ({ username, tokenSha256: sha256(token) })) }, null, 2)}\n`, { mode: 0o644 }),
-    ...Object.entries(actorTokens).filter(([actor]) => actor !== 'beta4-admin').map(([actor, token]) => writeFile(resolve(secretRoot, `${actor}.token`), `${token}\n`, { mode: 0o644 }))
   ]);
 
   const seedMode = process.env.BETA4_SEED_MODE ?? 'fresh';
@@ -73,7 +79,10 @@ async function prepare() {
     BETA4_SIGNING_KEY_FILE: paths.signing,
     BETA4_CURSOR_KEY_FILE: paths.cursor,
     BETA4_USERS_FILE: paths.users,
-    BETA4_ADMIN_TOKEN_FILE: paths.token,
+    BETA4_ADMIN_TOKEN_FILE: paths.adminToken,
+    BETA4_MANAGER_TOKEN_FILE: paths.managerToken,
+    BETA4_MEMBER_TOKEN_FILE: paths.memberToken,
+    BETA4_DENIED_TOKEN_FILE: paths.deniedToken,
     BETA4_ARTIFACT_DIR: artifactRoot,
     BETA4_TEST_UID: String(testUid),
     BETA4_TEST_GID: String(testGid),

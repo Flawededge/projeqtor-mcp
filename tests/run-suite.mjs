@@ -5,6 +5,7 @@ import { writeSanitizedArtifact } from './support/artifacts.mjs';
 import { FixtureLedger, createRunId } from './support/ledger.mjs';
 import { withResourceLock } from './support/locks.mjs';
 import { actionsFromListResult } from './support/action-discovery.mjs';
+import { runImportIdentityScenario } from './scenarios/import-identity.mjs';
 import { McpTestClient } from './support/mcp-client.mjs';
 import { discoverModules } from './support/module-discovery.mjs';
 import { structuredToolResult, verifyWhoami } from './support/tool-results.mjs';
@@ -104,6 +105,7 @@ async function main() {
     if (hashFields.some(value => typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value))) throw new Error('Coverage capability hashes are missing or malformed');
     if (worker.compatible !== true || worker.schemaVersion !== 4 || worker.workerVersion !== '2.0.0-beta.4' || worker.heartbeatFresh !== true) throw new Error('Worker capability compatibility or heartbeat check failed');
     summary.coverage = { modules: moduleIds.length, actions: actionCount, classes: classPolicy.installed, handlers: handlerPolicy.installed, sourceFiles: handlerPolicy.installedSourceFiles, unknown: 0, deferred: 0 };
+    summary.importIdentity = await runImportIdentityScenario({ runId });
   }
 
   summary.cleanupPlanCount = (await ledger.cleanupPlan()).length;
