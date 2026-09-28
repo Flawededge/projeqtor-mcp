@@ -13,11 +13,11 @@
   "handlerMappings": {
     "tool/saveDisableSynchronizationDefinition.php": {
       "action": "ticketing.synchronization.disable",
-      "test": "coverage.ticketing.tool.save_disable_synchronization_definition"
+      "test": "ticketing.synchronization.disable"
     },
     "tool/saveSynchronizationDefinition.php": {
       "action": "ticketing.synchronization.configure",
-      "test": "coverage.ticketing.tool.save_synchronization_definition"
+      "test": "ticketing.synchronization.configure"
     }
   },
   "handlerHandoffs": {

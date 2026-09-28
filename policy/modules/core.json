@@ -4,5 +4,10 @@
   "dependsOn": [],
   "legacyAliases": [],
   "pathPatterns": [],
-  "classPatterns": []
+  "classPatterns": [],
+  "genericCrudHandlers": {
+    "tool:removeJobDefinition": ["JobDefinition"],
+    "tool:removeMessageFollowup": ["MessageLegalFollowup"],
+    "tool:saveJobDefinition": ["JobDefinition"]
+  }
 }

@@ -109,7 +109,7 @@ function pqV4MutationKinds(array $tokens): array
 {
     $joined = pqV4TokenText($tokens);
     $patterns = [
-        'object_create_update' => '/(?:->|::)\s*(?:save|savework|savewithplanning|create|insert)\s*\(/',
+        'object_create_update' => '/(?:->|::)\s*(?:save|savework|savewithplanning|savewithrefresh|simplesave|saveforced|create|insert)\s*\(/',
         'object_delete' => '/(?:->|::)\s*(?:delete|purge|remove)\s*\(/',
         'sql_write' => '/\bsql\s*::\s*(?:execute|exec)\s*\(/',
         'file_write' => '/\b(?:file_put_contents|fwrite|fputcsv|rename|unlink|move_uploaded_file|mkdir|rmdir|copy)\s*\(/',
@@ -137,7 +137,7 @@ function pqV4SourceRole(string $relative): string
     $knownLibraries = [
         'tool/projeqtor.php', 'tool/projeqtor-hr.php', 'tool/projeqtor_string.php',
         'tool/formatter.php', 'tool/jsonFunctions.php', 'tool/planningListFunction.php',
-        'tool/imputationListFunction.php', 'tool/liveMeetingFunc.php',
+        'tool/imputationListFunction.php', 'tool/liveMeetingFunc.php', 'tool/file.php',
         'report/header.php', 'report/headerFunctions.php', 'plugin/loadPlugin.php',
     ];
     if (in_array($relative, $knownLibraries, true)) {
@@ -250,41 +250,44 @@ function pqV4KnownGenericCrud(string $name): bool
     return in_array($name, ['saveObject', 'deleteObject', 'deleteObjectMultiple', 'deleteObjectMultipleControl'], true);
 }
 
-function pqV4ValidateCatalog(array $handlers, ?array $catalog): array
+function pqV4ValidateCatalog(array $handlers, array $catalog): array
 {
-    if ($catalog === null) {
-        return ['present' => false, 'validatedActions' => 0, 'validatedTests' => 0];
-    }
-    foreach (['actions', 'tests'] as $key) {
-        if (!isset($catalog[$key]) || !is_array($catalog[$key]) || !array_is_list($catalog[$key])) {
-            pqV4Fail("Module catalog $key must be a list");
-        }
-        foreach ($catalog[$key] as $identifier) {
-            if (!is_string($identifier) || $identifier === '') {
-                pqV4Fail("Module catalog $key contains an invalid identifier");
-            }
+    if (!is_array($catalog['actions'] ?? null) || array_is_list($catalog['actions'])) pqV4Fail('Module catalog actions must be an object map');
+    if (!is_array($catalog['handlers'] ?? null) || array_is_list($catalog['handlers'])) pqV4Fail('Module catalog handlers must be an object map');
+    if (!is_array($catalog['tests'] ?? null) || !array_is_list($catalog['tests'])) pqV4Fail('Module catalog tests must be a list');
+    foreach ($catalog['actions'] as $identifier => $metadata) {
+        if (!is_string($identifier) || $identifier === '' || !is_array($metadata)
+            || !is_string($metadata['module'] ?? null) || !is_string($metadata['testContract'] ?? null)) {
+            pqV4Fail('Module catalog contains an invalid action');
         }
     }
-    $actions = array_fill_keys($catalog['actions'] ?? [], true);
-    $tests = array_fill_keys($catalog['tests'] ?? [], true);
-    $missingActions = [];
-    $missingTests = [];
+    $tests = array_fill_keys($catalog['tests'], true);
+    foreach ($catalog['tests'] as $identifier) if (!is_string($identifier) || $identifier === '') pqV4Fail('Module catalog contains an invalid test');
+    $validatedHandlers = 0;
     foreach ($handlers as $handler) {
         foreach ($handler['mappedActions'] as $action) {
-            if (!isset($actions[$action])) {
-                $missingActions[$action] = true;
+            $metadata = $catalog['actions'][$action] ?? null;
+            $runtime = $catalog['handlers'][$handler['id']] ?? null;
+            if ($metadata === null || ($metadata['testContract'] ?? null) !== $handler['coverageTestId']) {
+                pqV4Fail('Module catalog mismatch for ' . $handler['id']);
             }
+            if (($handler['mappingSource'] ?? null) === 'runtime_action') {
+                if ($runtime === null || ($runtime['action'] ?? null) !== $action
+                    || ($runtime['module'] ?? null) !== $handler['module']
+                    || ($runtime['testContract'] ?? null) !== $handler['coverageTestId']) {
+                    pqV4Fail('Runtime module catalog mismatch for ' . $handler['id']);
+                }
+            } elseif ($runtime !== null && ($runtime['action'] ?? null) !== $action) {
+                pqV4Fail('Policy/runtime action mismatch for ' . $handler['id']);
+            }
+            $validatedHandlers++;
         }
         if ($handler['coverageTestId'] !== null && !isset($tests[$handler['coverageTestId']])) {
-            $missingTests[$handler['coverageTestId']] = true;
+            pqV4Fail('Module catalog test is missing: ' . $handler['coverageTestId']);
         }
     }
-    if ($missingActions !== [] || $missingTests !== []) {
-        pqV4Fail(sprintf(
-            'Module catalog mismatch: %d actions and %d tests are missing',
-            count($missingActions),
-            count($missingTests)
-        ));
-    }
-    return ['present' => true, 'validatedActions' => count($actions), 'validatedTests' => count($tests)];
+    return [
+        'present' => true, 'validatedActions' => count($catalog['actions']),
+        'validatedTests' => count($tests), 'validatedHandlers' => $validatedHandlers,
+    ];
 }

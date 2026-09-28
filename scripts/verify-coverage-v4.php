@@ -29,20 +29,25 @@ verify(mkdir($temporary, 0700), 'temporary directory must be created');
 
 try {
     $inventoryPath = "$temporary/source-inventory-v4.json";
+    $catalogPath = "$temporary/module-catalog-v4.json";
     $handlersPath = "$temporary/ui-handler-policy-v4.json";
     $classesPath = "$temporary/class-policy-v4.json";
+    $output = [];
+    verify(runCommand([PHP_BINARY, "$repo/scripts/generate-module-catalog-v4.php", $catalogPath], $output) === 0, implode("\n", $output));
     $output = [];
     verify(runCommand([PHP_BINARY, "$repo/scripts/generate-source-inventory-v4.php", $source, $inventoryPath], $output) === 0, implode("\n", $output));
     $output = [];
     verify(runCommand([
         PHP_BINARY, "$repo/scripts/compile-coverage-v4.php", $inventoryPath,
         "$repo/bridge/class-policy-v3.json", "$repo/policy/modules", $handlersPath, $classesPath,
+        $catalogPath,
     ], $output) === 0, implode("\n", $output));
 
     foreach ([
         "$repo/bridge/source-inventory-v4.json" => $inventoryPath,
         "$repo/bridge/ui-handler-policy-v4.json" => $handlersPath,
         "$repo/bridge/class-policy-v4.json" => $classesPath,
+        "$repo/policy/module-catalog-v4.json" => $catalogPath,
     ] as $tracked => $generated) {
         verify(hash_file('sha256', $tracked) === hash_file('sha256', $generated), basename($tracked) . ' is stale');
     }
@@ -53,6 +58,7 @@ try {
     verify($inventory['sourceFileCount'] === count($inventory['files']), 'source inventory count');
     verify($handlers['entrypointCount'] === count($handlers['handlers']), 'handler count');
     verify($handlers['unknownCount'] === 0 && $handlers['deferredCount'] === 0, 'zero unknown/deferred handlers');
+    $catalog = pqV4ReadJson($catalogPath);
     verify($classes['expectedInstalledClassCount'] === 640 && $classes['unknownCount'] === 0, '640 known classes');
     verify(array_keys($handlers['moduleCounts']) === PQ_V4_MODULES, 'all modules are present in deterministic order');
     foreach (PQ_V4_MODULES as $module) {
@@ -67,9 +73,10 @@ try {
             verify(count($handler['mappedActions']) === 1 && $handler['coverageTestId'] !== null, $handler['path'] . ' action/test mapping');
         }
     }
-    foreach (['tool/backupFilter.php', 'tool/backupLayout.php', 'tool/backupReportLayout.php'] as $path) {
-        verify(($byPath[$path]['classification'] ?? null) === 'registered_action', "$path is a supported action");
+    foreach (['tool/backupFilter.php', 'tool/backupLayout.php'] as $path) {
+        verify(($byPath[$path]['mappingSource'] ?? null) === 'explicit_session_or_library', "$path is audited session state");
     }
+    verify(($byPath['tool/backupReportLayout.php']['classification'] ?? null) === 'registered_action', 'report layout backup is a supported action');
     foreach (['tool/saveWorkTokenClientContract.php', 'tool/saveWorkTokenMarkup.php'] as $path) {
         verify(($byPath[$path]['module'] ?? null) === 'financial', "$path belongs to financial");
         verify(($byPath[$path]['classification'] ?? null) === 'registered_action', "$path is supported");
@@ -87,38 +94,27 @@ $text = '$object->delete()';
 // $object->remove();
 /* $object->create(); */
 $object->save();
+$object->saveWithRefresh();
+$object->simpleSave();
+$object->saveForced();
 ?>
 <script>object.remove();</script>
 PHP;
     verify(pqV4MutationKinds(pqV4ExecutableTokens($synthetic)) === ['object_create_update'], 'lexer ignores strings, comments, HTML, and JavaScript');
 
-    $actions = [];
-    $tests = [];
-    foreach ($handlers['handlers'] as $handler) {
-        foreach ($handler['mappedActions'] as $action) {
-            $actions[$action] = true;
-        }
-        if ($handler['coverageTestId'] !== null) {
-            $tests[$handler['coverageTestId']] = true;
-        }
-    }
-    $catalogPath = "$temporary/module-catalog-v4.json";
-    pqV4WriteJson($catalogPath, ['actions' => array_keys($actions), 'tests' => array_keys($tests)]);
+    $invalidCatalog = $catalog;
+    $firstHandler = array_key_first($invalidCatalog['handlers']);
+    verify(is_string($firstHandler), 'runtime catalog contains native handler mappings');
+    $removedAction = $invalidCatalog['handlers'][$firstHandler]['action'];
+    unset($invalidCatalog['actions'][$removedAction]);
+    $invalidCatalogPath = "$temporary/invalid-module-catalog-v4.json";
+    pqV4WriteJson($invalidCatalogPath, $invalidCatalog);
     $output = [];
     verify(runCommand([
         PHP_BINARY, "$repo/scripts/compile-coverage-v4.php", $inventoryPath,
         "$repo/bridge/class-policy-v3.json", "$repo/policy/modules",
-        "$temporary/catalog-handlers.json", "$temporary/catalog-classes.json", $catalogPath,
-    ], $output) === 0, 'complete module catalog must validate');
-    verify(pqV4ReadJson("$temporary/catalog-handlers.json")['catalogValidation']['present'] === true, 'catalog validation status');
-    array_pop($actions);
-    pqV4WriteJson($catalogPath, ['actions' => array_keys($actions), 'tests' => array_keys($tests)]);
-    $output = [];
-    verify(runCommand([
-        PHP_BINARY, "$repo/scripts/compile-coverage-v4.php", $inventoryPath,
-        "$repo/bridge/class-policy-v3.json", "$repo/policy/modules",
-        "$temporary/incomplete-handlers.json", "$temporary/incomplete-classes.json", $catalogPath,
-    ], $output) !== 0, 'incomplete module catalog must fail closed');
+        "$temporary/incomplete-handlers.json", "$temporary/incomplete-classes.json", $invalidCatalogPath,
+    ], $output) !== 0, 'runtime catalog with a missing action must fail closed');
 
 
     fwrite(STDOUT, json_encode([

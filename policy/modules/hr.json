@@ -1,8 +1,19 @@
 {
   "module": "hr",
   "version": "4.0.0",
-  "dependsOn": ["core", "environment"],
+  "dependsOn": ["core", "configuration", "environment"],
   "legacyAliases": ["hr_tools_configuration"],
   "pathPatterns": ["#(?:^|/)[^/]*(?:employee|employment|leave|absence|skill|projeqtor-hr)#i"],
-  "classPatterns": ["/(?:Employee|Employment|Leave|Absence|Skill)/i"]
+  "classPatterns": ["/(?:Employee|Employment|Leave|Absence|Skill)/i"],
+  "genericCrudHandlers": {
+    "tool:removeTranslatorLanguage": ["LocalizationTranslatorLanguage"],
+    "tool:saveTranslatorLanguage": ["LocalizationTranslatorLanguage"]
+  },
+  "handlerMappings": {
+    "tool:removeCustomEarnedRulesOfEmpContractType": {"action": "hr.leave.permissions.configure", "classes": ["CustomEarnedRulesOfEmploymentContractType"]},
+    "tool:removeLvTypeOfEmpContractType": {"action": "hr.leave.permissions.configure", "classes": ["LeaveTypeOfEmploymentContractType"]},
+    "tool:saveActivitySkill": {"action": "hr.skill.assign", "classes": ["ActivitySkill"]},
+    "tool:saveCustomEarnedRulesOfEmpContractType": {"action": "hr.leave.permissions.configure", "classes": ["CustomEarnedRulesOfEmploymentContractType"]},
+    "tool:saveLvTypeOfEmpContractType": {"action": "hr.leave.permissions.configure", "classes": ["LeaveTypeOfEmploymentContractType"]}
+  }
 }

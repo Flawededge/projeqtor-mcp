@@ -29,5 +29,6 @@
     "follow-up.imputation-alert",
     "follow-up.comment",
     "follow-up.timesheet-result"
-  ]
+  ],
+  "genericCrudHandlers": {"tool:saveWorkCategory": ["WorkCategory"]}
 }

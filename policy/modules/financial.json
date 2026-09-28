@@ -8,7 +8,7 @@
   "ownedClasses": [
     "AbacusDefinition", "AbacusLine", "AbacusValue", "Abacusable", "Bill", "BillLine",
     "Budget", "BudgetElement", "CallForTender", "ClientContract", "ExpenseDetail",
-    "IndividualExpense", "Payment", "Phase", "ProjectExpense", "ProviderBill",
+    "Complexity", "ComplexityValues", "IndividualExpense", "Payment", "Phase", "ProjectExpense", "ProviderBill",
     "ProviderOrder", "ProviderPayment", "ProviderTerm", "Quotation", "SupplierContract",
     "Tender", "TenderEvaluationCriteria", "WorkCommand", "WorkCommandAccepted",
     "WorkCommandBilled", "WorkUnit", "WorkUnitCatalogPhase", "WorkTokenClientContract", "WorkTokenMarkup"
@@ -74,6 +74,12 @@
     "financial.abacus.apply",
     "financial.factur-x.import"
   ],
+  "handlerMappings": {
+    "tool:removeActivityWorkUnit": {"action": "financial.work_unit.manage", "classes": ["ActivityWorkUnit", "WorkCommandDone", "WorkCommand", "Activity", "ActivityPlanningElement", "Assignment"]},
+    "tool:saveActivityWorkUnit": {"action": "financial.work_unit.manage", "classes": ["ActivityWorkUnit", "WorkCommandDone", "WorkCommand", "Activity", "ActivityPlanningElement"]},
+    "tool:saveComplexity": {"action": "financial.work_unit.manage", "classes": ["Complexity"]},
+    "tool:savePhasing": {"action": "financial.abacus.manage", "classes": ["Phasing"]}
+  },
   "excludedOwnership": {
     "EmploymentContract": "hr",
     "EmploymentContractType": "hr",
