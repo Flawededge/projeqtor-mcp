@@ -32,3 +32,15 @@ test('harness principals are isolated tokens for all acceptance actors', async (
   for (const actor of ['beta4-admin', 'beta4-manager', 'beta4-member', 'beta4-denied']) assert.match(harness, new RegExp(`'${actor}'`));
   assert.match(harness, /tokenSha256: sha256\(token\)/);
 });
+
+test('disposable bootstrap captures state and enables every optional acceptance family', () => {
+  assert.match(bootstrap, /mcp-harness-module-state\.json/);
+  assert.match(bootstrap, /if\(!is_file\(\$moduleSnapshotPath\)\)/);
+  for (const moduleName of [
+    'moduleAbsence', 'moduleNotification', 'moduleDataCloning', 'moduleAssets',
+    'moduleLocalization', 'modulePoker', 'moduleChecklist', 'moduleMail',
+    'moduleTokenManagement', 'moduleHumanResource', 'moduleSkillManagement',
+    'moduleVoting', 'moduleCrmProspect', 'moduleAbacus'
+  ]) assert.match(bootstrap, new RegExp(`'${moduleName}'`));
+  assert.match(bootstrap, /foreach\(array_keys\(\$parentModuleIds\) as \$parentModuleId\)/);
+});

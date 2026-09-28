@@ -133,10 +133,11 @@ test('capabilities expose deterministic module versions and claims', async () =>
   assert.equal(response.structuredContent.schemaVersion, 4);
   assert.equal(response.structuredContent.modules.length, 13);
   assert.deepEqual(new Set(response.structuredContent.modules.map(module => module.id)), new Set(MODULE_IDS));
+  assert.equal(response.structuredContent.modules.reduce((total, module) => total + module.actionCount, 0), 212);
   const planning = response.structuredContent.modules.find(module => module.id === 'planning');
   assert.equal(planning.version, '2.0.0-beta.4');
   assert.equal(planning.enabled, true);
-  assert.equal(planning.actionCount, 1);
+  assert.equal(planning.actionCount, 21);
   assert.match(planning.coverageHash, /^[a-f0-9]{64}$/);
   assert.deepEqual(planning.enabledStateRequirements, []);
 });

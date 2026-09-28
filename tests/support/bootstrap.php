@@ -60,6 +60,41 @@ $admin = SqlElement::getSingleSqlElementFromCriteria('User', array('name' => 'ad
 if (!$admin->id) bootstrapFail('official admin user is missing', 73);
 setSessionUser($admin);
 
+// Enable every optional family exercised by the disposable acceptance matrix.
+// Capture the original switches once so restore-mode cleanup can put them back.
+$acceptanceModuleNames = array(
+  'moduleAbsence','moduleNotification','moduleDataCloning','moduleAssets',
+  'moduleSituation','moduleGestionCA','moduleLocalization','modulePoker',
+  'moduleTargetMilestone','moduleTechnicalProgress','moduleBudgetFunctionOfOrga',
+  'moduleTodoList','moduleChecklist','moduleMail','moduleTokenManagement',
+  'moduleHumanResource','moduleSkillManagement','moduleVoting',
+  'moduleProjectAnalysis','moduleCrmProspect','moduleAbacus'
+);
+$moduleSnapshotPath='/var/lib/projeqtor/mcp-harness-module-state.json';
+$moduleSnapshot=array('version'=>1,'modules'=>array());
+foreach($acceptanceModuleNames as $moduleName){
+  $module=SqlElement::getSingleSqlElementFromCriteria('Module',array('name'=>$moduleName));
+  if(!$module->id)bootstrapFail("required acceptance module $moduleName is missing",77);
+  $moduleSnapshot['modules'][$moduleName]=(int)$module->active;
+}
+if(!is_file($moduleSnapshotPath)){
+  $temporary=$moduleSnapshotPath.'.tmp';
+  if(file_put_contents($temporary,json_encode($moduleSnapshot,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."\n",LOCK_EX)===false||!rename($temporary,$moduleSnapshotPath))bootstrapFail('could not capture initial module state',78);
+}
+$parentModuleIds=array();
+foreach($acceptanceModuleNames as $moduleName){
+  $module=SqlElement::getSingleSqlElementFromCriteria('Module',array('name'=>$moduleName));
+  $module->active=1;$result=$module->save();
+  if(!in_array(getLastOperationStatus($result),array('OK','NO_CHANGE'),true))bootstrapFail("could not enable acceptance module $moduleName",79);
+  if((int)$module->idModule>0)$parentModuleIds[(int)$module->idModule]=true;
+}
+foreach(array_keys($parentModuleIds) as $parentModuleId){
+  $parent=new Module((int)$parentModuleId);
+  if(!$parent->id)bootstrapFail("acceptance parent module $parentModuleId is missing",80);
+  $parent->active=1;$result=$parent->save();
+  if(!in_array(getLastOperationStatus($result),array('OK','NO_CHANGE'),true))bootstrapFail("could not refresh acceptance parent module $parentModuleId",81);
+}
+
 $identityProfiles = array('beta4-admin' => 'ADM', 'beta4-manager' => 'PL', 'beta4-member' => 'TM', 'beta4-denied' => 'G');
 foreach ($identityProfiles as $name => $profileCode) {
   $profile = SqlElement::getSingleSqlElementFromCriteria('Profile', array('profileCode' => $profileCode));

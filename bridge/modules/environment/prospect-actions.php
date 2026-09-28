@@ -2,13 +2,16 @@
 declare(strict_types=1);
 
 function mcpEnvironmentRequireMutation(object $object,string $operation,?string $expectedVersion=null): void {
-  $class=get_class($object);mcpRequireClassOperation($class,$operation);
+  $class=get_class($object);
+  // These child records remain blocked from generic CRUD. Their semantic
+  // workflows still enforce ProjeQtOr's native object permission checks below.
+  if(!in_array($class,array('ProspectEvent','OtherClient'),true))mcpRequireClassOperation($class,$operation);
   if(!(int)($object->id??0)||!Security::checkValidAccessForUser($object,$operation,null,null,false))mcpJsonError(403,'forbidden',"$class $operation access is denied");
   if($expectedVersion===null||$expectedVersion==='')mcpJsonError(409,'expected_version_required',"$class #".(int)$object->id." requires expectedVersion");
   $actual=mcpObjectVersion($object);if(!hash_equals($actual,$expectedVersion))mcpJsonError(409,'version_conflict',"$class #".(int)$object->id." has changed",array('expectedVersion'=>$expectedVersion,'actualVersion'=>$actual));
 }
 function mcpEnvironmentCreateAllowed(object $object): void {
-  $class=get_class($object);mcpRequireClassOperation($class,'create');if(!Security::checkValidAccessForUser($object,'create',null,null,false))mcpJsonError(403,'forbidden',"$class create access is denied");
+  $class=get_class($object);if(!in_array($class,array('ProspectEvent','OtherClient'),true))mcpRequireClassOperation($class,'create');if(!Security::checkValidAccessForUser($object,'create',null,null,false))mcpJsonError(403,'forbidden',"$class create access is denied");
 }
 function mcpEnvironmentWorkflowPreview(array $arguments,string $username,string $action): array {
   return array('action'=>$action,'actor'=>$username,'itemCount'=>count($arguments['items']??array()),'payloadRedacted'=>true);

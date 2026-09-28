@@ -3,7 +3,7 @@ import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const VALID_MODULES = new Set([
-  'planning', 'ticketing', 'scrum', 'follow-up', 'steering', 'financial',
+  'planning', 'ticketing', 'scrum', 'follow_up', 'steering', 'financial',
   'products', 'hr', 'environment', 'tools', 'reports', 'configuration'
 ]);
 

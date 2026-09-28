@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import planningModule from '../src/modules/planning/index.mjs';
+import planningModule, { PLANNING_ACTIONS, PLANNING_JOBS } from '../src/modules/planning/index.mjs';
 
 const serverRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = path.dirname(serverRoot);
@@ -23,12 +23,14 @@ function descriptor() {
   return JSON.parse(php(source));
 }
 
-test('Planning presentation module owns only its high-frequency convenience tool', () => {
+test('Planning presentation module claims every canonical action and only one convenience tool', () => {
   assert.equal(planningModule.id, 'planning');
   assert.equal(planningModule.version, '2.0.0-beta.4');
   assert.deepEqual(planningModule.claims.tools, ['projeqtor_plan_projects']);
-  assert.deepEqual(planningModule.claims.actions, ['planning.calculate']);
-  assert.deepEqual(planningModule.claims.jobs, ['planning.calculate']);
+  assert.deepEqual(planningModule.claims.actions, PLANNING_ACTIONS);
+  assert.equal(PLANNING_ACTIONS.length, 21);
+  assert.deepEqual(planningModule.claims.jobs, PLANNING_JOBS);
+  assert.equal(PLANNING_JOBS.length, 5);
 });
 
 test('Planning bridge declares every requested semantic workflow family', () => {

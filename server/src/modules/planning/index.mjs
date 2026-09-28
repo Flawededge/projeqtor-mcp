@@ -2,6 +2,38 @@ import * as z from 'zod/v4';
 import { defineModule } from '../runtime.mjs';
 import { idempotencyKeySchema, registerCanonicalActionTool } from '../shared/action-tool.mjs';
 
+export const PLANNING_ACTIONS = Object.freeze([
+  'project.snapshot',
+  'planning.assignment.upsert',
+  'planning.assignment.remove',
+  'planning.assignment.automatic',
+  'planning.allocation.upsert',
+  'planning.allocation.remove',
+  'planning.dependency.upsert',
+  'planning.dependency.remove',
+  'planning.selection.delete',
+  'planning.integrity.repair',
+  'planning.grid.inline_edit',
+  'planning.element.resize',
+  'planning.element.phase',
+  'planning.activity.split',
+  'planning.scenario.configure',
+  'planning.critical_resources.evaluate',
+  'planning.calculate',
+  'planning.wbs.renumber',
+  'planning.diagnostics',
+  'planning.baseline.create',
+  'planning.baseline.delete'
+]);
+
+export const PLANNING_JOBS = Object.freeze([
+  'project.snapshot',
+  'planning.critical_resources.evaluate',
+  'planning.calculate',
+  'planning.wbs.renumber',
+  'planning.baseline.create'
+]);
+
 const inputSchema = z.object({
   projectIds: z.array(z.number().int().positive()).min(1).max(200),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -14,7 +46,7 @@ const inputSchema = z.object({
 
 export default defineModule({
   id: 'planning', version: '2.0.0-beta.4', dependencies: ['core'],
-  claims: { actions: ['planning.calculate'], jobs: ['planning.calculate'], tools: ['projeqtor_plan_projects'] },
+  claims: { actions: PLANNING_ACTIONS, jobs: PLANNING_JOBS, tools: ['projeqtor_plan_projects'] },
   register(registrar, context) {
     registerCanonicalActionTool(registrar, context, {
       name: 'projeqtor_plan_projects', action: 'planning.calculate', inputSchema,

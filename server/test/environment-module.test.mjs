@@ -76,6 +76,15 @@ test('Environment mutations fail closed on concurrency and parent permissions', 
   assert.match(prospects, /new Link\(\)/);
 });
 
+test('Environment semantic-only child models do not make guarded actions unavailable', () => {
+  const descriptor = phpDescriptor();
+  assert.deepEqual(descriptor.actions['environment.prospect.event.manage'].permissionClasses, ['Prospect', 'Contact']);
+  assert.deepEqual(descriptor.actions['environment.client_relationship.promote'].permissionClasses, ['Client']);
+  assert.ok(descriptor.actions['environment.prospect.convert'].permissionClasses.includes('Link'));
+  const prospects = execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(new URL('../../bridge/modules/environment/prospect-actions.php', import.meta.url).pathname)});`], { encoding: 'utf8' });
+  assert.match(prospects, /array\('ProspectEvent','OtherClient'\)/);
+});
+
 test('Environment policy maps exact prospect handlers to public semantic actions', () => {
   const policyPath = new URL('../../policy/modules/environment.json', import.meta.url).pathname;
   const policy = JSON.parse(execFileSync('php', ['-r', `echo file_get_contents(${JSON.stringify(policyPath)});`], { encoding: 'utf8' }));

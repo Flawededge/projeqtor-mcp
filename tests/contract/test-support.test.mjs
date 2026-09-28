@@ -124,4 +124,6 @@ test('all twelve module contracts are discoverable and uniquely owned', async ()
   assert.equal(modules.length, 12);
   assert.equal(new Set(modules.map(module => module.id)).size, 12);
   assert.deepEqual(modules.map(module => module.id), [...modules.map(module => module.id)].sort());
+  assert.ok(modules.some(module => module.id === 'follow_up'));
+  assert.ok(!modules.some(module => module.id === 'follow-up'));
 });

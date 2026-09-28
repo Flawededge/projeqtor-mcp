@@ -1,5 +1,5 @@
 export default {
-  id: 'follow-up',
+  id: 'follow_up',
   locks: ['work-period', 'imputation-alert-delivery'],
   requiredTools: ['projeqtor_record_work'],
   requiredActions: [
