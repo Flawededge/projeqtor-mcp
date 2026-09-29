@@ -109,7 +109,6 @@ services:
       - app-cache:/var/www/html/cache
       - ${BETA4_SIGNING_KEY_FILE:?generated secret file required}:/run/secrets/projeqtor_signing_key:ro
       - ${BETA4_CURSOR_KEY_FILE:?generated secret file required}:/run/secrets/projeqtor_cursor_key:ro
-      - ./support/api-apache.conf:/etc/apache2/conf-available/projeqtor-api.conf:ro
     restart: "no"
     security_opt: [no-new-privileges:true]
 

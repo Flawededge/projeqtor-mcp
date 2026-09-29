@@ -18,7 +18,7 @@ All notable changes are documented here. Versions follow Semantic Versioning.
 
 ### Validation
 
-- Stable release retains the accepted 137 unit tests, 42 contract tests, complete PHP/JavaScript lint, 562-task import, identity, permission, artifact, resource-leveling, and zero-unknown/deferred coverage evidence.
+- Stable release retains the accepted 137 unit tests, 43 contract tests, complete PHP/JavaScript lint, 562-task import, identity, permission, artifact, resource-leveling, and zero-unknown/deferred coverage evidence.
 
 ## [2.0.0-beta.4] - 2026-09-27
 

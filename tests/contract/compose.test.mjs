@@ -30,6 +30,12 @@ test('app and worker trust exactly the fixed disposable MCP address', () => {
   assert.equal((compose.match(/^    environment: \*app-environment$/gm) ?? []).length, 4);
 });
 
+test('app lets the image entrypoint render its trusted-IP Apache policy', () => {
+  const app = compose.slice(compose.indexOf('  app:'), compose.indexOf('\n  worker:'));
+  assert.doesNotMatch(app, /api-apache\.conf/);
+  assert.match(app, /environment: \*app-environment/);
+});
+
 test('gateway is non-root, capability-free, and has only narrow writable tmpfs mounts', () => {
   const gateway = compose.slice(compose.indexOf('  gateway:'), compose.indexOf('\n  mail:'));
   assert.match(gateway, /user: "101:101"/);
