@@ -1,14 +1,15 @@
 {
   "name": "projeqtor-mcp-bridge",
-  "version": "1.2.0",
+  "version": "2.0.0-beta.2",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "start": "node src/server.mjs",
-    "check": "node --check src/server.mjs"
+    "start": "node src/main.mjs",
+    "check": "node --check src/main.mjs && node --check src/domain.mjs && node --check src/contracts.mjs && node --check src/full-control.mjs && node --check src/tools.mjs",
+    "test": "node --test"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",

@@ -23,5 +23,12 @@ jobs:
       - name: Validate server syntax
         working-directory: server
         run: npm run check
+      - name: Run server tests
+        working-directory: server
+        run: npm test
+      - name: Build server image
+        run: docker build --pull=false --tag projeqtor-mcp:ci server
       - name: Validate bridge syntax
-        run: php -l bridge/index.php
+        run: |
+          php -l bridge/index.php
+          php -l bridge/schema.php

@@ -1,7 +1,10 @@
 <?php
 declare(strict_types=1);
 
+if (ob_get_level() === 0) ob_start();
+
 function denyMcpRequest(int $status, string $message): never {
+  if (ob_get_level() > 0) ob_clean();
   http_response_code($status);
   header('Content-Type: application/json; charset=UTF-8');
   header('Cache-Control: no-store');
@@ -10,8 +13,8 @@ function denyMcpRequest(int $status, string $message): never {
 }
 
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? '');
-if (!in_array($method, array('GET', 'PUT', 'POST'), true)) {
-  header('Allow: GET, PUT, POST');
+if (!in_array($method, array('GET', 'PUT', 'POST', 'DELETE'), true)) {
+  header('Allow: GET, PUT, POST, DELETE');
   denyMcpRequest(405, 'Method not allowed');
 }
 
@@ -27,7 +30,7 @@ $body = file_get_contents('php://input');
 if ($body === false) {
   denyMcpRequest(400, 'Unable to read request body');
 }
-if (strlen($body) > 1048576) {
+if (strlen($body) > 4194304) {
   denyMcpRequest(413, 'Request body is too large');
 }
 
@@ -51,14 +54,53 @@ if ($key === false || trim($key) === '') {
   denyMcpRequest(500, 'Internal authentication is unavailable');
 }
 $key = trim($key);
+$bridgeUri = $_REQUEST['uri'] ?? '';
 $bodyDigest = hash('sha256', $body);
-$expected = hash_hmac('sha256', $timestamp . "\n" . $username . "\n" . $method . "\n" . $bodyDigest, $key);
+$expected = hash_hmac('sha256', $timestamp . "\n" . $username . "\n" . $method . "\n" . $bridgeUri . "\n" . $bodyDigest, $key);
 if (!hash_equals($expected, $signature)) {
   denyMcpRequest(401, 'Invalid internal authentication');
 }
 
 $_SERVER['PHP_AUTH_USER'] = $username;
 $_SERVER['REMOTE_USER'] = $username;
+
+if (str_starts_with($bridgeUri, '__mcp/v2/')) {
+  $batchMode = true;
+  $apiMode = true;
+  $contextForAttributes = 'global';
+  chdir('/var/www/html/mcp-api');
+  require_once '/var/www/html/tool/projeqtor.php';
+
+  $mcpUser = SqlElement::getSingleSqlElementFromCriteria('User', array('name' => $username));
+  if (!$mcpUser->id || $mcpUser->idle || $mcpUser->locked) {
+    denyMcpRequest(403, 'Mapped ProjeQtOr user is unavailable');
+  }
+  $mcpUser->_API = true;
+  setSessionUser($mcpUser);
+  $batchMode = false;
+
+  require_once __DIR__ . '/router.php';
+  mcpHandleV2($bridgeUri, $method, $body, $username);
+}
+
+if ($method === 'GET' && preg_match('#^__mcp/schema/([A-Za-z][A-Za-z0-9_]*)$#D', $bridgeUri, $matches)) {
+  $batchMode = true;
+  $apiMode = true;
+  $contextForAttributes = 'global';
+  chdir('/var/www/html/mcp-api');
+  require_once '/var/www/html/tool/projeqtor.php';
+
+  $mcpUser = SqlElement::getSingleSqlElementFromCriteria('User', array('name' => $username));
+  if (!$mcpUser->id || $mcpUser->idle || $mcpUser->locked) {
+    denyMcpRequest(403, 'Mapped ProjeQtOr user is unavailable');
+  }
+  $mcpUser->_API = true;
+  setSessionUser($mcpUser);
+  $batchMode = false;
+
+  require_once __DIR__ . '/schema-v2.php';
+  emitMcpSchemaV2($matches[1]);
+}
 
 if ($method !== 'GET') {
   $decoded = json_decode($body, true);

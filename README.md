@@ -19,15 +19,21 @@ ProjeQtOr
 
 The bearer token is stored only as a SHA-256 digest. The MCP server and bridge share a separate signing key through mounted secret files. The bridge also accepts requests from one explicitly configured MCP container address.
 
-## Current tools
+## Current interface
 
-- `projeqtor_get_item`
-- `projeqtor_list_items`
-- `projeqtor_list_resource_choices`
-- `projeqtor_create_item`
-- `projeqtor_update_item`
+Version `2.0.0-beta.2` provides a policy-controlled object engine for ProjeQtOr 13.1 plus semantic actions for workflows that generic `save()` cannot safely reproduce.
 
-Version 1.2.0 supports per-user read/write access for an allow-listed set of ProjeQtOr object classes. There is intentionally no generic delete tool.
+- Discovery: identity, capabilities, installed class policy, exact schemas, and reference values.
+- Query: database-filtered keyset pagination and History-aware changes with tombstones.
+- Mutation: validation and atomic or best-effort operation batches of up to 200 records.
+- Guarded changes: actor-bound, expiring previews for deletion, security, configuration, Cron, mail, and comparable side effects.
+- Actions: 20 registered workflows covering copy, transitions, snapshots, planning, baselines, import/export/report, attachments, reset mail, cleanup, and Cron.
+- Jobs: durable per-user queue, progress, cooperative cancellation, and expiring result artifacts.
+- Resources: permission-checked attachments, document versions, and job results.
+
+All 13 beta.1 tools remain as compatibility wrappers, for a total of 29 tools. Every one of the 640 installed `SqlElement` subclasses is classified; unknown classes fail startup, and the caller's native ProjeQtOr rights are applied above the repository policy.
+
+See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagination behavior.
 
 ## Server configuration
 
@@ -58,7 +64,7 @@ Generate a strong bearer token with a cryptographically secure password manager,
 
 ## Bridge configuration
 
-Copy `bridge/index.php` and `bridge/.htaccess` into a dedicated `mcp-api` path inside the ProjeQtOr web root.
+Copy the complete `bridge/` directory into a dedicated `mcp-api` path inside the ProjeQtOr web root. Install `worker/` in the application image when queued actions are enabled.
 
 | Setting | Required | Purpose |
 | --- | --- | --- |
@@ -67,15 +73,18 @@ Copy `bridge/index.php` and `bridge/.htaccess` into a dedicated `mcp-api` path i
 
 Keep the bridge private: do not publish its path or port outside the application network.
 
+The worker must have only the private database network, no published port, the same application/data view as ProjeQtOr, and a non-root runtime identity. It stores sanitized operation metadata in the additive `McpOperation` table; result artifacts default to seven-day retention and audit rows to 30 days.
+
 ## Development
 
 ```bash
 cd server
 npm ci
 npm run check
+npm test
 ```
 
-Releases are cut from `main` using semantic-version tags. New capabilities are developed on focused branches and merged only after validation. See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
+Releases are cut from `main` using semantic-version tags. New capabilities are developed on focused branches and merged only after validation. See [CONTRIBUTING.md](CONTRIBUTING.md), [docs/TOOLS.md](docs/TOOLS.md), and [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Security
 
