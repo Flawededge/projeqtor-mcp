@@ -80,7 +80,7 @@ export class McpTestClient {
 
   async initialize() {
     const result = await this.request('initialize', {
-      protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'projeqtor-beta4-tests', version: '2.0.0' }
+      protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'projeqtor-beta4-tests', version: '2.0.1' }
     });
     await this.request('notifications/initialized', {}, true);
     return result;

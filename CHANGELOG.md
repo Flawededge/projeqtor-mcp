@@ -2,6 +2,19 @@
 
 All notable changes are documented here. Versions follow Semantic Versioning.
 
+## [2.0.1] - 2026-09-28
+
+### Fixed
+
+- Replaced Compose file-backed secrets with explicit read-only bind mounts so the non-root initializer, worker, Apache, and MCP processes can read their required files across Docker Compose implementations.
+- Made the generated database-password file readable to containers while retaining a root-only host secret directory; the human/API credentials that are never mounted remain mode `0600`.
+- Added regression coverage for all 14 secret bind mounts and the host permission contract.
+
+### Validation
+
+- All 137 unit tests and 44 contract tests pass; the production Compose model validates successfully.
+- A clean Unraid deployment initialized an empty ProjeQtOr 13.1 database, exposed 36 MCP tools and 212 actions, and passed identity, coverage, worker, authentication-boundary, log-redaction, and zero-host-port checks.
+
 ## [2.0.0] - 2026-09-28
 
 ### Added

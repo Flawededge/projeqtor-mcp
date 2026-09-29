@@ -11,13 +11,6 @@ x-app-environment: &app-environment
   PROJEQTOR_MCP_SIGNING_KEY_FILE: /run/secrets/mcp_signing_key
   PROJEQTOR_MCP_CURSOR_KEY_FILE: /run/secrets/mcp_cursor_key
   PROJEQTOR_BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/admin_password
-x-app-volumes: &app-volumes
-  - app-data:/var/lib/projeqtor
-  - app-cache:/var/www/html/cache
-x-app-secrets: &app-secrets
-  - db_password
-  - mcp_signing_key
-  - mcp_cursor_key
 services:
   db:
     image: postgres:17-alpine
@@ -26,8 +19,9 @@ services:
       POSTGRES_DB: projeqtor
       POSTGRES_USER: projeqtor
       POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-    secrets: [db_password]
-    volumes: [db-data:/var/lib/postgresql/data]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/db-password:/run/secrets/db_password:ro
     networks: [backend]
     healthcheck:
       test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U projeqtor -d projeqtor"]
@@ -36,29 +30,34 @@ services:
       retries: 20
     security_opt: [no-new-privileges:true]
   initialize:
-    image: ${PROJEQTOR_APP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp-app:2.0.0}
+    image: ${PROJEQTOR_APP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp-app:2.0.1}
     restart: "no"
     depends_on:
       db: {condition: service_healthy}
     environment: *app-environment
     command: [su, -s, /bin/sh, www-data, -c, "php /usr/local/lib/projeqtor/initialize.php"]
-    secrets: [db_password, mcp_signing_key, mcp_cursor_key, admin_password]
-    volumes: *app-volumes
+    volumes:
+      - app-data:/var/lib/projeqtor
+      - app-cache:/var/www/html/cache
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/db-password:/run/secrets/db_password:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-signing-key:/run/secrets/mcp_signing_key:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-cursor-key:/run/secrets/mcp_cursor_key:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/admin-password:/run/secrets/admin_password:ro
     networks: [backend]
     security_opt: [no-new-privileges:true]
   app:
-    image: ${PROJEQTOR_APP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp-app:2.0.0}
+    image: ${PROJEQTOR_APP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp-app:2.0.1}
     restart: unless-stopped
     depends_on:
       initialize: {condition: service_completed_successfully}
     environment: *app-environment
-    secrets:
-      - db_password
-      - mcp_signing_key
-      - mcp_cursor_key
-      - source: api_htpasswd
-        target: projeqtor-api-htpasswd
-    volumes: *app-volumes
+    volumes:
+      - app-data:/var/lib/projeqtor
+      - app-cache:/var/www/html/cache
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/db-password:/run/secrets/db_password:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-signing-key:/run/secrets/mcp_signing_key:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-cursor-key:/run/secrets/mcp_cursor_key:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/api.htpasswd:/run/secrets/projeqtor-api-htpasswd:ro
     networks:
       backend:
         aliases: [projeqtor-app-backend]
@@ -71,15 +70,19 @@ services:
       start_period: 30s
     security_opt: [no-new-privileges:true]
   worker:
-    image: ${PROJEQTOR_APP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp-app:2.0.0}
+    image: ${PROJEQTOR_APP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp-app:2.0.1}
     restart: unless-stopped
     depends_on:
       initialize: {condition: service_completed_successfully}
     user: "33:33"
     entrypoint: [/usr/local/bin/projeqtor-worker-entrypoint]
     environment: *app-environment
-    secrets: *app-secrets
-    volumes: *app-volumes
+    volumes:
+      - app-data:/var/lib/projeqtor
+      - app-cache:/var/www/html/cache
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/db-password:/run/secrets/db_password:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-signing-key:/run/secrets/mcp_signing_key:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-cursor-key:/run/secrets/mcp_cursor_key:ro
     networks: [backend]
     read_only: true
     tmpfs: ["/tmp:size=16m,mode=1777"]
@@ -92,7 +95,7 @@ services:
       retries: 20
       start_period: 20s
   mcp:
-    image: ${PROJEQTOR_MCP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp:2.0.0}
+    image: ${PROJEQTOR_MCP_IMAGE:-ghcr.io/flawededge/projeqtor-mcp:2.0.1}
     restart: unless-stopped
     depends_on:
       app: {condition: service_healthy}
@@ -103,7 +106,9 @@ services:
       MCP_USERS_FILE: /run/secrets/mcp_users
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-localhost,127.0.0.1,mcp,gateway}
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-localhost,127.0.0.1,mcp,gateway}
-    secrets: [mcp_signing_key, mcp_users]
+    volumes:
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-signing-key:/run/secrets/mcp_signing_key:ro
+      - ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-users.json:/run/secrets/mcp_users:ro
     networks:
       backend:
         ipv4_address: ${PROJEQTOR_MCP_TRUSTED_IP:-172.31.84.13}
@@ -154,16 +159,3 @@ volumes:
   db-data:
   app-data:
   app-cache:
-secrets:
-  db_password:
-    file: ${PROJEQTOR_SECRETS_DIR:-./secrets}/db-password
-  admin_password:
-    file: ${PROJEQTOR_SECRETS_DIR:-./secrets}/admin-password
-  api_htpasswd:
-    file: ${PROJEQTOR_SECRETS_DIR:-./secrets}/api.htpasswd
-  mcp_signing_key:
-    file: ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-signing-key
-  mcp_cursor_key:
-    file: ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-cursor-key
-  mcp_users:
-    file: ${PROJEQTOR_SECRETS_DIR:-./secrets}/mcp-users.json

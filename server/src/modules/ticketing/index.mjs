@@ -45,7 +45,7 @@ const inputSchema = z.object({
 });
 
 export default defineModule({
-  id: 'ticketing', version: '2.0.0',
+  id: 'ticketing', version: '2.0.1',
   dependencies: ['core'],
   enabledStateRequirements: ['ticket-class-installed'],
   claims: {

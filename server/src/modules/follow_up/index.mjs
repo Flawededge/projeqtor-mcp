@@ -65,7 +65,7 @@ const inputSchema = z.object({
 
 export default defineModule({
   id: 'follow_up',
-  version: '2.0.0',
+  version: '2.0.1',
   dependencies: ['core', 'planning', 'environment'],
   enabledStateRequirements: [],
   claims: {

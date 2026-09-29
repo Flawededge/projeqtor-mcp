@@ -1,4 +1,4 @@
-export const SERVER_VERSION = '2.0.0';
+export const SERVER_VERSION = '2.0.1';
 
 export const FILTER_OPERATORS = Object.freeze([
   'eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'in', 'not_in',

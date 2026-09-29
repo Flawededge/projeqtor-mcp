@@ -102,12 +102,12 @@ async function main() {
     const handlerPolicy = capabilities.handlerPolicy ?? {};
     const worker = capabilities.workerCompatibility ?? {};
     const hashFields = [classPolicy.hash, classPolicy.manifestHash, handlerPolicy.hash, handlerPolicy.manifestHash, handlerPolicy.sourceInventoryHash, handlerPolicy.sourceTreeHash];
-    if (capabilities.serverVersion !== '2.0.0' || capabilities.schemaVersion !== 4) throw new Error('Beta 4 server/schema capability mismatch');
+    if (capabilities.serverVersion !== '2.0.1' || capabilities.schemaVersion !== 4) throw new Error('Beta 4 server/schema capability mismatch');
     if (JSON.stringify(moduleIds) !== JSON.stringify(expectedModules) || actionCount !== 212) throw new Error(`Module/action capability mismatch: modules=${moduleIds.length} actions=${actionCount}`);
     if (classPolicy.version !== 4 || classPolicy.installed !== 640 || classPolicy.unknown !== 0) throw new Error(`Class policy closure failed: version=${classPolicy.version} installed=${classPolicy.installed} unknown=${classPolicy.unknown}`);
     if (handlerPolicy.version !== 4 || handlerPolicy.installed !== 899 || handlerPolicy.installedSourceFiles !== 944 || handlerPolicy.includedLibraries !== 45 || handlerPolicy.mutationCandidates !== 337 || handlerPolicy.unknown !== 0 || handlerPolicy.deferred !== 0) throw new Error(`Handler policy closure failed: version=${handlerPolicy.version} installed=${handlerPolicy.installed} sources=${handlerPolicy.installedSourceFiles} unknown=${handlerPolicy.unknown} deferred=${handlerPolicy.deferred}`);
     if (hashFields.some(value => typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value))) throw new Error('Coverage capability hashes are missing or malformed');
-    if (worker.compatible !== true || worker.schemaVersion !== 4 || worker.workerVersion !== '2.0.0' || worker.heartbeatFresh !== true) throw new Error('Worker capability compatibility or heartbeat check failed');
+    if (worker.compatible !== true || worker.schemaVersion !== 4 || worker.workerVersion !== '2.0.1' || worker.heartbeatFresh !== true) throw new Error('Worker capability compatibility or heartbeat check failed');
     summary.coverage = { modules: moduleIds.length, actions: actionCount, classes: classPolicy.installed, handlers: handlerPolicy.installed, sourceFiles: handlerPolicy.installedSourceFiles, unknown: 0, deferred: 0 };
     summary.importIdentity = await runImportIdentityScenario({ runId });
     const identity = verifyWhoami(

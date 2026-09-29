@@ -21,7 +21,7 @@ The bearer token is stored only as a SHA-256 digest. The MCP server and bridge s
 
 ## Current interface
 
-Version `2.0.0` splits full-control coverage into Core plus twelve independently owned module packs for ProjeQtOr 13.1.
+Version `2.0.1` splits full-control coverage into Core plus twelve independently owned module packs for ProjeQtOr 13.1.
 
 - Discovery: identity, capabilities, module/action ownership, installed class policy, exact schemas, reference values, and native-handler coverage.
 - Query: database-filtered keyset pagination and History-aware changes with tombstones.
@@ -39,8 +39,8 @@ See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagi
 
 The stable release publishes two public Linux/AMD64 images:
 
-- `ghcr.io/flawededge/projeqtor-mcp-app:2.0.0` — ProjeQtOr 13.1, bridge, initializer, and worker runtime.
-- `ghcr.io/flawededge/projeqtor-mcp:2.0.0` — non-root MCP HTTP server.
+- `ghcr.io/flawededge/projeqtor-mcp-app:2.0.1` — ProjeQtOr 13.1, bridge, initializer, and worker runtime.
+- `ghcr.io/flawededge/projeqtor-mcp:2.0.1` — non-root MCP HTTP server.
 
 The worker reuses the application image. PostgreSQL and the gateway use their official upstream images. For a fresh local deployment:
 

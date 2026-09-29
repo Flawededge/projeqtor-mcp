@@ -46,7 +46,7 @@ export const HR_CLASSES = Object.freeze([
 
 export default defineModule({
   id: 'hr',
-  version: '2.0.0',
+  version: '2.0.1',
   dependencies: ['core', 'configuration', 'environment'],
   enabledStateRequirements: ['employee-or-skill-class-installed'],
   claims: { classes: HR_CLASSES, actions: HR_ACTIONS, handlers: HR_HANDLERS, jobs: ['hr.leave.calendar.export'] },

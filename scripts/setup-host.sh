@@ -34,7 +34,7 @@ chmod 0600 "$env_file" "$secrets"/*
 # Compose implements file-backed secrets as bind mounts. Files consumed by
 # unprivileged container users must be readable after mounting; the root-only
 # parent directory still prevents host users from traversing to them.
-chmod 0444 "$secrets/admin-password" "$secrets/api.htpasswd" "$secrets/mcp-signing-key" "$secrets/mcp-cursor-key" "$secrets/mcp-users.json"
+chmod 0444 "$secrets/db-password" "$secrets/admin-password" "$secrets/api.htpasswd" "$secrets/mcp-signing-key" "$secrets/mcp-cursor-key" "$secrets/mcp-users.json"
 
 printf '%s\n' "Fresh hosting configuration created in $root"
 printf '%s\n' "Administrator password: $secrets/admin-password"

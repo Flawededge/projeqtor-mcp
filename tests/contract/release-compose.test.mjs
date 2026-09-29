@@ -24,11 +24,22 @@ test('MCP bridge traffic uses the fixed-address backend network', () => {
 test('generated host secrets are traversable only by root and readable by unprivileged consumers', () => {
   assert.match(setupHost, /chmod 0700 "\$secrets"/);
   assert.match(setupHost, /chmod 0600 "\$env_file" "\$secrets"\/\*/);
-  for (const file of ['admin-password', 'api.htpasswd', 'mcp-signing-key', 'mcp-cursor-key', 'mcp-users.json']) {
+  for (const file of ['db-password', 'admin-password', 'api.htpasswd', 'mcp-signing-key', 'mcp-cursor-key', 'mcp-users.json']) {
     assert.match(setupHost, new RegExp(`chmod 0444 [^\\n]*"\\$secrets/${file.replace('.', '\\.')}`));
   }
   assert.doesNotMatch(setupHost, /chmod 0444[^\n]*admin-mcp-token/);
   assert.doesNotMatch(setupHost, /chmod 0444[^\n]*api-password/);
+});
+
+test('release Compose uses portable read-only secret bind mounts', () => {
+  assert.doesNotMatch(releaseCompose, /^\s*secrets:/m);
+  assert.doesNotMatch(releaseCompose, /mode: 0444/);
+  assert.equal((releaseCompose.match(/db-password:\/run\/secrets\/db_password:ro/g) ?? []).length, 4);
+  assert.equal((releaseCompose.match(/mcp-signing-key:\/run\/secrets\/mcp_signing_key:ro/g) ?? []).length, 4);
+  assert.equal((releaseCompose.match(/mcp-cursor-key:\/run\/secrets\/mcp_cursor_key:ro/g) ?? []).length, 3);
+  assert.equal((releaseCompose.match(/admin-password:\/run\/secrets\/admin_password:ro/g) ?? []).length, 1);
+  assert.equal((releaseCompose.match(/api\.htpasswd:\/run\/secrets\/projeqtor-api-htpasswd:ro/g) ?? []).length, 1);
+  assert.equal((releaseCompose.match(/mcp-users\.json:\/run\/secrets\/mcp_users:ro/g) ?? []).length, 1);
 });
 
 test('generated MCP digest matches the trimmed bearer token clients send', () => {
