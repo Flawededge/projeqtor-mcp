@@ -115,6 +115,14 @@ Releases are cut from `main` using semantic-version tags. New capabilities are d
 
 Beta 4 acceptance evidence, the live approval gate, and coordinated rollback steps are recorded in [docs/BETA4-RUNBOOK.md](docs/BETA4-RUNBOOK.md).
 
+## License and upstream attribution
+
+ProjeQtOr MCP is licensed under the [GNU Affero General Public License, version 3 or later](LICENSE) (`AGPL-3.0-or-later`). If you modify this software and let users interact with the modified version over a network, AGPL section 13 requires offering those users its corresponding source.
+
+This is an independently developed integration, not an official ProjeQtOr product. ProjeQtOr is the original upstream product, copyright 2009-2026 Pascal BERNARD / PROJEQTOR, and is also distributed under AGPL v3 or later. See [NOTICE](NOTICE) and the [official ProjeQtOr license](https://www.projeqtor.com/en/copyright_en/) for attribution and details.
+
+The corresponding source for this integration, including its container build and deployment scripts, is available at [github.com/Flawededge/projeqtor-mcp](https://github.com/Flawededge/projeqtor-mcp).
+
 ## Security
 
 See [SECURITY.md](SECURITY.md). This repository intentionally contains no deployment secrets or host-specific addresses.

@@ -1,0 +1,26 @@
+ProjeQtOr MCP
+Copyright (C) 2026 Flawededge and contributors
+
+This project is licensed under the GNU Affero General Public License,
+version 3 or (at your option) any later version (AGPL-3.0-or-later).
+See LICENSE for the complete terms.
+
+Upstream attribution
+--------------------
+
+This project is an independently developed integration for ProjeQtOr 13.1.
+It includes bridge and worker code designed to run in the ProjeQtOr runtime,
+and its application image downloads and incorporates the upstream ProjeQtOr
+distribution.
+
+ProjeQtOr is the original product. ProjeQtOr is copyright (C) 2009-2026
+Pascal BERNARD / PROJEQTOR and is distributed under the GNU Affero General
+Public License, version 3 or (at your option) any later version.
+
+Upstream project: https://www.projeqtor.org/
+Upstream license: https://www.projeqtor.com/en/copyright_en/
+Integration source: https://github.com/Flawededge/projeqtor-mcp
+
+This repository is not an official ProjeQtOr project and is not affiliated
+with, sponsored by, or endorsed by PROJEQTOR. No ownership of the ProjeQtOr
+software, name, documentation, images, or other upstream materials is claimed.
