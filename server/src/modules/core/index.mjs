@@ -32,7 +32,7 @@ const tools = [
 ];
 
 export default defineModule({
-  id: 'core', version: '2.0.0-beta.4', dependencies: [],
+  id: 'core', version: '2.0.0', dependencies: [],
   claims: {
     classes: ['Audit', 'Job', 'JobDefinition', 'JoblistDefinition', 'MessageLegal', 'MessageLegalFollowup', 'SubTask'],
     actions: CORE_ACTIONS,

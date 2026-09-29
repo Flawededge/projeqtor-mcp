@@ -24,7 +24,7 @@ function descriptor() {
 
 test('Ticketing presentation pack owns its semantic surface and one convenience tool', () => {
   assert.equal(ticketing.id, 'ticketing');
-  assert.equal(ticketing.version, '2.0.0-beta.4');
+  assert.equal(ticketing.version, '2.0.0');
   assert.deepEqual(ticketing.dependencies, ['core']);
   assert.deepEqual(ticketing.claims.actions, TICKETING_ACTIONS);
   assert.deepEqual(ticketing.claims.handlers, TICKETING_HANDLERS);

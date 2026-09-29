@@ -2,12 +2,31 @@
 set -eu
 
 umask 077
+
+if [ -n "${PROJEQTOR_DB_PASSWORD_FILE:-}" ]; then
+  if [ ! -r "$PROJEQTOR_DB_PASSWORD_FILE" ]; then
+    echo "Database password file is not readable" >&2
+    exit 64
+  fi
+  PROJEQTOR_DB_PASSWORD=$(cat "$PROJEQTOR_DB_PASSWORD_FILE")
+  export PROJEQTOR_DB_PASSWORD
+fi
+case "${PROJEQTOR_MCP_TRUSTED_IP:-}" in
+  ''|*[!0-9.]*) echo "Trusted MCP IPv4 address is invalid" >&2; exit 64 ;;
+esac
+sed "s/@PROJEQTOR_MCP_TRUSTED_IP@/${PROJEQTOR_MCP_TRUSTED_IP}/g" \
+  /etc/apache2/conf-available/projeqtor-api.conf \
+  > /etc/apache2/conf-available/projeqtor-api.conf.new
+mv /etc/apache2/conf-available/projeqtor-api.conf.new /etc/apache2/conf-available/projeqtor-api.conf
+
 mkdir -p \
   /var/lib/projeqtor/config \
   /var/lib/projeqtor/attachments \
   /var/lib/projeqtor/documents \
   /var/lib/projeqtor/logs \
   /var/lib/projeqtor/reports \
+  /var/lib/projeqtor/mcp-jobs \
+  /var/lib/projeqtor/mcp-uploads \
   /var/www/html/cache
 
 if [ ! -f /var/lib/projeqtor/config/parameters.php ]; then

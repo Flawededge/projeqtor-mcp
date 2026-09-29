@@ -43,7 +43,7 @@ export const ENVIRONMENT_HANDLERS = Object.freeze([
 
 export default defineModule({
   id: 'environment',
-  version: '2.0.0-beta.4',
+  version: '2.0.0',
   dependencies: ['core', 'configuration'],
   enabledStateRequirements: [],
   claims: {

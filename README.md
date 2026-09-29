@@ -21,7 +21,7 @@ The bearer token is stored only as a SHA-256 digest. The MCP server and bridge s
 
 ## Current interface
 
-Version `2.0.0-beta.4` splits full-control coverage into Core plus twelve independently owned module packs for ProjeQtOr 13.1.
+Version `2.0.0` splits full-control coverage into Core plus twelve independently owned module packs for ProjeQtOr 13.1.
 
 - Discovery: identity, capabilities, module/action ownership, installed class policy, exact schemas, reference values, and native-handler coverage.
 - Query: database-filtered keyset pagination and History-aware changes with tombstones.
@@ -34,6 +34,33 @@ Version `2.0.0-beta.4` splits full-control coverage into Core plus twelve indepe
 All 31 Beta 3 tools remain available and five typed convenience tools bring the public surface to 36. The pinned inventory contains 944 PHP files, 899 HTTP entrypoints, 337 mutation candidates, and 640 installed `SqlElement` subclasses with zero unknown and zero deferred surfaces. Unknown or source-changed classes/handlers fail readiness, and the caller's native ProjeQtOr rights are applied above repository policy.
 
 See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagination behavior.
+
+## Container hosting
+
+The stable release publishes two public Linux/AMD64 images:
+
+- `ghcr.io/flawededge/projeqtor-mcp-app:2.0.0` — ProjeQtOr 13.1, bridge, initializer, and worker runtime.
+- `ghcr.io/flawededge/projeqtor-mcp:2.0.0` — non-root MCP HTTP server.
+
+The worker reuses the application image. PostgreSQL and the gateway use their official upstream images. For a fresh local deployment:
+
+```bash
+git clone https://github.com/Flawededge/projeqtor-mcp.git
+cd projeqtor-mcp
+scripts/setup-host.sh deployment
+docker compose --env-file deployment/.env -f deployment/compose.yaml up -d
+```
+
+The setup command creates new credentials in a host-root-only directory without printing them. The initial ProjeQtOr administrator password is stored at `deployment/secrets/admin-password`; that administrator's MCP bearer token is stored separately at `deployment/secrets/admin-mcp-token`.
+
+The default endpoints are:
+
+```text
+http://127.0.0.1:8080/       ProjeQtOr
+http://127.0.0.1:3000/mcp    MCP Streamable HTTP
+```
+
+The Compose bundle binds to loopback by default. Put it behind an authenticated TLS reverse proxy or a private tailnet before changing the bind address. App, MCP, and worker image versions must be upgraded together.
 
 ## Server configuration
 

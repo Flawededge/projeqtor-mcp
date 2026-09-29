@@ -22,7 +22,7 @@ const inputSchema = z.object({
 }).strict();
 
 export default defineModule({
-  id: 'reports', version: '2.0.0-beta.4', dependencies: ['core'],
+  id: 'reports', version: '2.0.0', dependencies: ['core'],
   claims: { actions: REPORTS_ACTIONS, handlers: REPORTS_HANDLERS, jobs: REPORTS_JOBS, tools: ['projeqtor_render_report'] },
   register(registrar, context) {
     registerCanonicalActionTool(registrar, context, {

@@ -47,7 +47,7 @@ export const STEERING_HANDLERS = Object.freeze([
 
 export default defineModule({
   id: 'steering',
-  version: '2.0.0-beta.4',
+  version: '2.0.0',
   dependencies: ['core', 'configuration', 'planning', 'tools'],
   enabledStateRequirements: [],
   claims: {

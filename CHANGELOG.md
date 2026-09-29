@@ -2,7 +2,24 @@
 
 All notable changes are documented here. Versions follow Semantic Versioning.
 
-## [2.0.0-beta.3] - 2026-09-24
+## [2.0.0] - 2026-09-28
+
+### Added
+
+- Stable Core plus twelve-module full-control MCP surface with 36 tools and 212 typed actions.
+- Public GHCR application and MCP images with OCI source, version, license, SBOM, and provenance metadata.
+- A production Docker Compose bundle, hardened gateway, and non-printing first-run secret generator.
+- Automatic official ProjeQtOr V13.1.0 database initialization and secure fresh administrator provisioning.
+
+### Changed
+
+- Promoted the accepted `2.0.0-beta.4` runtime and worker protocol to stable `2.0.0`.
+- Database, HMAC, cursor, API, administrator, and MCP credentials are supplied as mounted files.
+
+### Validation
+
+- Stable release retains the accepted 137 unit tests, 42 contract tests, complete PHP/JavaScript lint, 562-task import, identity, permission, artifact, resource-leveling, and zero-unknown/deferred coverage evidence.
+
 ## [2.0.0-beta.4] - 2026-09-27
 
 ### Added
@@ -29,6 +46,7 @@ All notable changes are documented here. Versions follow Semantic Versioning.
 - The pinned inventory contains 944 PHP files, 899 HTTP entrypoints, 337 mutation candidates, and 640 classes with zero unknown and zero deferred surfaces.
 - All 127 unit tests, 10 contract tests, JavaScript checks, PHP lint, and reproducible coverage verification pass.
 
+## [2.0.0-beta.3] - 2026-09-24
 
 ### Added
 

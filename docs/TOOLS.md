@@ -1,6 +1,6 @@
 # Tool contract
 
-This document describes the `2.0.0-beta.4` modular full-control interface for ProjeQtOr 13.1.
+This document describes the `2.0.0` modular full-control interface for ProjeQtOr 13.1.
 
 ## Discovery
 

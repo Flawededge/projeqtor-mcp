@@ -3,7 +3,7 @@ import { TOOLS_ACTIONS, TOOLS_HANDLERS, TOOLS_JOBS } from './contracts.mjs';
 
 export default defineModule({
   id: 'tools',
-  version: '2.0.0-beta.4',
+  version: '2.0.0',
   dependencies: ['core', 'configuration'],
   enabledStateRequirements: [],
   claims: {
