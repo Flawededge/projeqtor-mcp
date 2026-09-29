@@ -86,6 +86,8 @@ npm test
 
 Releases are cut from `main` using semantic-version tags. New capabilities are developed on focused branches and merged only after validation. See [CONTRIBUTING.md](CONTRIBUTING.md), [docs/TOOLS.md](docs/TOOLS.md), and [docs/ROADMAP.md](docs/ROADMAP.md).
 
+Beta 4 acceptance evidence, the live approval gate, and coordinated rollback steps are recorded in [docs/BETA4-RUNBOOK.md](docs/BETA4-RUNBOOK.md).
+
 ## Security
 
 See [SECURITY.md](SECURITY.md). This repository intentionally contains no deployment secrets or host-specific addresses.
