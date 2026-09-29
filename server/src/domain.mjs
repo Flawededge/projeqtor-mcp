@@ -25,6 +25,7 @@ export const WRITE_CLASSES = Object.freeze([
 ]);
 
 export const REFERENCE_KINDS = Object.freeze({
+  activityPlanningMode: 'ActivityPlanningMode',
   activityType: 'ActivityType',
   calendar: 'CalendarDefinition',
   mainFunction: 'Role',

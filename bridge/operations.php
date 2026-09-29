@@ -156,12 +156,22 @@ function mcpExecuteOperationsArray(array $operations, string $mode='atomic', boo
   return array('ok'=>!count(array_filter($results,fn($item)=>in_array($item['status'],array('invalid','error'),true))),'rolledBack'=>false,'transactionMode'=>$mode,'items'=>$results);
 }
 
-function mcpHandleExecuteOperations(array $input): never {
+function mcpHandleExecuteOperations(array $input,string $username): never {
+  @set_time_limit(300);
   $operations = $input['operations'] ?? null;
-  if (!is_array($operations)) mcpJsonError(400,'invalid_batch','operations must be an array');
+  if (!is_array($operations) || count($operations) < 1 || count($operations) > MCP_V2_BATCH_MAX) mcpJsonError(400,'invalid_batch','operations must contain 1 to 200 items');
   foreach ($operations as $operation) if (($operation['action']??'') === 'delete') mcpJsonError(409,'guarded_change_required','Deletes require prepare_change and commit_change');
+  $idempotencyKey=isset($input['requestIdempotencyKey'])?(string)$input['requestIdempotencyKey']:null;$operationId=null;
+  if($idempotencyKey!==null){
+    if(!preg_match('/^[A-Za-z0-9_.:-]{1,255}$/D',$idempotencyKey))mcpJsonError(400,'invalid_idempotency_key','requestIdempotencyKey must contain 1 to 255 safe characters');
+    $requestHash=mcpRequestHash(array('transactionMode'=>$input['transactionMode']??'atomic','importRunId'=>$input['importRunId']??null,'operations'=>$operations));mcpEnsureOperationTable();
+    $query=Sql::query('SELECT * FROM mcpoperation WHERE username='.Sql::str($username).' AND idempotency_key='.Sql::str($idempotencyKey));$existing=Sql::fetchLine($query);
+    if($existing){if(!hash_equals((string)$existing['request_hash'],$requestHash))mcpJsonError(409,'idempotency_key_conflict','The idempotency key was already used with different arguments');$saved=json_decode((string)$existing['result_json'],true);if(!is_array($saved))$saved=array('ok'=>false,'status'=>$existing['status']);$saved['idempotencyReplay']=true;$saved['operationId']=(int)$existing['id'];mcpJsonResponse($saved);}
+    $operationId=mcpOperationInsert($username,'operations.batch','running',array('operationCount'=>count($operations),'transactionMode'=>$input['transactionMode']??'atomic'),null,null,$idempotencyKey,$requestHash,'never',1);
+  }
   $result=mcpExecuteOperationsArray($operations,(string)($input['transactionMode']??'atomic'),false);
   if(!empty($input['importRunId'])&&!$result['rolledBack'])$result['importJournal']=mcpRecordImportRun((string)getSessionUser()->name,(string)$input['importRunId'],$result);
+  if($operationId){$result['operationId']=$operationId;Sql::query('UPDATE mcpoperation SET status='.Sql::str($result['ok']?'succeeded':'failed').',progress=100,result_json='.Sql::str(json_encode($result)).',completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($operationId));}
   mcpJsonResponse($result);
 }
 
@@ -179,20 +189,41 @@ function mcpEnsureOperationTable(): void {
     progress integer NOT NULL DEFAULT 0,
     cancel_requested integer NOT NULL DEFAULT 0,
     nonce varchar(80) UNIQUE,
+    request_hash varchar(64),
+    idempotency_key varchar(255),
+    attempts integer NOT NULL DEFAULT 0,
+    max_attempts integer NOT NULL DEFAULT 1,
+    retry_policy varchar(30) NOT NULL DEFAULT 'never',
+    lease_owner varchar(120),
+    lease_expires_at timestamp NULL,
+    heartbeat_at timestamp NULL,
+    error_code varchar(100),
+    recovery_state varchar(40),
     created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at timestamp NULL,
     completed_at timestamp NULL,
     expires_at timestamp NULL
   )");
+  foreach(array(
+    'request_hash'=>'varchar(64)','idempotency_key'=>'varchar(255)','attempts'=>'integer NOT NULL DEFAULT 0','max_attempts'=>'integer NOT NULL DEFAULT 1',
+    'retry_policy'=>"varchar(30) NOT NULL DEFAULT 'never'",'lease_owner'=>'varchar(120)','lease_expires_at'=>'timestamp NULL','heartbeat_at'=>'timestamp NULL','error_code'=>'varchar(100)','recovery_state'=>'varchar(40)'
+  ) as $column=>$definition)Sql::query("ALTER TABLE mcpoperation ADD COLUMN IF NOT EXISTS $column $definition");
+  Sql::query('CREATE UNIQUE INDEX IF NOT EXISTS mcpoperation_actor_idempotency ON mcpoperation(username,idempotency_key) WHERE idempotency_key IS NOT NULL');
   $ready = true;
 }
 
-function mcpOperationInsert(string $username, string $type, string $status, array $payload, ?string $nonce=null, ?string $expires=null): int {
+function mcpCanonicalValue(mixed $value): mixed {
+  if(!is_array($value))return $value;if(array_is_list($value))return array_map('mcpCanonicalValue',$value);
+  ksort($value,SORT_STRING);foreach($value as $key=>$entry)$value[$key]=mcpCanonicalValue($entry);return $value;
+}
+function mcpRequestHash(array $value): string { return hash('sha256',json_encode(mcpCanonicalValue($value),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)); }
+
+function mcpOperationInsert(string $username,string $type,string $status,array $payload,?string $nonce=null,?string $expires=null,?string $idempotencyKey=null,?string $requestHash=null,string $retryPolicy='never',int $maxAttempts=1): int {
   mcpEnsureOperationTable();
-  $sql = 'INSERT INTO mcpoperation (username,operation_type,status,payload,nonce,expires_at) VALUES (' .
+  $sql = 'INSERT INTO mcpoperation (username,operation_type,status,payload,nonce,expires_at,idempotency_key,request_hash,retry_policy,max_attempts) VALUES (' .
     Sql::str($username) . ',' . Sql::str($type) . ',' . Sql::str($status) . ',' . Sql::str(json_encode($payload)) . ',' .
-    ($nonce?Sql::str($nonce):'NULL') . ',' . ($expires?Sql::str($expires):'NULL') . ')';
+    ($nonce?Sql::str($nonce):'NULL') . ',' . ($expires?Sql::str($expires):'NULL') . ',' . ($idempotencyKey?Sql::str($idempotencyKey):'NULL') . ',' . ($requestHash?Sql::str($requestHash):'NULL') . ',' . Sql::str($retryPolicy) . ',' . max(1,$maxAttempts) . ')';
   Sql::query($sql);
   return (int)Sql::$lastQueryNewid;
 }
@@ -250,9 +281,9 @@ function mcpVerifyConfirmation(string $token, string $username, string $kind): a
   $payload = mcpCursorDecode($parts[0]);
   if (($payload['username']??'')!==$username || ($payload['kind']??'')!==$kind || (int)($payload['expires']??0)<time()) mcpJsonError(400,'expired_confirmation','Confirmation token is expired or belongs to another actor');
   mcpEnsureOperationTable();
-  $result = Sql::query('UPDATE mcpoperation SET nonce=NULL,updated_at=CURRENT_TIMESTAMP WHERE nonce=' . Sql::str((string)$payload['nonce']) . ' AND username=' . Sql::str($username) . " AND status='prepared' RETURNING id,status,expires_at");
+  $result = Sql::query('UPDATE mcpoperation SET nonce=NULL,status=' . Sql::str('running') . ',started_at=COALESCE(started_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE nonce=' . Sql::str((string)$payload['nonce']) . ' AND username=' . Sql::str($username) . " AND status='prepared' RETURNING id,status,expires_at");
   $row = Sql::fetchLine($result);
-  if (!$row || $row['status']!=='prepared') mcpJsonError(409,'confirmation_replayed','Confirmation token was already used or revoked');
+  if (!$row || $row['status']!=='running') mcpJsonError(409,'confirmation_replayed','Confirmation token was already used or revoked');
   return array('document'=>$payload,'operationId'=>(int)$row['id']);
 }
 
@@ -273,27 +304,32 @@ function mcpHandlePrepareChange(array $input, string $username): never {
 }
 
 function mcpHandleCommitChange(array $input, string $username): never {
+  @set_time_limit(300);
   mcpRequireKeys($input,array('confirmationToken'));
   $verified = mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'change');
   $operations = $verified['document']['payload']['operations']??array();
   $result = mcpExecuteOperationsArray($operations,'atomic',true);
   $status = $result['ok']?'succeeded':'failed';
-  Sql::query('UPDATE mcpoperation SET status=' . Sql::str($status) . ', result_json=' . Sql::str(json_encode($result)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' . $verified['operationId'] . " AND status='prepared'");
+  Sql::query('UPDATE mcpoperation SET status=' . Sql::str($status) . ', progress=100, result_json=' . Sql::str(json_encode($result)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' . $verified['operationId'] . " AND status='running'");
   mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId'])));
 }
 
 function mcpJobRow(array $row): array {
-  return array('id'=>(int)$row['id'],'username'=>$row['username'],'type'=>$row['operation_type'],'status'=>$row['status'],'progress'=>(int)$row['progress'],'cancelRequested'=>(bool)$row['cancel_requested'],'createdAt'=>$row['created_at'],'updatedAt'=>$row['updated_at'],'startedAt'=>$row['started_at'],'completedAt'=>$row['completed_at'],'expiresAt'=>$row['expires_at'],'resultResource'=>($row['result_path']||$row['result_json'])?'projeqtor://jobs/' . $row['id'] . '/result':null);
+  return array('id'=>(int)$row['id'],'username'=>$row['username'],'type'=>$row['operation_type'],'status'=>$row['status'],'progress'=>(int)$row['progress'],'cancelRequested'=>(bool)$row['cancel_requested'],'attempts'=>(int)($row['attempts']??0),'maxAttempts'=>(int)($row['max_attempts']??1),'retryPolicy'=>$row['retry_policy']??'never','heartbeatAt'=>$row['heartbeat_at']??null,'leaseExpiresAt'=>$row['lease_expires_at']??null,'recoveryState'=>$row['recovery_state']??null,'errorCode'=>$row['error_code']??null,'createdAt'=>$row['created_at'],'updatedAt'=>$row['updated_at'],'startedAt'=>$row['started_at'],'completedAt'=>$row['completed_at'],'expiresAt'=>$row['expires_at'],'resultResource'=>($row['result_path']||$row['result_json'])?'projeqtor://jobs/' . $row['id'] . '/result':null);
 }
 
 function mcpHandleListJobs(array $input, string $username): never {
   mcpEnsureOperationTable();
   $size=max(1,min(200,(int)($input['pageSize']??50)));
+  $status=(string)($input['status']??'');$fingerprint=substr(hash('sha256',json_encode(array('status'=>$status,'sort'=>'id:desc'))),0,24);$cursor=mcpSignedCursorDecode($input['cursor']??null);
+  if($cursor&&(($cursor['kind']??'')!=='jobs'||($cursor['fingerprint']??'')!==$fingerprint))mcpJsonError(400,'cursor_query_mismatch','Cursor does not belong to this job query');
   $where='username=' . Sql::str($username);
-  if (!empty($input['status'])) $where.=' AND status=' . Sql::str((string)$input['status']);
-  $result=Sql::query("SELECT * FROM mcpoperation WHERE $where ORDER BY id DESC LIMIT $size");
+  if($status)$where.=' AND status='.Sql::str($status);if($cursor)$where.=' AND id<'.Sql::fmtId((int)$cursor['after']);
+  $result=Sql::query("SELECT * FROM mcpoperation WHERE $where ORDER BY id DESC LIMIT ".($size+1));
   $items=array(); while($row=Sql::fetchLine($result)) $items[]=mcpJobRow($row);
-  mcpJsonResponse(array('returned'=>count($items),'items'=>$items));
+  $hasMore=count($items)>$size;if($hasMore)array_pop($items);$next=$hasMore?mcpSignedCursorEncode(array('kind'=>'jobs','fingerprint'=>$fingerprint,'after'=>end($items)['id'])):null;
+  $countWhere='username='.Sql::str($username).($status?' AND status='.Sql::str($status):'');$countResult=Sql::query("SELECT count(*) AS total FROM mcpoperation WHERE $countWhere");$countRow=Sql::fetchLine($countResult);
+  mcpJsonResponse(array('returned'=>count($items),'total'=>(int)$countRow['total'],'hasMore'=>$hasMore,'nextCursor'=>$next,'items'=>$items));
 }
 
 function mcpHandleGetJob(int $id,string $username): never {
@@ -308,4 +344,41 @@ function mcpHandleCancelJob(array $input,string $username): never {
   mcpEnsureOperationTable();
   Sql::query("UPDATE mcpoperation SET cancel_requested=1, status=CASE WHEN status='queued' THEN 'cancelled' ELSE 'cancel_requested' END, updated_at=CURRENT_TIMESTAMP, completed_at=CASE WHEN status='queued' THEN CURRENT_TIMESTAMP ELSE completed_at END WHERE id=" . Sql::fmtId($id) . ' AND username=' . Sql::str($username) . " AND status IN ('queued','running','cancel_requested')");
   mcpHandleGetJob($id,$username);
+}
+
+function mcpRevalidateRetryPermission(array $row): void {
+  $payload=json_decode((string)($row['payload']??''),true);
+  if(!is_array($payload))mcpJsonError(409,'job_not_retryable','The saved job payload is invalid');
+  $action=(string)($payload['action']??$row['operation_type']??'');
+  $arguments=is_array($payload['arguments']??null)?$payload['arguments']:array();
+  if(!function_exists('mcpActionAvailable')||!mcpActionAvailable($action))mcpJsonError(403,'forbidden','The originating action is no longer available');
+  if($action==='project.snapshot'){
+    $project=new Project((int)($arguments['idProject']??0));
+    if(!$project->id||!Security::checkValidAccessForUser($project,'read',null,null,false))mcpJsonError(403,'forbidden','Project snapshot access is no longer available');
+  }elseif($action==='export.start'){
+    $class=(string)($arguments['objectClass']??'');
+    mcpRequireClassOperation($class,'read');
+    if(!Security::checkValidAccessForUser(null,'read',$class,null,false))mcpJsonError(403,'forbidden','Export access is no longer available');
+  }elseif($action==='report.start'){
+    $report=new Report((int)($arguments['idReport']??0));
+    if(!$report->id||!Security::checkValidAccessForUser($report,'read',null,null,false))mcpJsonError(403,'forbidden','Report access is no longer available');
+  }
+}
+
+function mcpHandleRetryJob(array $input,string $username): never {
+  $id=(int)($input['id']??0);if(!$id)mcpJsonError(400,'id_required','A positive job id is required');mcpEnsureOperationTable();
+  $query=Sql::query('SELECT * FROM mcpoperation WHERE id='.Sql::fmtId($id).' AND username='.Sql::str($username).' FOR UPDATE');$row=Sql::fetchLine($query);if(!$row)mcpJsonError(404,'job_not_found','Job was not found');
+  if(($row['retry_policy']??'never')!=='safe')mcpJsonError(409,'job_not_retryable','Only jobs with safe retry policy can be retried');
+  if((int)$row['attempts']>=(int)$row['max_attempts'])mcpJsonError(409,'retry_limit_reached','The job attempt limit has been reached');
+  if(!in_array($row['status'],array('failed','cancelled'),true))mcpJsonError(409,'job_not_retryable','Only failed or cancelled safe jobs can be retried');
+  mcpRevalidateRetryPermission($row);
+  Sql::query("UPDATE mcpoperation SET status='queued',progress=0,cancel_requested=0,result_json=NULL,result_path=NULL,error_code=NULL,recovery_state=NULL,lease_owner=NULL,lease_expires_at=NULL,heartbeat_at=NULL,started_at=NULL,completed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=".Sql::fmtId($id).' AND username='.Sql::str($username));
+  mcpHandleGetJob($id,$username);
+}
+
+function mcpWorkerCompatibility(): array {
+  mcpEnsureOperationTable();$required=array('request_hash','idempotency_key','attempts','max_attempts','retry_policy','lease_owner','lease_expires_at','heartbeat_at','error_code','recovery_state');
+  $query=Sql::query("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='mcpoperation'");$present=array();while($row=Sql::fetchLine($query))$present[]=$row['column_name'];$missing=array_values(array_diff($required,$present));
+  $path='/var/lib/projeqtor/mcp-worker-heartbeat';$stamp=is_file($path)?(int)trim((string)file_get_contents($path)):0;$age=$stamp?time()-$stamp:null;
+  return array('schemaVersion'=>3,'workerVersion'=>'2.0.0-beta.3','compatible'=>!count($missing),'missingColumns'=>$missing,'heartbeatAt'=>$stamp?date(DATE_ATOM,$stamp):null,'heartbeatAgeSeconds'=>$age,'heartbeatFresh'=>$age!==null&&$age>=0&&$age<=45);
 }

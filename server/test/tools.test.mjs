@@ -24,6 +24,7 @@ test('registers the compatibility and full-control v2 tool surface', () => {
     'projeqtor_batch_upsert',
     'projeqtor_whoami',
     'projeqtor_list_object_classes',
+    'projeqtor_list_ui_handlers',
     'projeqtor_query_items',
     'projeqtor_get_changes',
     'projeqtor_validate_operations',
@@ -36,6 +37,7 @@ test('registers the compatibility and full-control v2 tool surface', () => {
     'projeqtor_prepare_action',
     'projeqtor_commit_action',
     'projeqtor_list_jobs',
+    'projeqtor_retry_job',
     'projeqtor_get_job',
     'projeqtor_cancel_job'
   ]);
@@ -71,6 +73,9 @@ test('reference lookup filters inactive values and searches names', async () => 
     username: 'tester',
     apiRequest: async (...args) => {
       calls.push(args);
+      if (args[0] === '__mcp/schema/CalendarDefinition') return { fields: [
+        { name: 'id' }, { name: 'name' }, { name: 'idle' }
+      ] };
       return { total: 1, returned: 1, hasMore: false, items: [{ id: 1, name: 'Default', idle: 0 }] };
     }
   });
@@ -79,8 +84,29 @@ test('reference lookup filters inactive values and searches names', async () => 
   });
   assert.equal(response.structuredContent.objectClass, 'CalendarDefinition');
   assert.deepEqual(response.structuredContent.items, [{ id: 1, name: 'Default', idle: 0 }]);
-  assert.equal(calls[0][0], '__mcp/v2/query');
-  assert.deepEqual(calls[0][3].filter.all.map(node => node.operator), ['eq', 'contains']);
+  assert.equal(calls[1][0], '__mcp/v2/query');
+  assert.deepEqual(calls[1][3].fields, ['id', 'name', 'idle']);
+  assert.deepEqual(calls[1][3].filter.all.map(node => node.operator), ['eq', 'contains']);
+});
+
+test('reference lookup selects only fields installed on the requested class', async () => {
+  const calls = [];
+  const server = createProjeqtorServer({
+    username: 'tester',
+    apiRequest: async (...args) => {
+      calls.push(args);
+      if (args[0] === '__mcp/schema/ActivityType') return { fields: [
+        { name: 'id' }, { name: 'name' }, { name: 'idle' }
+      ] };
+      return { total: 1, returned: 1, hasMore: false, items: [{ id: 26, name: 'Task', idle: 0 }] };
+    }
+  });
+  const response = await tool(server, 'projeqtor_list_reference_values')({
+    kind: 'activityType', activeOnly: true, filters: {}, pageSize: 20
+  });
+  assert.deepEqual(response.structuredContent.items, [{ id: 26, name: 'Task', idle: 0 }]);
+  assert.deepEqual(calls[1][3].fields, ['id', 'name', 'idle']);
+  assert.equal(JSON.stringify(calls[1][3]).includes('idProject'), false);
 });
 
 test('dependency creation maps friendly relationship names and lag days', async () => {

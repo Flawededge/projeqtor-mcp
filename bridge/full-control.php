@@ -126,10 +126,10 @@ function mcpFilterSql(object $object, mixed $node): string {
   }
   if (in_array($operator, array('contains','starts_with','ends_with'), true)) {
     if (!is_string($value)) mcpJsonError(400, 'invalid_filter', "'$operator' needs a string value");
-    $escaped = str_replace(array('\\','%','_'), array('\\\\','\\%','\\_'), $value);
+    $escaped = str_replace(array('!','%','_'), array('!!','!%','!_'), $value);
     if ($operator !== 'starts_with') $escaped = '%' . $escaped;
     if ($operator !== 'ends_with') $escaped .= '%';
-    return '(' . $column . ' ILIKE ' . Sql::str($escaped) . " ESCAPE '\\\\')";
+    return '(' . $column . ' ILIKE ' . Sql::str($escaped) . " ESCAPE '!')";
   }
   mcpJsonError(400, 'invalid_filter_operator', "Unsupported filter operator '$operator'");
 }
@@ -167,8 +167,10 @@ function mcpHandleClassCatalog(array $input): never {
   $classification = $input['classification'] ?? null;
   $supportedOnly = (bool)($input['supportedOnly'] ?? false);
   $search = mb_strtolower((string)($input['search'] ?? ''));
+  $fingerprint=substr(hash('sha256',json_encode(array('classification'=>$classification,'supportedOnly'=>$supportedOnly,'search'=>$search))),0,24);
   $pageSize = max(1, min(MCP_V2_PAGE_MAX, (int)($input['pageSize'] ?? 100)));
   $cursor = mcpSignedCursorDecode($input['cursor'] ?? null);
+  if($cursor&&(($cursor['kind']??'')!=='classes'||($cursor['fingerprint']??'')!==$fingerprint))mcpJsonError(400,'cursor_query_mismatch','Cursor does not belong to this class query');
   $after = (string)($cursor['after'] ?? '');
   $items = array();
   foreach (mcpInstalledClasses() as $class) {
@@ -186,9 +188,10 @@ function mcpHandleClassCatalog(array $input): never {
     'policyVersion'=>MCP_POLICY_VERSION,
     'installedCount'=>count(mcpInstalledClasses()),
     'inventory'=>$inventory,
+    'worker'=>function_exists('mcpWorkerCompatibility')?mcpWorkerCompatibility():array('compatible'=>false),
     'returned'=>count($items),
     'hasMore'=>$hasMore,
-    'nextCursor'=>$hasMore ? mcpSignedCursorEncode(array('after'=>end($items)['objectClass'])) : null,
+    'nextCursor'=>$hasMore ? mcpSignedCursorEncode(array('kind'=>'classes','fingerprint'=>$fingerprint,'after'=>end($items)['objectClass'])) : null,
     'items'=>$items
   ));
 }
@@ -235,8 +238,9 @@ function mcpHandleQuery(array $input): never {
   $class = (string)$input['objectClass'];
   $policy=mcpRequireClassOperation($class, 'read');
   $nativeClassRead=Security::checkValidAccessForUser(null,'read',$class,null,false);
+  $referenceClassRead=mcpReferenceParentReadAllowed($class,$policy);
   $contextualClass=in_array($policy['classification'],array('relation','derived'),true);
-  if (!$nativeClassRead && !$contextualClass) mcpJsonError(403, 'forbidden', 'Read access is denied');
+  if (!$nativeClassRead && !$referenceClassRead && !$contextualClass) mcpJsonError(403, 'forbidden', 'Read access is denied');
   $object = new $class();
   $fields = isset($input['fields']) && is_array($input['fields']) ? array_values(array_unique($input['fields'])) : null;
   if ($fields !== null) foreach ($fields as $field) mcpValidateField($object, (string)$field);
@@ -254,10 +258,10 @@ function mcpHandleQuery(array $input): never {
   $parts = array($nativeClassRead ? getAccesRestrictionClause($class, null, true) : '1=1');
   if (isset($input['filter'])) $parts[] = mcpFilterSql($object, $input['filter']);
   if (!empty($input['savedFilterId'])) $parts[] = mcpSavedFilterSql($object, (int)$input['savedFilterId']);
-  $fingerprint = substr(hash('sha256', json_encode(array($class,$input['filter']??null,$input['savedFilterId']??null,$sortField,$direction))), 0, 24);
+  $fingerprint = substr(hash('sha256', json_encode(array($class,$fields,$input['filter']??null,$input['savedFilterId']??null,$sortField,$direction))), 0, 24);
   $cursor = mcpSignedCursorDecode($input['cursor'] ?? null);
   if ($cursor) {
-    if (($cursor['fingerprint'] ?? '') !== $fingerprint) mcpJsonError(400, 'invalid_cursor', 'The cursor does not match this query');
+    if (($cursor['kind']??'')!=='items'||($cursor['fingerprint'] ?? '') !== $fingerprint) mcpJsonError(400, 'cursor_query_mismatch', 'The cursor does not match this query');
     $lastValue = $cursor['value'] ?? null;
     $lastId = (int)($cursor['id'] ?? 0);
     $compare = $direction === 'desc' ? '<' : '>';
@@ -269,57 +273,40 @@ function mcpHandleQuery(array $input): never {
   $hasMore = count($list) > $pageSize;
   if ($hasMore) array_pop($list);
   $lastScanned=count($list)?end($list):null;
-  if (!$nativeClassRead) $list=array_values(array_filter($list,fn($entry)=>mcpContextualReadAllowed($entry)));
+  if (!$nativeClassRead && !$referenceClassRead) $list=array_values(array_filter($list,fn($entry)=>mcpContextualReadAllowed($entry)));
   $items = array_map(fn($entry)=>mcpObjectArray($entry, $fields), $list);
   $next = null;
   if ($hasMore && $lastScanned) {
     $last = $lastScanned;
-    $next = mcpSignedCursorEncode(array('fingerprint'=>$fingerprint, 'value'=>$last->$sortField, 'id'=>(int)$last->id));
+    $next = mcpSignedCursorEncode(array('kind'=>'items','fingerprint'=>$fingerprint, 'value'=>$last->$sortField, 'id'=>(int)$last->id));
   }
   $total = null;
-  if (!empty($input['includeTotal']) && $nativeClassRead) {
+  if (!empty($input['includeTotal']) && ($nativeClassRead || $referenceClassRead)) {
     $countParts = $parts;
     if ($cursor) array_pop($countParts);
+    foreach($object->getDatabaseCriteria() as $field=>$value){
+      $countParts[]=$table.'.'.$object->getDatabaseColumnName((string)$field).'='.mcpSqlLiteral($object,(string)$field,$value);
+    }
+    if(property_exists($object,'isPrivate'))$countParts[]=SqlElement::getPrivacyClause($object);
     $total = $object->countSqlElementsFromCriteria(null, implode(' AND ', array_map(fn($part)=>'(' . $part . ')', $countParts)));
   }
   mcpJsonResponse(array('identifier'=>'id','total'=>$total,'returned'=>count($items),'pageSize'=>$pageSize,'hasMore'=>$hasMore,'nextCursor'=>$next,'items'=>$items));
 }
 
 function mcpHandleChanges(array $input): never {
-  mcpRequireKeys($input, array('objectClass','since'));
-  $class = (string)$input['objectClass'];
-  mcpRequireClassOperation($class, 'read');
-  // History contains tombstones for rows that no longer exist, so row-level
-  // access cannot be re-evaluated after deletion. Require native class-level
-  // read permission before exposing any history identifiers.
-  if (!Security::checkValidAccessForUser(null, 'read', $class, null, false)) {
-    mcpJsonError(403, 'forbidden', "History access is denied for '$class'");
-  }
-  $since = date_create_immutable((string)$input['since']);
-  $until = isset($input['until']) ? date_create_immutable((string)$input['until']) : new DateTimeImmutable('now');
-  if (!$since || !$until || $until <= $since) mcpJsonError(400, 'invalid_time_window', 'since and until must define a valid ISO-8601 window');
-  $pageSize = max(1, min(MCP_V2_PAGE_MAX, (int)($input['pageSize'] ?? 100)));
-  $cursor = mcpSignedCursorDecode($input['cursor'] ?? null);
-  $afterHistory = (int)($cursor['historyId'] ?? 0);
-  $history = new History();
-  $where = 'refType=' . Sql::str($class) . ' and operationDate>=' . Sql::str($since->format('Y-m-d H:i:s')) . ' and operationDate<' . Sql::str($until->format('Y-m-d H:i:s')) . ' and id>' . $afterHistory;
-  $rows = $history->getSqlElementsFromCriteria(null, false, $where, 'id asc', false, true, $pageSize * 10);
-  $changes = array();
-  $maxHistory = $afterHistory;
-  foreach ($rows as $row) {
-    $maxHistory = max($maxHistory, (int)$row->id);
-    $id = (int)$row->refId;
-    $changes[$id] = array('id'=>$id,'operation'=>(string)$row->operation,'changedAt'=>(string)$row->operationDate,'historyId'=>(int)$row->id);
-    if (count($changes) >= $pageSize) break;
-  }
-  $fields = isset($input['fields']) && is_array($input['fields']) ? $input['fields'] : null;
-  $items = array();
-  foreach ($changes as $change) {
-    $object = new $class($change['id'], true);
-    $deleted = !$object->id || strtolower($change['operation']) === 'delete';
-    if (!$deleted && !Security::checkValidAccessForUser($object, 'read', null, null, false)) continue;
-    $items[] = $deleted ? array_merge($change, array('deleted'=>true,'item'=>null)) : array_merge($change, array('deleted'=>false,'item'=>mcpObjectArray($object,$fields)));
-  }
-  $hasMore = count($rows) > count($changes);
-  mcpJsonResponse(array('since'=>$since->format(DATE_ATOM),'until'=>$until->format(DATE_ATOM),'returned'=>count($items),'hasMore'=>$hasMore,'nextCursor'=>$hasMore?mcpSignedCursorEncode(array('historyId'=>$maxHistory)):null,'items'=>$items));
+  mcpRequireKeys($input,array('objectClass','since'));$class=(string)$input['objectClass'];mcpRequireClassOperation($class,'read');
+  if(!Security::checkValidAccessForUser(null,'read',$class,null,false))mcpJsonError(403,'forbidden',"History access is denied for '$class'");
+  $since=date_create_immutable((string)$input['since']);if(!$since)mcpJsonError(400,'invalid_time_window','since must be a valid ISO-8601 timestamp');
+  $fields=isset($input['fields'])&&is_array($input['fields'])?array_values(array_unique($input['fields'])):null;$probe=new $class();if($fields!==null)foreach($fields as $field)mcpValidateField($probe,(string)$field);
+  $pageSize=max(1,min(MCP_V2_PAGE_MAX,(int)($input['pageSize']??100)));$cursor=mcpSignedCursorDecode($input['cursor']??null);$requestedUntil=isset($input['until'])?date_create_immutable((string)$input['until']):null;
+  if($cursor){if(($cursor['kind']??'')!=='changes')mcpJsonError(400,'cursor_query_mismatch','Cursor does not belong to a change query');$watermark=(string)($cursor['watermarkUntil']??'');if($requestedUntil&&$requestedUntil->format(DATE_ATOM)!==$watermark)mcpJsonError(400,'cursor_query_mismatch','until differs from the fixed cursor watermark');}
+  else{$watermark=($requestedUntil?:new DateTimeImmutable('now'))->format(DATE_ATOM);}
+  $until=date_create_immutable($watermark);if(!$until||$until<=$since)mcpJsonError(400,'invalid_time_window','since and until must define a valid ISO-8601 window');
+  $fingerprint=substr(hash('sha256',json_encode(array($class,$fields,$since->format(DATE_ATOM),$watermark,'historyId','asc'))),0,24);if($cursor&&($cursor['fingerprint']??'')!==$fingerprint)mcpJsonError(400,'cursor_query_mismatch','Cursor does not match this change query');
+  $afterHistory=(int)($cursor['historyId']??0);$history=new History();$where='refType='.Sql::str($class).' and operationDate>='.Sql::str($since->format('Y-m-d H:i:s')).' and operationDate<'.Sql::str($until->format('Y-m-d H:i:s')).' and id>'.$afterHistory;
+  $rows=$history->getSqlElementsFromCriteria(null,false,$where,'id asc',false,true,$pageSize*10);$changes=array();$maxHistory=$afterHistory;
+  foreach($rows as $row){$maxHistory=max($maxHistory,(int)$row->id);$id=(int)$row->refId;$changes[$id]=array('id'=>$id,'operation'=>(string)$row->operation,'changedAt'=>(string)$row->operationDate,'historyId'=>(int)$row->id);if(count($changes)>=$pageSize)break;}
+  $items=array();foreach($changes as $change){$object=new $class($change['id'],true);$deleted=!$object->id||strtolower($change['operation'])==='delete';if(!$deleted&&!Security::checkValidAccessForUser($object,'read',null,null,false))continue;$items[]=$deleted?array_merge($change,array('deleted'=>true,'item'=>null)):array_merge($change,array('deleted'=>false,'item'=>mcpObjectArray($object,$fields)));}
+  $lastRow=count($rows)?end($rows):null;$hasMore=$lastRow&&(int)$lastRow->id>$maxHistory;$next=$hasMore?mcpSignedCursorEncode(array('kind'=>'changes','fingerprint'=>$fingerprint,'watermarkUntil'=>$watermark,'historyId'=>$maxHistory)):null;
+  mcpJsonResponse(array('since'=>$since->format(DATE_ATOM),'watermarkUntil'=>$watermark,'returned'=>count($items),'hasMore'=>$hasMore,'nextCursor'=>$next,'items'=>$items));
 }

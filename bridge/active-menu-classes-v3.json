@@ -1,0 +1,923 @@
+{
+    "sourceVersion": "13.1.0",
+    "observedAt": "2026-09-24",
+    "activeUserFacingCount": 229,
+    "classes": {
+        "Acceptance": {
+            "menu": "menuAcceptance",
+            "administrative": false
+        },
+        "AcceptanceType": {
+            "menu": "menuAcceptanceType",
+            "administrative": false
+        },
+        "AccessProfile": {
+            "menu": "menuAccessProfile",
+            "administrative": true
+        },
+        "AccessProfileNoProject": {
+            "menu": "menuAccessProfileNoProject",
+            "administrative": true
+        },
+        "Action": {
+            "menu": "menuAction",
+            "administrative": false
+        },
+        "ActionType": {
+            "menu": "menuActionType",
+            "administrative": false
+        },
+        "Activity": {
+            "menu": "menuActivity",
+            "administrative": false
+        },
+        "ActivityExpense": {
+            "menu": "menuActivityExpense",
+            "administrative": false
+        },
+        "ActivityExpenseType": {
+            "menu": "menuActivityExpenseType",
+            "administrative": false
+        },
+        "ActivityPrice": {
+            "menu": "menuActivityPrice",
+            "administrative": false
+        },
+        "ActivityType": {
+            "menu": "menuActivityType",
+            "administrative": false
+        },
+        "Affectation": {
+            "menu": "menuAffectation",
+            "administrative": false
+        },
+        "Alert": {
+            "menu": "menuAlert",
+            "administrative": false
+        },
+        "Asset": {
+            "menu": "menuAsset",
+            "administrative": false
+        },
+        "AssetCategory": {
+            "menu": "menuAssetCategory",
+            "administrative": false
+        },
+        "AssetType": {
+            "menu": "menuAssetType",
+            "administrative": false
+        },
+        "Assignment": {
+            "menu": "menuAssignment",
+            "administrative": false
+        },
+        "Assumption": {
+            "menu": "menuAssumption",
+            "administrative": false
+        },
+        "AssumptionType": {
+            "menu": "menuAssumptionType",
+            "administrative": false
+        },
+        "Audit": {
+            "menu": "menuAudit",
+            "administrative": false
+        },
+        "Bill": {
+            "menu": "menuBill",
+            "administrative": false
+        },
+        "BillType": {
+            "menu": "menuBillType",
+            "administrative": false
+        },
+        "Brand": {
+            "menu": "menuBrand",
+            "administrative": false
+        },
+        "Budget": {
+            "menu": "menuBudget",
+            "administrative": false
+        },
+        "BudgetCategory": {
+            "menu": "menuBudgetCategory",
+            "administrative": false
+        },
+        "BudgetOrientation": {
+            "menu": "menuBudgetOrientation",
+            "administrative": false
+        },
+        "BudgetType": {
+            "menu": "menuBudgetType",
+            "administrative": false
+        },
+        "CallForTender": {
+            "menu": "menuCallForTender",
+            "administrative": false
+        },
+        "CallForTenderType": {
+            "menu": "menuCallForTenderType",
+            "administrative": false
+        },
+        "Catalog": {
+            "menu": "menuCatalog",
+            "administrative": false
+        },
+        "CatalogType": {
+            "menu": "menuCatalogType",
+            "administrative": false
+        },
+        "CatalogUO": {
+            "menu": "menuCatalogUO",
+            "administrative": false
+        },
+        "Category": {
+            "menu": "menuCategory",
+            "administrative": false
+        },
+        "ChangeRequest": {
+            "menu": "menuChangeRequest",
+            "administrative": false
+        },
+        "ChangeRequestType": {
+            "menu": "menuChangeRequestType",
+            "administrative": false
+        },
+        "ChecklistDefinition": {
+            "menu": "menuChecklistDefinition",
+            "administrative": false
+        },
+        "Client": {
+            "menu": "menuClient",
+            "administrative": false
+        },
+        "ClientContract": {
+            "menu": "menuClientContract",
+            "administrative": false
+        },
+        "ClientContractType": {
+            "menu": "menuClientContractType",
+            "administrative": false
+        },
+        "ClientType": {
+            "menu": "menuClientType",
+            "administrative": false
+        },
+        "Command": {
+            "menu": "menuCommand",
+            "administrative": false
+        },
+        "CommandType": {
+            "menu": "menuCommandType",
+            "administrative": false
+        },
+        "Component": {
+            "menu": "menuComponent",
+            "administrative": false
+        },
+        "ComponentType": {
+            "menu": "menuComponentType",
+            "administrative": false
+        },
+        "ComponentVersion": {
+            "menu": "menuComponentVersion",
+            "administrative": false
+        },
+        "ComponentVersionType": {
+            "menu": "menuComponentVersionType",
+            "administrative": false
+        },
+        "Constraint": {
+            "menu": "menuConstraint",
+            "administrative": false
+        },
+        "ConstraintType": {
+            "menu": "menuConstraintType",
+            "administrative": false
+        },
+        "Contact": {
+            "menu": "menuContact",
+            "administrative": false
+        },
+        "Context": {
+            "menu": "menuContext",
+            "administrative": false
+        },
+        "ContextType": {
+            "menu": "menuContextType",
+            "administrative": false
+        },
+        "Criticality": {
+            "menu": "menuCriticality",
+            "administrative": false
+        },
+        "Decision": {
+            "menu": "menuDecision",
+            "administrative": false
+        },
+        "DecisionMakerProspect": {
+            "menu": "menuDecisionMakerProspect",
+            "administrative": false
+        },
+        "DecisionType": {
+            "menu": "menuDecisionType",
+            "administrative": false
+        },
+        "Deliverable": {
+            "menu": "menuDeliverable",
+            "administrative": false
+        },
+        "DeliverableStatus": {
+            "menu": "menuDeliverableStatus",
+            "administrative": false
+        },
+        "DeliverableType": {
+            "menu": "menuDeliverableType",
+            "administrative": false
+        },
+        "DeliverableWeight": {
+            "menu": "menuDeliverableWeight",
+            "administrative": false
+        },
+        "Delivery": {
+            "menu": "menuDelivery",
+            "administrative": false
+        },
+        "DeliveryMode": {
+            "menu": "menuDeliveryMode",
+            "administrative": false
+        },
+        "DeliveryType": {
+            "menu": "menuDeliveryType",
+            "administrative": false
+        },
+        "Document": {
+            "menu": "menuDocument",
+            "administrative": false
+        },
+        "DocumentDirectory": {
+            "menu": "menuDocumentDirectory",
+            "administrative": false
+        },
+        "DocumentType": {
+            "menu": "menuDocumentType",
+            "administrative": false
+        },
+        "DomainProspect": {
+            "menu": "menuDomainProspect",
+            "administrative": false
+        },
+        "Efficiency": {
+            "menu": "menuEfficiency",
+            "administrative": false
+        },
+        "EmailTemplate": {
+            "menu": "menuEmailTemplate",
+            "administrative": false
+        },
+        "Employee": {
+            "menu": "menuEmployee",
+            "administrative": false
+        },
+        "EmployeeLeaveEarned": {
+            "menu": "menuEmployeeLeaveEarned",
+            "administrative": false
+        },
+        "EmployeeManager": {
+            "menu": "menuEmployeeManager",
+            "administrative": false
+        },
+        "EmploymentContract": {
+            "menu": "menuEmploymentContract",
+            "administrative": false
+        },
+        "EmploymentContractEndReason": {
+            "menu": "menuEmploymentContractEndReason",
+            "administrative": false
+        },
+        "EmploymentContractType": {
+            "menu": "menuEmploymentContractType",
+            "administrative": false
+        },
+        "Engagement": {
+            "menu": "menuEngagement",
+            "administrative": false
+        },
+        "Epic": {
+            "menu": "menuEpic",
+            "administrative": false
+        },
+        "EpicType": {
+            "menu": "menuEpicType",
+            "administrative": false
+        },
+        "ExpenseDetailType": {
+            "menu": "menuExpenseDetailType",
+            "administrative": false
+        },
+        "Feasibility": {
+            "menu": "menuFeasibility",
+            "administrative": false
+        },
+        "GlobalView": {
+            "menu": "menuGlobalView",
+            "administrative": false
+        },
+        "Health": {
+            "menu": "menuHealth",
+            "administrative": false
+        },
+        "Incoming": {
+            "menu": "menuIncoming",
+            "administrative": false
+        },
+        "IncomingMail": {
+            "menu": "menuIncomingMail",
+            "administrative": false
+        },
+        "IncomingMailType": {
+            "menu": "menuIncomingMailType",
+            "administrative": false
+        },
+        "IncomingStatus": {
+            "menu": "menuIncomingStatus",
+            "administrative": false
+        },
+        "IncomingType": {
+            "menu": "menuIncomingType",
+            "administrative": false
+        },
+        "IncomingWeight": {
+            "menu": "menuIncomingWeight",
+            "administrative": false
+        },
+        "IndicatorDefinition": {
+            "menu": "menuIndicatorDefinition",
+            "administrative": false
+        },
+        "IndicatorDefinitionPerProject": {
+            "menu": "menuIndicatorDefinitionPerProject",
+            "administrative": false
+        },
+        "IndividualExpense": {
+            "menu": "menuIndividualExpense",
+            "administrative": false
+        },
+        "IndividualExpenseType": {
+            "menu": "menuIndividualExpenseType",
+            "administrative": false
+        },
+        "InputMailboxImport": {
+            "menu": "menuInputMailboxImport",
+            "administrative": false
+        },
+        "InputMailboxTicket": {
+            "menu": "menuInputMailboxTicket",
+            "administrative": false
+        },
+        "InterventionMode": {
+            "menu": "menuInterventionMode",
+            "administrative": false
+        },
+        "Issue": {
+            "menu": "menuIssue",
+            "administrative": false
+        },
+        "IssueType": {
+            "menu": "menuIssueType",
+            "administrative": false
+        },
+        "JoblistDefinition": {
+            "menu": "menuJoblistDefinition",
+            "administrative": false
+        },
+        "KpiDefinition": {
+            "menu": "menuKpiDefinition",
+            "administrative": false
+        },
+        "Language": {
+            "menu": "menuLanguage",
+            "administrative": false
+        },
+        "LanguageSkillLevel": {
+            "menu": "menuLanguageSkillLevel",
+            "administrative": false
+        },
+        "Leave": {
+            "menu": "menuLeave",
+            "administrative": false
+        },
+        "LeaveType": {
+            "menu": "menuLeaveType",
+            "administrative": false
+        },
+        "LessonLearned": {
+            "menu": "menuLessonLearned",
+            "administrative": false
+        },
+        "LessonLearnedType": {
+            "menu": "menuLessonLearnedType",
+            "administrative": false
+        },
+        "Likelihood": {
+            "menu": "menuLikelihood",
+            "administrative": false
+        },
+        "LocalizationItem": {
+            "menu": "menuLocalizationItem",
+            "administrative": false
+        },
+        "LocalizationItemType": {
+            "menu": "menuLocalizationItemType",
+            "administrative": false
+        },
+        "LocalizationRequest": {
+            "menu": "menuLocalizationRequest",
+            "administrative": false
+        },
+        "LocalizationRequestType": {
+            "menu": "menuLocalizationRequestType",
+            "administrative": false
+        },
+        "LocalizationTranslator": {
+            "menu": "menuLocalizationTranslator",
+            "administrative": false
+        },
+        "Location": {
+            "menu": "menuLocation",
+            "administrative": false
+        },
+        "Mail": {
+            "menu": "menuMail",
+            "administrative": false
+        },
+        "MailToSend": {
+            "menu": "menuMailToSend",
+            "administrative": false
+        },
+        "MeasureUnit": {
+            "menu": "menuMeasureUnit",
+            "administrative": false
+        },
+        "Meeting": {
+            "menu": "menuMeeting",
+            "administrative": false
+        },
+        "MeetingType": {
+            "menu": "menuMeetingType",
+            "administrative": false
+        },
+        "Message": {
+            "menu": "menuMessage",
+            "administrative": false
+        },
+        "MessageLegal": {
+            "menu": "menuMessageLegal",
+            "administrative": false
+        },
+        "MessageType": {
+            "menu": "menuMessageType",
+            "administrative": false
+        },
+        "Milestone": {
+            "menu": "menuMilestone",
+            "administrative": false
+        },
+        "MilestoneType": {
+            "menu": "menuMilestoneType",
+            "administrative": false
+        },
+        "Model": {
+            "menu": "menuModel",
+            "administrative": false
+        },
+        "Notification": {
+            "menu": "menuNotification",
+            "administrative": false
+        },
+        "NotificationDefinition": {
+            "menu": "menuNotificationDefinition",
+            "administrative": false
+        },
+        "Opportunity": {
+            "menu": "menuOpportunity",
+            "administrative": false
+        },
+        "OpportunityType": {
+            "menu": "menuOpportunityType",
+            "administrative": false
+        },
+        "Organization": {
+            "menu": "menuOrganization",
+            "administrative": false
+        },
+        "OrganizationType": {
+            "menu": "menuOrganizationType",
+            "administrative": false
+        },
+        "OutgoingMail": {
+            "menu": "menuOutgoingMail",
+            "administrative": false
+        },
+        "OutgoingMailType": {
+            "menu": "menuOutgoingMailType",
+            "administrative": false
+        },
+        "OverallProgress": {
+            "menu": "menuOverallProgress",
+            "administrative": false
+        },
+        "Payment": {
+            "menu": "menuPayment",
+            "administrative": false
+        },
+        "PaymentDelay": {
+            "menu": "menuPaymentDelay",
+            "administrative": false
+        },
+        "PaymentMode": {
+            "menu": "menuPaymentMode",
+            "administrative": false
+        },
+        "PaymentType": {
+            "menu": "menuPaymentType",
+            "administrative": false
+        },
+        "PeriodicMeeting": {
+            "menu": "menuPeriodicMeeting",
+            "administrative": false
+        },
+        "Personas": {
+            "menu": "menuPersonas",
+            "administrative": false
+        },
+        "PlanningMode": {
+            "menu": "menuPlanningMode",
+            "administrative": false
+        },
+        "PokerComplexity": {
+            "menu": "menuPokerComplexity",
+            "administrative": false
+        },
+        "PokerSession": {
+            "menu": "menuPokerSession",
+            "administrative": false
+        },
+        "PokerSessionType": {
+            "menu": "menuPokerSessionType",
+            "administrative": false
+        },
+        "PokerSessionVoting": {
+            "menu": "menuPokerSessionVoting",
+            "administrative": false
+        },
+        "PositionProspect": {
+            "menu": "menuPositionProspect",
+            "administrative": false
+        },
+        "PredefinedNote": {
+            "menu": "menuPredefinedNote",
+            "administrative": false
+        },
+        "PredefinedSituation": {
+            "menu": "menuPredefinedSituation",
+            "administrative": false
+        },
+        "Priority": {
+            "menu": "menuPriority",
+            "administrative": false
+        },
+        "Product": {
+            "menu": "menuProduct",
+            "administrative": false
+        },
+        "ProductType": {
+            "menu": "menuProductType",
+            "administrative": false
+        },
+        "ProductVersion": {
+            "menu": "menuProductVersion",
+            "administrative": false
+        },
+        "ProductVersionType": {
+            "menu": "menuProductVersionType",
+            "administrative": false
+        },
+        "Profile": {
+            "menu": "menuProfile",
+            "administrative": true
+        },
+        "Project": {
+            "menu": "menuProject",
+            "administrative": false
+        },
+        "ProjectExpense": {
+            "menu": "menuProjectExpense",
+            "administrative": false
+        },
+        "ProjectExpenseType": {
+            "menu": "menuProjectExpenseType",
+            "administrative": false
+        },
+        "ProjectSituation": {
+            "menu": "menuProjectSituation",
+            "administrative": false
+        },
+        "ProjectSituationExpense": {
+            "menu": "menuProjectSituationExpense",
+            "administrative": false
+        },
+        "ProjectSituationIncome": {
+            "menu": "menuProjectSituationIncome",
+            "administrative": false
+        },
+        "ProjectType": {
+            "menu": "menuProjectType",
+            "administrative": false
+        },
+        "Prospect": {
+            "menu": "menuProspect",
+            "administrative": false
+        },
+        "ProspectEstimate": {
+            "menu": "menuProspectEstimate",
+            "administrative": false
+        },
+        "ProspectEstimateType": {
+            "menu": "menuProspectEstimateType",
+            "administrative": false
+        },
+        "ProspectEventType": {
+            "menu": "menuProspectEventType",
+            "administrative": false
+        },
+        "ProspectOrigin": {
+            "menu": "menuProspectOrigin",
+            "administrative": false
+        },
+        "ProspectQualification": {
+            "menu": "menuProspectQualification",
+            "administrative": false
+        },
+        "ProspectType": {
+            "menu": "menuProspectType",
+            "administrative": false
+        },
+        "ProspectionSource": {
+            "menu": "menuProspectionSource",
+            "administrative": false
+        },
+        "Provider": {
+            "menu": "menuProvider",
+            "administrative": false
+        },
+        "ProviderBill": {
+            "menu": "menuProviderBill",
+            "administrative": false
+        },
+        "ProviderBillType": {
+            "menu": "menuProviderBillType",
+            "administrative": false
+        },
+        "ProviderOrder": {
+            "menu": "menuProviderOrder",
+            "administrative": false
+        },
+        "ProviderOrderType": {
+            "menu": "menuProviderOrderType",
+            "administrative": false
+        },
+        "ProviderPayment": {
+            "menu": "menuProviderPayment",
+            "administrative": false
+        },
+        "ProviderPaymentType": {
+            "menu": "menuProviderPaymentType",
+            "administrative": false
+        },
+        "ProviderTerm": {
+            "menu": "menuProviderTerm",
+            "administrative": false
+        },
+        "ProviderType": {
+            "menu": "menuProviderType",
+            "administrative": false
+        },
+        "Quality": {
+            "menu": "menuQuality",
+            "administrative": false
+        },
+        "Question": {
+            "menu": "menuQuestion",
+            "administrative": false
+        },
+        "QuestionType": {
+            "menu": "menuQuestionType",
+            "administrative": false
+        },
+        "Quotation": {
+            "menu": "menuQuotation",
+            "administrative": false
+        },
+        "QuotationType": {
+            "menu": "menuQuotationType",
+            "administrative": false
+        },
+        "RaciModel": {
+            "menu": "menuRaciModel",
+            "administrative": false
+        },
+        "Recipient": {
+            "menu": "menuRecipient",
+            "administrative": false
+        },
+        "Renewal": {
+            "menu": "menuRenewal",
+            "administrative": false
+        },
+        "Requirement": {
+            "menu": "menuRequirement",
+            "administrative": false
+        },
+        "RequirementType": {
+            "menu": "menuRequirementType",
+            "administrative": false
+        },
+        "Resolution": {
+            "menu": "menuResolution",
+            "administrative": false
+        },
+        "Resource": {
+            "menu": "menuResource",
+            "administrative": false
+        },
+        "ResourceMaterial": {
+            "menu": "menuResourceMaterial",
+            "administrative": false
+        },
+        "ResourceTeam": {
+            "menu": "menuResourceTeam",
+            "administrative": false
+        },
+        "Risk": {
+            "menu": "menuRisk",
+            "administrative": false
+        },
+        "RiskLevel": {
+            "menu": "menuRiskLevel",
+            "administrative": false
+        },
+        "RiskType": {
+            "menu": "menuRiskType",
+            "administrative": false
+        },
+        "Role": {
+            "menu": "menuRole",
+            "administrative": false
+        },
+        "ScrumPriority": {
+            "menu": "menuScrumPriority",
+            "administrative": false
+        },
+        "Severity": {
+            "menu": "menuSeverity",
+            "administrative": false
+        },
+        "Skill": {
+            "menu": "menuSkill",
+            "administrative": false
+        },
+        "SkillLevel": {
+            "menu": "menuSkillLevel",
+            "administrative": false
+        },
+        "Sprint": {
+            "menu": "menuSprint",
+            "administrative": false
+        },
+        "SprintType": {
+            "menu": "menuSprintType",
+            "administrative": false
+        },
+        "Status": {
+            "menu": "menuStatus",
+            "administrative": false
+        },
+        "StatusMail": {
+            "menu": "menuStatusMail",
+            "administrative": false
+        },
+        "StatusMailPerProject": {
+            "menu": "menuStatusMailPerProject",
+            "administrative": false
+        },
+        "SupplierContract": {
+            "menu": "menuSupplierContract",
+            "administrative": false
+        },
+        "SupplierContractType": {
+            "menu": "menuSupplierContractType",
+            "administrative": false
+        },
+        "Team": {
+            "menu": "menuTeam",
+            "administrative": false
+        },
+        "Tender": {
+            "menu": "menuTender",
+            "administrative": false
+        },
+        "TenderStatus": {
+            "menu": "menuTenderStatus",
+            "administrative": false
+        },
+        "TenderType": {
+            "menu": "menuTenderType",
+            "administrative": false
+        },
+        "Term": {
+            "menu": "menuTerm",
+            "administrative": false
+        },
+        "TestCase": {
+            "menu": "menuTestCase",
+            "administrative": false
+        },
+        "TestCaseType": {
+            "menu": "menuTestCaseType",
+            "administrative": false
+        },
+        "TestSession": {
+            "menu": "menuTestSession",
+            "administrative": false
+        },
+        "TestSessionType": {
+            "menu": "menuTestSessionType",
+            "administrative": false
+        },
+        "Ticket": {
+            "menu": "menuTicket",
+            "administrative": false
+        },
+        "TicketDelay": {
+            "menu": "menuTicketDelay",
+            "administrative": false
+        },
+        "TicketDelayPerProject": {
+            "menu": "menuTicketDelayPerProject",
+            "administrative": false
+        },
+        "TicketSimple": {
+            "menu": "menuTicketSimple",
+            "administrative": false
+        },
+        "TicketType": {
+            "menu": "menuTicketType",
+            "administrative": false
+        },
+        "TokenDefinition": {
+            "menu": "menuTokenDefinition",
+            "administrative": false
+        },
+        "Trend": {
+            "menu": "menuTrend",
+            "administrative": false
+        },
+        "Urgency": {
+            "menu": "menuUrgency",
+            "administrative": false
+        },
+        "User": {
+            "menu": "menuUser",
+            "administrative": true
+        },
+        "UserStory": {
+            "menu": "menuUserStory",
+            "administrative": false
+        },
+        "UserStoryType": {
+            "menu": "menuUserStoryType",
+            "administrative": false
+        },
+        "VotingAttributionRule": {
+            "menu": "menuVotingAttributionRule",
+            "administrative": false
+        },
+        "VotingUseRule": {
+            "menu": "menuVotingUseRule",
+            "administrative": false
+        },
+        "VotingUseRulePerProject": {
+            "menu": "menuVotingUseRulePerProject",
+            "administrative": false
+        },
+        "WorkCommand": {
+            "menu": "menuWorkCommand",
+            "administrative": false
+        },
+        "Workflow": {
+            "menu": "menuWorkflow",
+            "administrative": false
+        }
+    }
+}

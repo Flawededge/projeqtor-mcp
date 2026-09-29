@@ -8,13 +8,20 @@ require_once '/var/www/html/mcp-api/router.php';
 require_once '/usr/local/lib/projeqtor/cron-control.php';
 $batchMode=false;
 
+const MCP_WORKER_LEASE_SECONDS=120;
+function workerLeaseOwner(): string { static $owner=null;if($owner===null)$owner=(gethostname()?:'worker').':'.getmypid().':'.bin2hex(random_bytes(4));return $owner; }
+function workerHeartbeatPath(): string { return '/var/lib/projeqtor/mcp-worker-heartbeat'; }
+function workerTouchHeartbeat(): void { $path=workerHeartbeatPath();$tmp=$path.'.tmp-'.getmypid();file_put_contents($tmp,(string)time(),LOCK_EX);rename($tmp,$path); }
+
 function workerUpdate(int $id,string $status,int $progress,?array $result=null,?string $path=null): void {
-  $sql='UPDATE mcpoperation SET status='.Sql::str($status).', progress='.(int)$progress.', updated_at=CURRENT_TIMESTAMP';
+  $terminal=in_array($status,array('succeeded','failed','cancelled','recovery_required'),true);
+  $sql='UPDATE mcpoperation SET status='.Sql::str($status).', progress='.(int)$progress.', updated_at=CURRENT_TIMESTAMP, heartbeat_at=CURRENT_TIMESTAMP';
   if($status==='running')$sql.=', started_at=COALESCE(started_at,CURRENT_TIMESTAMP)';
-  if(in_array($status,array('succeeded','failed','cancelled'),true))$sql.=', completed_at=CURRENT_TIMESTAMP';
+  if($status==='running')$sql.=', lease_expires_at=CURRENT_TIMESTAMP + INTERVAL \''.MCP_WORKER_LEASE_SECONDS.' seconds\'';
+  if($terminal)$sql.=', completed_at=CURRENT_TIMESTAMP,lease_owner=NULL,lease_expires_at=NULL';
   if($result!==null)$sql.=', result_json='.Sql::str(json_encode($result));
   if($path!==null)$sql.=', result_path='.Sql::str($path);
-  Sql::query($sql.' WHERE id='.Sql::fmtId($id));
+  Sql::query($sql.' WHERE id='.Sql::fmtId($id));workerTouchHeartbeat();
 }
 
 function workerCancelled(int $id): bool {
@@ -23,9 +30,15 @@ function workerCancelled(int $id): bool {
 
 function workerMaintenance(): void {
   Sql::query("UPDATE mcpoperation SET status='expired', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, nonce=NULL WHERE status='prepared' AND expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP");
+  Sql::query("UPDATE mcpoperation SET status='queued',progress=0,lease_owner=NULL,lease_expires_at=NULL,heartbeat_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE status='running' AND retry_policy='safe' AND lease_expires_at<CURRENT_TIMESTAMP AND attempts<max_attempts");
+  Sql::query("UPDATE mcpoperation SET status='failed',error_code='retry_limit_reached',completed_at=CURRENT_TIMESTAMP,lease_owner=NULL,lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE status='running' AND retry_policy='safe' AND lease_expires_at<CURRENT_TIMESTAMP AND attempts>=max_attempts");
+  Sql::query("UPDATE mcpoperation SET status='recovery_required',recovery_state='interrupted_non_idempotent',error_code='worker_lease_expired',completed_at=CURRENT_TIMESTAMP,lease_owner=NULL,lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE status='running' AND retry_policy='recovery_required' AND lease_expires_at<CURRENT_TIMESTAMP");
+  Sql::query("UPDATE mcpoperation SET status='failed',error_code='worker_lease_expired',completed_at=CURRENT_TIMESTAMP,lease_owner=NULL,lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE status='running' AND retry_policy='never' AND lease_expires_at<CURRENT_TIMESTAMP");
   Sql::query("DELETE FROM mcpoperation WHERE completed_at IS NOT NULL AND completed_at < CURRENT_TIMESTAMP - INTERVAL '30 days'");
   foreach(glob('/var/lib/projeqtor/mcp-jobs/job-*')?:array() as $file)if(filemtime($file)<time()-7*86400)@unlink($file);
+  foreach(glob('/var/lib/projeqtor/mcp-jobs/*.tmp-*')?:array() as $file)if(filemtime($file)<time()-300)@unlink($file);
   foreach(glob('/var/lib/projeqtor/mcp-uploads/*')?:array() as $file)if(filemtime($file)<time()-3600)@unlink($file);
+  workerTouchHeartbeat();
 }
 
 function workerArtifactPath(int $id,string $extension): string {
@@ -45,9 +58,9 @@ function workerProjectReferenceWhere(array $references,string $typeField='refTyp
 function workerSnapshot(int $jobId,array $arguments): array {
   $idProject=(int)($arguments['idProject']??0);$project=new Project($idProject);if(!$project->id||!Security::checkValidAccessForUser($project,'read',null,null,false))throw new RuntimeException('Project is unavailable');
   $classes=array('Project','Activity','Milestone','Meeting','PeriodicMeeting','TestSession','Sprint','Ticket','Requirement','Risk','Issue','Opportunity','Action','Document','Affectation','Assignment','Dependency','Link','Note','Attachment','Baseline','PlanningElement','PlannedWork','Work');
-  $path=workerArtifactPath($jobId,'ndjson');$handle=fopen($path,'wb');$watermark=date(DATE_ATOM);$counts=array();$projectRefs=array('Project'=>array($idProject=>true));
+  $path=workerArtifactPath($jobId,'ndjson');$temporary=$path.'.tmp-'.bin2hex(random_bytes(6));$handle=fopen($temporary,'xb');$watermark=date(DATE_ATOM);$counts=array();$projectRefs=array('Project'=>array($idProject=>true));
   fwrite($handle,json_encode(array('recordType'=>'snapshot','schemaVersion'=>1,'idProject'=>$idProject,'historyWatermark'=>$watermark))."\n");
-  foreach($classes as $index=>$class){if(workerCancelled($jobId)){fclose($handle);@unlink($path);throw new RuntimeException('cancelled');} $policy=mcpClassPolicy($class);if(!$policy['supported']||!in_array('read',$policy['operations'],true))continue;$obj=new $class();
+  foreach($classes as $index=>$class){if(workerCancelled($jobId)){fclose($handle);@unlink($temporary);throw new RuntimeException('cancelled');} $policy=mcpClassPolicy($class);if(!$policy['supported']||!in_array('read',$policy['operations'],true))continue;$obj=new $class();
     if($class==='Project')$where='id='.Sql::fmtId($idProject);
     else if(property_exists($obj,'idProject'))$where='idProject='.Sql::fmtId($idProject);
     else if($class==='Dependency')$where='('.workerProjectReferenceWhere($projectRefs,'predecessorRefType','predecessorRefId').' OR '.workerProjectReferenceWhere($projectRefs,'successorRefType','successorRefId').')';
@@ -57,7 +70,7 @@ function workerSnapshot(int $jobId,array $arguments): array {
     if(!$nativeClassRead)$list=array_values(array_filter($list,fn($item)=>mcpContextualReadAllowed($item)));
     $counts[$class]=count($list);foreach($list as $item){$projectRefs[$class][(int)$item->id]=true;fwrite($handle,json_encode(array('recordType'=>'object','objectClass'=>$class,'item'=>mcpObjectArray($item)),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)."\n");}workerUpdate($jobId,'running',min(90,5+(int)(85*($index+1)/count($classes))));
   }
-  fclose($handle);return array('ok'=>true,'idProject'=>$idProject,'historyWatermark'=>$watermark,'counts'=>$counts,'resource'=>'projeqtor://jobs/'.$jobId.'/result','path'=>$path);
+  fflush($handle);fclose($handle);if(!rename($temporary,$path)){@unlink($temporary);throw new RuntimeException('Atomic snapshot publication failed');}return array('ok'=>true,'idProject'=>$idProject,'historyWatermark'=>$watermark,'counts'=>$counts,'resource'=>'projeqtor://jobs/'.$jobId.'/result','path'=>$path);
 }
 
 function workerPlanning(int $jobId,array $arguments): array {
@@ -71,9 +84,9 @@ function workerBaseline(array $arguments): array {
 }
 
 function workerExport(int $jobId,array $arguments): array {
-  $class=(string)($arguments['objectClass']??'');mcpRequireClassOperation($class,'read');$obj=new $class();$where=getAccesRestrictionClause($class,null,true);$list=$obj->getSqlElementsFromCriteria(null,false,$where,'id asc',false,true);$format=(string)($arguments['format']??'ndjson');if(!in_array($format,array('json','ndjson','csv'),true))$format='ndjson';$path=workerArtifactPath($jobId,$format);$handle=fopen($path,'wb');
-  if($format==='json')fwrite($handle,'[');$first=true;$headers=null;foreach($list as $item){$row=mcpObjectArray($item);if($format==='ndjson')fwrite($handle,json_encode($row,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)."\n");else if($format==='json'){if(!$first)fwrite($handle,',');fwrite($handle,json_encode($row,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));$first=false;}else{if($headers===null){$headers=array_keys($row);fputcsv($handle,$headers);}fputcsv($handle,array_map(fn($key)=>is_scalar($row[$key]??null)?$row[$key]:'',$headers));}}
-  if($format==='json')fwrite($handle,']');fclose($handle);return array('ok'=>true,'objectClass'=>$class,'format'=>$format,'count'=>count($list),'resource'=>'projeqtor://jobs/'.$jobId.'/result','path'=>$path);
+  $class=(string)($arguments['objectClass']??'');mcpRequireClassOperation($class,'read');$obj=new $class();$where=getAccesRestrictionClause($class,null,true);$list=$obj->getSqlElementsFromCriteria(null,false,$where,'id asc',false,true);$format=(string)($arguments['format']??'ndjson');if(!in_array($format,array('json','ndjson','csv'),true))$format='ndjson';$path=workerArtifactPath($jobId,$format);$temporary=$path.'.tmp-'.bin2hex(random_bytes(6));$handle=fopen($temporary,'xb');
+  if($format==='json')fwrite($handle,'[');$first=true;$headers=null;foreach($list as $index=>$item){if(workerCancelled($jobId)){fclose($handle);@unlink($temporary);throw new RuntimeException('cancelled');}$row=mcpObjectArray($item);if($format==='ndjson')fwrite($handle,json_encode($row,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)."\n");else if($format==='json'){if(!$first)fwrite($handle,',');fwrite($handle,json_encode($row,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE));$first=false;}else{if($headers===null){$headers=array_keys($row);fputcsv($handle,$headers);}fputcsv($handle,array_map(fn($key)=>is_scalar($row[$key]??null)?$row[$key]:'',$headers));}if($index%100===0)workerUpdate($jobId,'running',min(90,5+(int)(85*($index+1)/max(1,count($list)))));}
+  if($format==='json')fwrite($handle,']');fflush($handle);fclose($handle);if(!rename($temporary,$path)){@unlink($temporary);throw new RuntimeException('Atomic export publication failed');}return array('ok'=>true,'objectClass'=>$class,'format'=>$format,'count'=>count($list),'resource'=>'projeqtor://jobs/'.$jobId.'/result','path'=>$path);
 }
 
 function workerImport(array $arguments,string $username): array {
@@ -98,13 +111,14 @@ function workerExecute(array $row): array {
 
 mcpAssertPolicyComplete();
 mcpEnsureOperationTable();
-$lastMaintenance=0;
+$lastMaintenance=0;workerTouchHeartbeat();
 while(true){
   if(time()-$lastMaintenance>=60){workerMaintenance();$lastMaintenance=time();}
-  Sql::beginTransaction();$result=Sql::query("SELECT * FROM mcpoperation WHERE status='queued' ORDER BY id ASC FOR UPDATE SKIP LOCKED LIMIT 1");$row=Sql::fetchLine($result);if($row)Sql::query("UPDATE mcpoperation SET status='running',progress=1,started_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=".Sql::fmtId($row['id'])." AND status='queued'");Sql::commitTransaction();
+  Sql::beginTransaction();$result=Sql::query("SELECT * FROM mcpoperation WHERE status='queued' AND attempts<max_attempts ORDER BY id ASC FOR UPDATE SKIP LOCKED LIMIT 1");$row=Sql::fetchLine($result);if($row)Sql::query("UPDATE mcpoperation SET status='running',progress=1,attempts=attempts+1,lease_owner=".Sql::str(workerLeaseOwner()).",lease_expires_at=CURRENT_TIMESTAMP + INTERVAL '".MCP_WORKER_LEASE_SECONDS." seconds',heartbeat_at=CURRENT_TIMESTAMP,started_at=COALESCE(started_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=".Sql::fmtId($row['id'])." AND status='queued'");Sql::commitTransaction();workerTouchHeartbeat();
   if(!$row){if(getenv('MCP_WORKER_ONCE')==='1')break;sleep(2);continue;}
-  $user=SqlElement::getSingleSqlElementFromCriteria('User',array('name'=>$row['username']));if(!$user->id||$user->idle||$user->locked){workerUpdate((int)$row['id'],'failed',100,array('ok'=>false,'error'=>array('code'=>'user_unavailable','message'=>'Originating user is unavailable')));continue;}$user->_API=true;setSessionUser($user);
-  try{if(workerCancelled((int)$row['id']))throw new RuntimeException('cancelled');$output=workerExecute($row);$path=$output['path']??null;unset($output['path']);workerUpdate((int)$row['id'],'succeeded',100,$output,$path);}catch(Throwable $error){$cancelled=$error->getMessage()==='cancelled';workerUpdate((int)$row['id'],$cancelled?'cancelled':'failed',100,array('ok'=>false,'error'=>array('code'=>$cancelled?'cancelled':'job_failed','message'=>cleanApiMessage($error->getMessage()))));}
+  $startedAt=microtime(true);$user=SqlElement::getSingleSqlElementFromCriteria('User',array('name'=>$row['username']));if(!$user->id||$user->idle||$user->locked){workerUpdate((int)$row['id'],'failed',100,array('ok'=>false,'error'=>array('code'=>'user_unavailable','message'=>'Originating user is unavailable')));Sql::query("UPDATE mcpoperation SET error_code='user_unavailable' WHERE id=".Sql::fmtId($row['id']));error_log(json_encode(array('operationId'=>(int)$row['id'],'actor'=>$row['username'],'action'=>$row['operation_type'],'durationMs'=>(int)((microtime(true)-$startedAt)*1000),'outcome'=>'failed:user_unavailable')));continue;}$user->_API=true;setSessionUser($user);
+  try{if(workerCancelled((int)$row['id']))throw new RuntimeException('cancelled');$output=workerExecute($row);$path=$output['path']??null;unset($output['path']);workerUpdate((int)$row['id'],'succeeded',100,$output,$path);$outcome='succeeded';}catch(Throwable $error){$cancelled=$error->getMessage()==='cancelled';$code=$cancelled?'cancelled':'job_failed';workerUpdate((int)$row['id'],$cancelled?'cancelled':'failed',100,array('ok'=>false,'error'=>array('code'=>$code,'message'=>cleanApiMessage($error->getMessage()))));Sql::query('UPDATE mcpoperation SET error_code='.Sql::str($code).' WHERE id='.Sql::fmtId($row['id']));foreach(glob('/var/lib/projeqtor/mcp-jobs/job-'.(int)$row['id'].'.*.tmp-*')?:array() as $temporary)@unlink($temporary);$outcome=($cancelled?'cancelled':'failed:'.$code);}
+  error_log(json_encode(array('operationId'=>(int)$row['id'],'actor'=>$row['username'],'action'=>$row['operation_type'],'durationMs'=>(int)((microtime(true)-$startedAt)*1000),'outcome'=>$outcome)));
   workerMaintenance();$lastMaintenance=time();
   if(getenv('MCP_WORKER_ONCE')==='1')break;
 }

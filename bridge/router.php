@@ -35,10 +35,11 @@ function mcpHandleV2(string $uri, string $method, string $body, string $username
   }
   if($method==='POST'&&$uri==='__mcp/v2/classes')mcpHandleClassCatalog($input);
   if($method==='POST'&&$uri==='__mcp/v2/item')mcpHandleGetItem($input);
+  if($method==='POST'&&$uri==='__mcp/v2/ui-handlers')mcpHandleUiHandlers($input);
   if($method==='POST'&&$uri==='__mcp/v2/query')mcpHandleQuery($input);
   if($method==='POST'&&$uri==='__mcp/v2/changes')mcpHandleChanges($input);
   if($method==='POST'&&$uri==='__mcp/v2/operations/validate')mcpHandleValidateOperations($input);
-  if($method==='POST'&&$uri==='__mcp/v2/operations/execute')mcpHandleExecuteOperations($input);
+  if($method==='POST'&&$uri==='__mcp/v2/operations/execute')mcpHandleExecuteOperations($input,$username);
   if($method==='POST'&&$uri==='__mcp/v2/changes/prepare')mcpHandlePrepareChange($input,$username);
   if($method==='POST'&&$uri==='__mcp/v2/changes/commit')mcpHandleCommitChange($input,$username);
   if($method==='POST'&&$uri==='__mcp/v2/actions')mcpHandleListActions($input);
@@ -50,5 +51,6 @@ function mcpHandleV2(string $uri, string $method, string $body, string $username
   if($method==='GET'&&preg_match('#^__mcp/v2/jobs/([0-9]+)$#D',$uri,$matches))mcpHandleGetJob((int)$matches[1],$username);
   if($method==='POST'&&$uri==='__mcp/v2/jobs/cancel')mcpHandleCancelJob($input,$username);
   if($method==='GET'&&preg_match('#^__mcp/v2/resources/(attachment|document-version|job-result)/([0-9]+)$#D',$uri,$matches))mcpResourceFile($matches[1],(int)$matches[2],$username);
+  if($method==='POST'&&$uri==='__mcp/v2/jobs/retry')mcpHandleRetryJob($input,$username);
   mcpJsonError(404,'endpoint_not_found','Unknown MCP bridge endpoint');
 }

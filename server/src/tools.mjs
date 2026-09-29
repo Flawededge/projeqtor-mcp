@@ -172,11 +172,15 @@ export function createProjeqtorServer({ username, apiRequest }) {
       ]);
       return result({
     serverVersion: SERVER_VERSION,
-    schemaVersion: 2,
+    schemaVersion: 3,
     policyVersion: catalog.policyVersion,
     identity,
     inventory: catalog.inventory,
     actionRegistry: actions.items,
+    classPolicy: { version: catalog.policyVersion, hash: catalog.inventory?.policyHash, manifestHash: catalog.inventory?.manifestHash, installed: catalog.inventory?.installedClassCount, unknown: catalog.inventory?.unknownClasses?.length ?? 0 },
+    handlerPolicy: { version: catalog.inventory?.handlers?.policyVersion, hash: catalog.inventory?.handlers?.policyHash, installed: catalog.inventory?.handlers?.installedHandlerCount, unknown: catalog.inventory?.handlers?.unknownHandlers?.length ?? 0, deferred: catalog.inventory?.handlers?.deferredHandlerCount, mutationCandidates: catalog.inventory?.handlers?.mutationCandidateCount },
+    workerCompatibility: catalog.worker,
+    operationSchemaVersion: catalog.worker?.schemaVersion,
     resources: ['projeqtor://attachments/{id}', 'projeqtor://document-versions/{id}', 'projeqtor://jobs/{id}/result'],
     transactionModes: ['atomic', 'best_effort'],
     concurrency: { versionField: '_version', updateField: 'expectedVersion' },
@@ -298,12 +302,16 @@ export function createProjeqtorServer({ username, apiRequest }) {
   }, async ({ kind, activeOnly, search, filters, cursor, pageSize }) => {
     try {
       const objectClass = REFERENCE_KINDS[kind];
+      const schema = await getSchema(objectClass);
+      const available = new Set((schema.fields ?? []).filter(field => !field.sensitive).map(field => field.name));
+      const selectedFields = ['id', 'name', 'code', 'idProject', 'idProfile', 'scope', 'sortOrder', 'idle'].filter(field => available.has(field));
+      if (!available.has('id') || !available.has('name')) throw new DomainError('reference_schema_incomplete', `${objectClass} does not expose id and name`);
       const extra = [];
-      if (activeOnly) extra.push({ field: 'idle', operator: 'eq', value: 0 });
-      if (search) extra.push({ field: 'name', operator: 'contains', value: search });
+      if (activeOnly && available.has('idle')) extra.push({ field: 'idle', operator: 'eq', value: 0 });
+      if (search && available.has('name')) extra.push({ field: 'name', operator: 'contains', value: search });
       const data = await apiRequest(
         '__mcp/v2/query', username, 'POST',
-        { objectClass, fields: ['id', 'name', 'code', 'idProject', 'idProfile', 'scope', 'sortOrder', 'idle'], filter: exactFilter(filters, extra), orderBy: [{ field: 'id', direction: 'asc' }], cursor, pageSize, includeTotal: true },
+        { objectClass, fields: selectedFields, filter: exactFilter(filters, extra), orderBy: [{ field: 'id', direction: 'asc' }], cursor, pageSize, includeTotal: true },
         { allowItemErrors: true }
       );
       return result({ kind, objectClass, ...data, truncated: data.hasMore, items: data.items.map(compactReference) });
