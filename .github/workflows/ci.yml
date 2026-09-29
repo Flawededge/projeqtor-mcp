@@ -63,7 +63,7 @@ jobs:
           - planning
           - ticketing
           - scrum
-          - follow-up
+          - follow_up
           - steering
           - financial
           - products
