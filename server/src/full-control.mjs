@@ -2,6 +2,9 @@ import { ResourceTemplate } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import { DomainError, cleanApiMessage } from './domain.mjs';
 import { FILTER_OPERATORS, LIMITS, TRANSACTION_MODES } from './contracts.mjs';
+import { MODULE_IDS, LEGACY_MODULE_ALIASES } from './modules/catalog.mjs';
+
+const moduleFilters = [...MODULE_IDS, ...Object.keys(LEGACY_MODULE_ALIASES)];
 
 const className = z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,99}$/);
 const fieldName = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/);
@@ -90,12 +93,13 @@ export function registerFullControlTools(server, { username, apiRequest }) {
   server.registerTool('projeqtor_list_ui_handlers', {
     description: 'List every installed ProjeQtOr tool/view entrypoint with module, mutation kinds, source hash, coverage classification, mappings, availability, risk, and Beta 4 issue.',
     inputSchema: z.object({
-      module: z.enum(['planning_followup_environment', 'ticketing_scrum', 'steering_reports', 'financial_products', 'hr_tools_configuration']).optional(),
+      module: z.enum(moduleFilters).optional(),
       classification: z.enum(['generic_crud', 'registered_action', 'read_only', 'intentional_exclusion', 'deferred_beta4']).optional(),
       mutationType: z.string().max(100).optional(),
       search: z.string().max(200).optional(),
       cursor: z.string().max(2000).optional(),
-      pageSize: z.number().int().min(1).max(LIMITS.pageSize).default(100)
+      pageSize: z.number().int().min(1).max(LIMITS.pageSize).default(100),
+      includeTotal: z.boolean().default(false)
     }),
     annotations: { readOnlyHint: true, destructiveHint: false }
   }, guarded(args => post(apiRequest, '__mcp/v2/ui-handlers', username, args)));
@@ -158,8 +162,18 @@ export function registerFullControlTools(server, { username, apiRequest }) {
   }, guarded(args => post(apiRequest, '__mcp/v2/changes/commit', username, args)));
 
   server.registerTool('projeqtor_list_actions', {
-    description: 'List registered high-level ProjeQtOr actions, their risk, synchrony, domain and availability to this user.',
-    inputSchema: z.object({ domain: z.string().max(100).optional(), availableOnly: z.boolean().default(true) }),
+    description: 'List registered high-level ProjeQtOr actions by module, risk, availability, or search text with stable cursor pagination.',
+    inputSchema: z.object({
+      module: z.enum(moduleFilters).optional(),
+      search: z.string().max(200).optional(),
+      risk: z.enum(['read', 'write', 'destructive', 'administrative', 'external', 'external_side_effect']).optional(),
+      availability: z.enum(['available', 'unavailable', 'all']).optional(),
+      cursor: z.string().max(2000).optional(),
+      pageSize: z.number().int().min(1).max(LIMITS.pageSize).default(100),
+      includeTotal: z.boolean().default(false),
+      domain: z.string().max(100).optional(),
+      availableOnly: z.boolean().optional()
+    }),
     annotations: { readOnlyHint: true, destructiveHint: false }
   }, guarded(args => post(apiRequest, '__mcp/v2/actions', username, args)));
 

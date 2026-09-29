@@ -1,67 +1,15 @@
 <?php
 declare(strict_types=1);
 
-function mcpActionRegistry(): array {
-  $objectRef = array('type'=>'object','required'=>array('objectClass','id'),'properties'=>array('objectClass'=>array('type'=>'string'),'id'=>array('type'=>'integer')));
-  $registry=array(
-    'object.copy'=>array('domain'=>'core','risk'=>'write','async'=>false,'schema'=>array('type'=>'object','required'=>array('objectClass','id'),'properties'=>$objectRef['properties'])),
-    'workflow.transition'=>array('domain'=>'workflow','risk'=>'write','async'=>false,'schema'=>array('type'=>'object','required'=>array('objectClass','id','idStatus'),'properties'=>array('objectClass'=>array('type'=>'string'),'id'=>array('type'=>'integer'),'idStatus'=>array('type'=>'integer'),'expectedVersion'=>array('type'=>'string')))),
-    'project.snapshot'=>array('domain'=>'project','risk'=>'read','async'=>true,'schema'=>array('type'=>'object','required'=>array('idProject'),'properties'=>array('idProject'=>array('type'=>'integer'),'sections'=>array('type'=>'array')))),
-    'planning.calculate'=>array('domain'=>'planning','risk'=>'write','async'=>true,'schema'=>array('type'=>'object','required'=>array('projectIds'),'properties'=>array('projectIds'=>array('type'=>'array'),'startDate'=>array('type'=>'string'),'criticalPath'=>array('type'=>'boolean'),'allowOverbooking'=>array('type'=>'boolean'),'criticalResourceMode'=>array('type'=>'boolean')))),
-    'planning.diagnostics'=>array('domain'=>'planning','risk'=>'read','async'=>false,'schema'=>array('type'=>'object','required'=>array('idProject'),'properties'=>array('idProject'=>array('type'=>'integer')))),
-    'planning.baseline.create'=>array('domain'=>'planning','risk'=>'write','async'=>true,'schema'=>array('type'=>'object','required'=>array('idProject','name'),'properties'=>array('idProject'=>array('type'=>'integer'),'name'=>array('type'=>'string'),'date'=>array('type'=>'string'),'privacy'=>array('type'=>'integer')))),
-    'planning.baseline.delete'=>array('domain'=>'planning','risk'=>'destructive','async'=>false,'schema'=>array('type'=>'object','required'=>array('id'),'properties'=>array('id'=>array('type'=>'integer'),'expectedVersion'=>array('type'=>'string')))),
-    'import.start'=>array('domain'=>'exchange','risk'=>'write','async'=>true,'schema'=>array('type'=>'object','required'=>array('uploadId','objectClass'),'properties'=>array('uploadId'=>array('type'=>'string'),'objectClass'=>array('type'=>'string'),'importRunId'=>array('type'=>'string')))),
-    'import.cleanup'=>array('domain'=>'exchange','risk'=>'destructive','async'=>false,'schema'=>array('type'=>'object','required'=>array('importRunId'),'properties'=>array('importRunId'=>array('type'=>'string'),'force'=>array('type'=>'boolean')))),
-    'export.start'=>array('domain'=>'exchange','risk'=>'read','async'=>true,'schema'=>array('type'=>'object','required'=>array('objectClass'),'properties'=>array('objectClass'=>array('type'=>'string'),'filter'=>array('type'=>'object'),'format'=>array('enum'=>array('json','ndjson','csv'))))),
-    'report.start'=>array('domain'=>'report','risk'=>'read','async'=>true,'schema'=>array('type'=>'object','required'=>array('idReport'),'properties'=>array('idReport'=>array('type'=>'integer'),'parameters'=>array('type'=>'object')))),
-    'attachment.upload.begin'=>array('domain'=>'document','risk'=>'write','async'=>false,'schema'=>array('type'=>'object','required'=>array('refType','refId','fileName','expectedBytes'),'properties'=>array('refType'=>array('type'=>'string'),'refId'=>array('type'=>'integer'),'fileName'=>array('type'=>'string'),'mimeType'=>array('type'=>'string'),'expectedBytes'=>array('type'=>'integer'),'description'=>array('type'=>'string')))),
-    'attachment.upload.chunk'=>array('domain'=>'document','risk'=>'write','async'=>false,'schema'=>array('type'=>'object','required'=>array('uploadId','offset','base64'),'properties'=>array('uploadId'=>array('type'=>'string'),'offset'=>array('type'=>'integer'),'base64'=>array('type'=>'string')))),
-    'attachment.upload.commit'=>array('domain'=>'document','risk'=>'write','async'=>false,'schema'=>array('type'=>'object','required'=>array('uploadId'),'properties'=>array('uploadId'=>array('type'=>'string')))),
-    'attachment.upload.abort'=>array('domain'=>'document','risk'=>'destructive','async'=>false,'schema'=>array('type'=>'object','required'=>array('uploadId'),'properties'=>array('uploadId'=>array('type'=>'string')))),
-    'user.trigger_password_reset'=>array('domain'=>'administration','risk'=>'external','async'=>false,'schema'=>array('type'=>'object','required'=>array('idUser'),'properties'=>array('idUser'=>array('type'=>'integer')))),
-    'cron.check'=>array('domain'=>'administration','risk'=>'read','async'=>false,'schema'=>array('type'=>'object','properties'=>array())),
-    'cron.start'=>array('domain'=>'administration','risk'=>'administrative','async'=>true,'schema'=>array('type'=>'object','properties'=>array())),
-    'cron.stop'=>array('domain'=>'administration','risk'=>'administrative','async'=>false,'schema'=>array('type'=>'object','properties'=>array())),
-    'cron.restart'=>array('domain'=>'administration','risk'=>'administrative','async'=>true,'schema'=>array('type'=>'object','properties'=>array()))
-  );
-  $handlerManifest=function_exists('mcpHandlerPolicyManifest')?mcpHandlerPolicyManifest():array('handlers'=>array());
-  foreach($registry as $id=>&$metadata){
-    $mapped=array();foreach($handlerManifest['handlers']??array() as $handler)if(in_array($id,$handler['mappedActions']??array(),true))$mapped[]=$handler['id'];
-    $domain=$metadata['domain'];$metadata['module']=in_array($domain,array('planning','project'),true)?'planning_followup_environment':($domain==='report'?'steering_reports':'hr_tools_configuration');
-    $metadata['mappedHandlers']=$mapped;$metadata['resultSchema']=array('type'=>'object','required'=>array('ok'));
-    $metadata['retryPolicy']=in_array($id,array('project.snapshot','export.start','report.start','cron.start','cron.restart'),true)?'safe':(in_array($id,array('planning.calculate','planning.baseline.create','import.start'),true)?'recovery_required':'never');
-    $metadata['maxAttempts']=$metadata['retryPolicy']==='safe'?3:1;$metadata['idempotency']=array('supported'=>true,'scope'=>'actor','sameBodyReturnsOriginal'=>true,'conflictOnDifferentBody'=>true);
-    $metadata['sideEffectClassification']=$metadata['risk'];
-  }unset($metadata);
-  return $registry;
-}
 
-function mcpActionAvailable(string $action): bool {
-  if (str_starts_with($action,'cron.') || $action==='user.trigger_password_reset') {
-    return securityGetAccessRightYesNo('menuAdmin','read') === 'YES';
-  }
-  return true;
-}
-
-function mcpHandleListActions(array $input): never {
-  $domain=$input['domain']??null; $availableOnly=(bool)($input['availableOnly']??true); $items=array();
-  foreach(mcpActionRegistry() as $id=>$action){
-    if($domain && $action['domain']!==$domain)continue;
-    $available=mcpActionAvailable($id);
-    if($availableOnly&&!$available)continue;
-    $items[]=array('action'=>$id,'domain'=>$action['domain'],'module'=>$action['module'],'risk'=>$action['risk'],'sideEffectClassification'=>$action['sideEffectClassification'],'async'=>$action['async'],'available'=>$available,'requiresConfirmation'=>in_array($action['risk'],array('destructive','administrative','external'),true),'mappedHandlers'=>$action['mappedHandlers'],'resultSchema'=>$action['resultSchema'],'retryPolicy'=>$action['retryPolicy'],'maxAttempts'=>$action['maxAttempts'],'idempotency'=>$action['idempotency']);
-  }
-  mcpJsonResponse(array('returned'=>count($items),'items'=>$items));
-}
 
 function mcpHandleActionSchema(string $action): never {
   $registry=mcpActionRegistry(); if(!isset($registry[$action]))mcpJsonError(404,'action_not_found',"Action '$action' is not registered");
-  mcpJsonResponse(array_merge(array('action'=>$action),$registry[$action]));
+  mcpJsonResponse(mcpPublicActionMetadata($action,$registry[$action]));
 }
 
 function mcpQueueJob(string $username,string $action,array $arguments,?string $idempotencyKey=null,?string $requestHash=null): array {
-  $meta=mcpActionRegistry()[$action];$id=mcpOperationInsert($username,$action,'queued',array('action'=>$action,'arguments'=>$arguments),null,date('Y-m-d H:i:s',time()+30*86400),$idempotencyKey,$requestHash,$meta['retryPolicy'],$meta['maxAttempts']);
+  $meta=mcpActionRegistry()[$action];$id=mcpOperationInsert($username,$action,'queued',array('action'=>$action,'arguments'=>$arguments),null,date('Y-m-d H:i:s',time()+30*86400),$idempotencyKey,$requestHash,$meta['retryPolicy'],$meta['maxAttempts'],$meta['module'],$meta['actionVersion']);
   return array('ok'=>true,'queued'=>true,'job'=>array('id'=>$id,'type'=>$action,'status'=>'queued','progress'=>0,'resultResource'=>'projeqtor://jobs/'.$id.'/result'));
 }
 
@@ -78,6 +26,23 @@ function mcpUploadDirectory(): string { $path='/var/lib/projeqtor/mcp-uploads'; 
 function mcpUploadMetaPath(string $id): string { if(!preg_match('/^[a-f0-9]{48}$/D',$id))mcpJsonError(400,'invalid_upload','Invalid upload id'); return mcpUploadDirectory().'/'.$id.'.json'; }
 function mcpUploadDataPath(string $id): string { return mcpUploadDirectory().'/'.$id.'.part'; }
 function mcpReadUpload(string $id,string $username): array { $path=mcpUploadMetaPath($id); if(!is_file($path))mcpJsonError(404,'upload_not_found','Upload session was not found'); $meta=json_decode((string)file_get_contents($path),true); if(!is_array($meta)||($meta['username']??'')!==$username||strtotime((string)$meta['expiresAt'])<time())mcpJsonError(403,'upload_unavailable','Upload session is unavailable'); return $meta; }
+
+function mcpAttachmentMetadata(Attachment $attachment): array {
+  return array(
+    'id'=>(int)$attachment->id,
+    'refType'=>(string)$attachment->refType,
+    'refId'=>(int)$attachment->refId,
+    'fileName'=>(string)$attachment->fileName,
+    'description'=>(string)$attachment->description,
+    'type'=>(string)$attachment->type,
+    'idUser'=>(int)$attachment->idUser,
+    'creationDate'=>(string)$attachment->creationDate,
+    'subDirectory'=>(string)$attachment->subDirectory,
+    'fileSize'=>(int)$attachment->fileSize,
+    'mimeType'=>(string)$attachment->mimeType,
+    '_version'=>mcpObjectVersion($attachment)
+  );
+}
 
 function mcpExecuteUploadAction(string $action,array $arguments,string $username): array {
   if($action==='attachment.upload.begin'){
@@ -101,7 +66,7 @@ function mcpExecuteUploadAction(string $action,array $arguments,string $username
     $directory=rtrim(Parameter::getGlobalParameter('paramAttachmentDirectory'),'/').'/attachment_'.$attachment->id.'/'; if(!is_dir($directory))mkdir($directory,0770,true); $target=$directory.$meta['fileName'];
     if(!rename($source,$target)){Sql::rollbackTransaction();mcpJsonError(500,'attachment_move_failed','Unable to commit uploaded file');} try{Security::checkEvilFile($target);}catch(Throwable $error){Sql::rollbackTransaction();@unlink($target);mcpJsonError(400,'unsafe_attachment',cleanApiMessage($error->getMessage()));}
     $attachment->subDirectory=str_replace(Parameter::getGlobalParameter('paramAttachmentDirectory'),'${attachmentDirectory}',$directory); $attachment->fileSize=$size; $attachment->mimeType=$meta['mimeType']; $raw=$attachment->save(); if(getLastOperationStatus($raw)!=='OK'){Sql::rollbackTransaction();@unlink($target);mcpJsonError(400,'attachment_save_failed',cleanApiMessage($raw));}
-    Sql::commitTransaction(); @unlink(mcpUploadMetaPath($id)); return array('ok'=>true,'attachment'=>mcpObjectArray(new Attachment($attachment->id)),'resource'=>'projeqtor://attachments/'.$attachment->id);
+    Sql::commitTransaction(); @unlink(mcpUploadMetaPath($id)); $saved=new Attachment($attachment->id); return array('ok'=>true,'attachment'=>mcpAttachmentMetadata($saved),'resource'=>'projeqtor://attachments/'.$saved->id);
   }
   mcpJsonError(404,'action_not_found','Unknown upload action');
 }
@@ -132,13 +97,15 @@ function mcpImportCleanupPreview(string $username,array $arguments): array {
   return array('ok'=>true,'importRunId'=>$runId,'journalOperationId'=>(int)$journal['row']['id'],'force'=>$force,'counts'=>$counts,'truncated'=>$counts['total']>count($items),'items'=>$items);
 }
 
-function mcpCleanupImportRun(string $username,array $arguments): array {
+function mcpCleanupImportRun(string $username,array $arguments,?callable $progress=null): array {
   mcpRequireKeys($arguments,array('importRunId'));$runId=(string)$arguments['importRunId'];$force=!empty($arguments['force']);
   $preview=mcpImportCleanupPreview($username,$arguments);
   if($preview['counts']['inaccessible']>0)mcpJsonError(403,'cleanup_inaccessible','One or more import objects cannot be deleted',array('preview'=>$preview));
   if($preview['counts']['modified']>0&&!$force)mcpJsonError(409,'cleanup_modified','Objects changed after import; prepare a second cleanup with force=true to remove them',array('preview'=>$preview));
   $journal=mcpImportJournal($username,$runId);$document=$journal['document'];$results=array();Sql::beginTransaction();
-  foreach(array_reverse($document['items']??array()) as $entry){
+  $entries=array_reverse($document['items']??array());$total=count($entries);
+  foreach($entries as $index=>$entry){
+    if($progress)$progress($index,$total);
     $class=(string)($entry['objectClass']??'');$id=(int)($entry['id']??0);mcpRequireClassOperation($class,'delete');$object=new $class($id);
     if(!$object->id){$results[]=array('objectClass'=>$class,'id'=>$id,'status'=>'missing');continue;}
     if(!Security::checkValidAccessForUser($object,'delete',null,null,false)){Sql::rollbackTransaction();mcpJsonError(403,'cleanup_inaccessible',"Delete access is denied for $class #$id");}
@@ -146,6 +113,7 @@ function mcpCleanupImportRun(string $username,array $arguments): array {
     SqlElement::setDeleteConfirmed();$raw=$object->delete();if(getLastOperationStatus($raw)!=='OK'){Sql::rollbackTransaction();mcpJsonError(400,'cleanup_delete_failed',cleanApiMessage($raw),array('objectClass'=>$class,'id'=>$id));}
     $results[]=array('objectClass'=>$class,'id'=>$id,'status'=>'deleted');
   }
+  if($progress)$progress($total,$total);
   $document['cleanup']=array('completedAt'=>date(DATE_ATOM),'force'=>$force,'deleted'=>count(array_filter($results,fn($item)=>$item['status']==='deleted')),'actor'=>$username);
   Sql::query('UPDATE mcpoperation SET result_json='.Sql::str(json_encode($document)).',updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($journal['row']['id']));
   Sql::commitTransaction();
@@ -155,17 +123,9 @@ function mcpCleanupImportRun(string $username,array $arguments): array {
 function mcpExecuteActionValue(string $action,array $arguments,string $username,bool $allowGuarded=false,?string $idempotencyKey=null,?string $requestHash=null): array {
   $registry=mcpActionRegistry(); if(!isset($registry[$action]))mcpJsonError(404,'action_not_found',"Action '$action' is not registered"); if(!mcpActionAvailable($action))mcpJsonError(403,'forbidden','Action is unavailable');
   $risk=$registry[$action]['risk']; if(in_array($risk,array('destructive','administrative','external'),true)&&!$allowGuarded)mcpJsonError(409,'guarded_action_required','This action requires prepare_action and commit_action');
-  if(str_starts_with($action,'attachment.upload.'))return mcpExecuteUploadAction($action,$arguments,$username);
+  mcpValidateActionArguments($action,$arguments);
   if($registry[$action]['async'])return mcpQueueJob($username,$action,$arguments,$idempotencyKey,$requestHash);
-  if($action==='cron.check')return array('ok'=>true,'cronStatus'=>Cron::check());
-  if($action==='cron.stop'){Cron::setStopFlag();return array('ok'=>true,'cronStatus'=>'stopping');}
-  if($action==='planning.diagnostics')return mcpPlanningDiagnostics((int)($arguments['idProject']??0));
-  if($action==='object.copy'){mcpRequireKeys($arguments,array('objectClass','id'));$class=(string)$arguments['objectClass'];mcpRequireClassOperation($class,'create');$source=new $class((int)$arguments['id']);if(!$source->id||!Security::checkValidAccessForUser($source,'read',null,null,false)||!Security::checkValidAccessForUser(new $class(),'create',null,null,false))mcpJsonError(403,'forbidden','Copy access is denied');Sql::beginTransaction();$copy=$source->copy();if(!$copy||!$copy->id){Sql::rollbackTransaction();mcpJsonError(400,'copy_failed','Object copy failed');}Sql::commitTransaction();return array('ok'=>true,'source'=>array('objectClass'=>$class,'id'=>(int)$source->id),'copy'=>mcpObjectArray($copy));}
-  if($action==='workflow.transition'){mcpRequireKeys($arguments,array('objectClass','id','idStatus'));$operation=array('action'=>'update','objectClass'=>$arguments['objectClass'],'id'=>(int)$arguments['id'],'expectedVersion'=>$arguments['expectedVersion']??null,'data'=>array('idStatus'=>(int)$arguments['idStatus']));return mcpExecuteOperationsArray(array($operation),'atomic',false);}
-  if($action==='planning.baseline.delete'){$baseline=new Baseline((int)($arguments['id']??0));if(!$baseline->id||$baseline->idUser!=getSessionUser()->id)mcpJsonError(403,'forbidden','Only the baseline owner may delete it');if(!empty($arguments['expectedVersion'])&&!hash_equals(mcpObjectVersion($baseline),(string)$arguments['expectedVersion']))mcpJsonError(409,'version_conflict','Baseline has changed');Sql::beginTransaction();$raw=$baseline->deleteWithPlanning();if(getLastOperationStatus($raw)!=='OK'){Sql::rollbackTransaction();mcpJsonError(400,'baseline_delete_failed',cleanApiMessage($raw));}Sql::commitTransaction();return array('ok'=>true,'id'=>(int)$arguments['id'],'status'=>'deleted');}
-  if($action==='import.cleanup')return mcpCleanupImportRun($username,$arguments);
-  if($action==='user.trigger_password_reset')return mcpTriggerPasswordReset((int)($arguments['idUser']??0));
-  mcpJsonError(501,'action_not_implemented',"Action '$action' is registered but has no executor");
+  return mcpInvokeActionExecutor($action,$arguments,$username);
 }
 
 function mcpHandleExecuteAction(array $input,string $username): never {
@@ -180,7 +140,7 @@ function mcpHandleExecuteAction(array $input,string $username): never {
   }
   $registry=mcpActionRegistry();if(!isset($registry[$action]))mcpJsonError(404,'action_not_found','Action is not registered');
   if($registry[$action]['async'])mcpJsonResponse(mcpExecuteActionValue($action,$arguments,$username,false,$idempotencyKey,$requestHash));
-  $operationId=$idempotencyKey?mcpOperationInsert($username,$action,'running',array('action'=>$action),null,null,$idempotencyKey,$requestHash,'never',1):null;
+  $meta=$registry[$action];$operationId=mcpOperationInsert($username,$action,'running',array('action'=>$action),null,null,$idempotencyKey,$requestHash,'never',1,$meta['module'],$meta['actionVersion']);
   if($operationId)$GLOBALS['mcpCaptureErrors']=true;
   try{
     $result=mcpExecuteActionValue($action,$arguments,$username,false,$idempotencyKey,$requestHash);
@@ -196,7 +156,7 @@ function mcpHandleExecuteAction(array $input,string $username): never {
   }finally{
     if($operationId)$GLOBALS['mcpCaptureErrors']=false;
   }
-  if($operationId){$result['operationId']=$operationId;Sql::query("UPDATE mcpoperation SET status='succeeded',progress=100,result_json=".Sql::str(json_encode($result)).',completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($operationId));}
+  if($operationId){$result['operationId']=$operationId;$effects=$result['effects']??array();Sql::query("UPDATE mcpoperation SET status='succeeded',progress=100,result_json=".Sql::str(json_encode($result)).',effects_json='.Sql::str(json_encode($effects)).',completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($operationId));}
   mcpJsonResponse($result);
 }
 function mcpHandlePrepareAction(array $input,string $username): never {
@@ -204,12 +164,41 @@ function mcpHandlePrepareAction(array $input,string $username): never {
   $action=(string)$input['action'];$args=is_array($input['arguments']??null)?$input['arguments']:array();
   $registry=mcpActionRegistry();
   if(!isset($registry[$action]))mcpJsonError(404,'action_not_found','Action is not registered');
+  mcpValidateActionArguments($action,$args);
   if(!mcpActionAvailable($action))mcpJsonError(403,'forbidden','Action is unavailable');
   if(!in_array($registry[$action]['risk'],array('destructive','administrative','external'),true))mcpJsonError(400,'confirmation_not_required','This action does not require confirmation');
-  $preview=$action==='import.cleanup'?mcpImportCleanupPreview($username,$args):null;
+  $preview=null;$previewer=$registry[$action]['preview']??null;if($previewer && is_callable($previewer))$preview=$previewer($args,$username,$action);
   $nonce=bin2hex(random_bytes(24));$expires=time()+MCP_V2_CONFIRM_SECONDS;
-  $id=mcpOperationInsert($username,'guarded.action','prepared',array('action'=>$action,'arguments'=>$args),$nonce,date('Y-m-d H:i:s',$expires));
+  $meta=$registry[$action];$id=mcpOperationInsert($username,'guarded.action','prepared',array('action'=>$action,'arguments'=>$args),$nonce,date('Y-m-d H:i:s',$expires),null,null,'never',1,$meta['module'],$meta['actionVersion']);
   $token=mcpSignConfirmation($username,'action',array('operationId'=>$id,'action'=>$action,'arguments'=>$args),$nonce,$expires);
   mcpJsonResponse(array('ok'=>true,'operationId'=>$id,'action'=>$action,'risk'=>$registry[$action]['risk'],'arguments'=>$args,'preview'=>$preview,'expiresAt'=>date(DATE_ATOM,$expires),'confirmationToken'=>$token));
 }
-function mcpHandleCommitAction(array $input,string $username): never { @set_time_limit(900);mcpRequireKeys($input,array('confirmationToken'));$verified=mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'action');$payload=$verified['document']['payload'];$result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);Sql::query('UPDATE mcpoperation SET status=' . Sql::str('succeeded') . ', progress=100, result_json=' . Sql::str(json_encode($result)) . ', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=' . $verified['operationId'] . " AND status='running'");mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId']))); }
+
+function mcpPersistGuardedActionResult(int $operationId,array $result): string {
+  $succeeded=($result['ok']??false)===true;$status=$succeeded?'succeeded':'failed';$effects=$result['effects']??array();
+  $errorCode=$succeeded?null:(string)($result['error']['code']??'guarded_action_failed');
+  Sql::query('UPDATE mcpoperation SET status='.Sql::str($status).',progress=100,result_json='.Sql::str(json_encode($result)).
+    ',effects_json='.Sql::str(json_encode($effects)).',error_code='.($errorCode===null?'NULL':Sql::str($errorCode)).
+    ',completed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id='.Sql::fmtId($operationId)." AND status='running'");
+  return $status;
+}
+
+function mcpPersistGuardedActionFailure(int $operationId,Throwable $error): array {
+  $code=$error instanceof McpBridgeException?$error->errorCode:'action_failed';
+  $failure=array('ok'=>false,'error'=>array('code'=>$code,'message'=>cleanApiMessage($error->getMessage())),'operationId'=>$operationId);
+  mcpPersistGuardedActionResult($operationId,$failure);return $failure;
+}
+function mcpHandleCommitAction(array $input,string $username): never {
+  @set_time_limit(900);mcpRequireKeys($input,array('confirmationToken'));
+  $verified=mcpVerifyConfirmation((string)$input['confirmationToken'],$username,'action');$payload=$verified['document']['payload'];
+  $previousCapture=$GLOBALS['mcpCaptureErrors']??false;$GLOBALS['mcpCaptureErrors']=true;
+  try{
+    $result=mcpExecuteActionValue((string)$payload['action'],is_array($payload['arguments']??null)?$payload['arguments']:array(),$username,true);
+    mcpPersistGuardedActionResult($verified['operationId'],$result);
+  }catch(Throwable $error){
+    mcpPersistGuardedActionFailure($verified['operationId'],$error);$GLOBALS['mcpCaptureErrors']=$previousCapture;
+    if($error instanceof McpBridgeException)mcpJsonError($error->httpStatus,$error->errorCode,$error->getMessage(),$error->details);
+    mcpJsonError(500,'action_failed','Guarded action failed');
+  }finally{$GLOBALS['mcpCaptureErrors']=$previousCapture;}
+  mcpJsonResponse(array_merge($result,array('operationId'=>$verified['operationId'])));
+}

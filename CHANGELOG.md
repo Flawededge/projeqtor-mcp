@@ -3,6 +3,32 @@
 All notable changes are documented here. Versions follow Semantic Versioning.
 
 ## [2.0.0-beta.3] - 2026-09-24
+## [2.0.0-beta.4] - 2026-09-27
+
+### Added
+
+- Core plus twelve independently owned module packs with exact schemas, permissions, transaction policy, retry policy, and native-handler contracts.
+- 212 typed canonical actions covering the requested Planning, Ticketing, Scrum, Follow-up, Steering, Financial, Products, HR, Environment, Tools, Reports, and Configuration workflows.
+- Five high-frequency convenience tools for planning, work entry, ticket management, sprint management, and native report rendering, bringing the public surface to 36 tools.
+- An internal-only disposable PostgreSQL/app/MCP/worker/gateway/mail test harness with isolated temporary credentials and sanitized artifacts.
+
+### Changed
+
+- Coverage now inventories `tool/`, `view/`, `report/`, API, SSO, and bundled-plugin surfaces with token-aware mutation detection and fail-closed runtime-catalog validation.
+- Reports render native PDF, image, CSV, and structured artifacts instead of exporting `Report` database rows.
+- Administrative reference rebuilding and WBS renumbering run as guarded, recovery-required worker jobs.
+
+### Security
+
+- Session termination requires Administration access or explicit Audit update permission.
+- Guarded failures persist structured failed outcomes, and one-shot confirmation actions no longer advertise unsupported idempotency guarantees.
+- Job resources enforce canonical actor-owned paths and exact MIME types for JSON, NDJSON, CSV, PDF, PNG, JPEG, ZIP, and XLSX.
+
+### Validation
+
+- The pinned inventory contains 944 PHP files, 899 HTTP entrypoints, 337 mutation candidates, and 640 classes with zero unknown and zero deferred surfaces.
+- All 127 unit tests, 10 contract tests, JavaScript checks, PHP lint, and reproducible coverage verification pass.
+
 
 ### Added
 

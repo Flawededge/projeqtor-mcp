@@ -1,0 +1,17 @@
+{
+  "module": "tools",
+  "version": "4.0.0",
+  "dependsOn": ["core", "configuration"],
+  "legacyAliases": ["hr_tools_configuration"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:attachment|document|note|link|mail|notification|import|export|locali|clon|subscription|asset|file|uploadimage)#i"],
+  "classPatterns": ["/(?:Attachment|Document|Note|Link|Mail|Notification|Import|Localization|Cloning|Subscription|Asset)/i"],
+  "genericCrudHandlers": {"tool:saveAttachmentEdit": ["Attachment"]},
+  "handlerMappings": {
+    "tool:removeOrigin": {"action": "tools.relationship.unlink", "classes": ["Origin"]},
+    "tool:saveNoteStreamBacklog": {"action": "tools.note.manage", "classes": ["Note"]},
+    "tool:saveNoteStreamKanban": {"action": "tools.note.manage", "classes": ["Note"]},
+    "tool:saveOrigin": {"action": "tools.relationship.link", "classes": ["Origin"]},
+    "tool:setAlertRead": {"action": "tools.notification.status", "classes": ["Alert"]},
+    "tool:setHighlight": {"action": "tools.notification.status", "classes": ["Highlight"]}
+  }
+}

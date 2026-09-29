@@ -27,6 +27,7 @@ COPY deployment/app/api-apache.conf /etc/apache2/conf-available/projeqtor-api.co
 COPY deployment/app/entrypoint.sh /usr/local/bin/projeqtor-entrypoint
 COPY worker/mcp-worker.php /usr/local/lib/projeqtor/mcp-worker.php
 COPY worker/mcp-cron.php /usr/local/lib/projeqtor/mcp-cron.php
+COPY worker/report-render.php /usr/local/lib/projeqtor/report-render.php
 COPY worker/cron-control.php /usr/local/lib/projeqtor/cron-control.php
 COPY worker/entrypoint.sh /usr/local/bin/projeqtor-worker-entrypoint
 COPY worker/healthcheck.php /usr/local/lib/projeqtor/worker-healthcheck.php

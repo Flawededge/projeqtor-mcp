@@ -1,6 +1,6 @@
 # Tool contract
 
-This document describes the `2.0.0-beta.3` full-control beta interface for ProjeQtOr 13.1.
+This document describes the `2.0.0-beta.4` modular full-control interface for ProjeQtOr 13.1.
 
 ## Discovery
 
@@ -11,7 +11,7 @@ This document describes the `2.0.0-beta.3` full-control beta interface for Proje
 - `projeqtor_list_ui_handlers` exposes the complete source-hashed handler inventory, coverage classification, mapped action/class, availability, and Beta 4 issue.
 - `projeqtor_list_reference_values` exposes permitted reference/type records through the canonical query engine.
 
-All 640 installed `SqlElement` subclasses and 797 installed UI entrypoints are classified at startup. Readiness fails if a class or handler is unknown, missing, or source-changed. The policy denies secrets and internal persistence models, then applies the caller's native rights. Schema metadata is user-contextual and version-specific; call it before constructing writes.
+All 640 installed `SqlElement` subclasses and 899 HTTP entrypoints from 944 inventoried PHP files are classified at startup, including 337 mutation candidates. Readiness fails if a class or handler is unknown, missing, or source-changed. The policy denies secrets and internal persistence models, then applies the caller's native rights. Schema metadata is user-contextual and version-specific; call it before constructing writes.
 
 ## Filtered pagination
 
@@ -82,7 +82,7 @@ Deletion, cleanup, security/configuration changes, Cron control, outbound mail, 
 
 ## Semantic actions
 
-Use `projeqtor_list_actions` and `projeqtor_get_action_schema` before calling an action. Beta.2 registers 20 workflows covering object copy, workflow transition, project snapshot, planning calculation/diagnostics, baseline create/delete, import and previewed cleanup, export/report, chunked attachment upload/abort/commit, user reset mail, and Cron check/start/stop/restart. Generic CRUD covers other policy-permitted classes; secret setting/disclosure, plugin installation, raw SQL, and host/container/database administration are excluded.
+Use `projeqtor_list_actions` and `projeqtor_get_action_schema` before calling an action. Beta 4 registers 212 typed workflows in Core plus twelve module packs and retains generic CRUD for policy-permitted classes. Five typed convenience tools cover project planning, work entry, ticket management, sprint management, and report rendering without creating alternate workflow logic. Secret setting/disclosure, plugin installation, raw SQL, and host/container/database administration remain excluded.
 
 Planning, imports, exports, reports, and large snapshots run as durable jobs under the originating user's identity. Use `projeqtor_list_jobs`, `projeqtor_get_job`, `projeqtor_cancel_job`, and `projeqtor_retry_job`. Leases and heartbeats allow read-only snapshot/export/report jobs and safe Cron operations to retry up to three attempts. Interrupted planning, baseline, and import work becomes `recovery_required` and is never replayed automatically. Explicit retry rechecks ownership, current permissions, safe policy, and attempt limits.
 

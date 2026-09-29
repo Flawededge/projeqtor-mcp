@@ -15,7 +15,7 @@ import {
   validateData
 } from './domain.mjs';
 import { SERVER_VERSION, LIMITS } from './contracts.mjs';
-import { registerFullControlTools } from './full-control.mjs';
+import { registerModulePacks } from './modules/index.mjs';
 
 const fieldNameSchema = z.string().regex(/^[A-Za-z][A-Za-z0-9_]*$/);
 const readClassSchema = z.enum(READ_CLASSES);
@@ -120,6 +120,7 @@ export function createProjeqtorServer({ username, apiRequest }) {
   const server = new McpServer({ name: 'projeqtor', version: SERVER_VERSION });
   const schemaCache = new Map();
   const referenceCache = new Map();
+  let moduleCatalog = [];
 
   async function getSchema(objectClass) {
     if (!schemaCache.has(objectClass)) {
@@ -172,13 +173,29 @@ export function createProjeqtorServer({ username, apiRequest }) {
       ]);
       return result({
     serverVersion: SERVER_VERSION,
-    schemaVersion: 3,
+    schemaVersion: 4,
+    modules: moduleCatalog.map(module => ({
+      ...module,
+      ...(catalog.inventory?.modules?.[module.id] ?? {})
+    })),
     policyVersion: catalog.policyVersion,
     identity,
     inventory: catalog.inventory,
     actionRegistry: actions.items,
     classPolicy: { version: catalog.policyVersion, hash: catalog.inventory?.policyHash, manifestHash: catalog.inventory?.manifestHash, installed: catalog.inventory?.installedClassCount, unknown: catalog.inventory?.unknownClasses?.length ?? 0 },
-    handlerPolicy: { version: catalog.inventory?.handlers?.policyVersion, hash: catalog.inventory?.handlers?.policyHash, installed: catalog.inventory?.handlers?.installedHandlerCount, unknown: catalog.inventory?.handlers?.unknownHandlers?.length ?? 0, deferred: catalog.inventory?.handlers?.deferredHandlerCount, mutationCandidates: catalog.inventory?.handlers?.mutationCandidateCount },
+    handlerPolicy: {
+      version: catalog.inventory?.handlers?.policyVersion,
+      hash: catalog.inventory?.handlers?.policyHash,
+      manifestHash: catalog.inventory?.handlers?.manifestHash,
+      sourceInventoryHash: catalog.inventory?.handlers?.sourceInventoryHash,
+      sourceTreeHash: catalog.inventory?.handlers?.sourceTreeHash,
+      installed: catalog.inventory?.handlers?.installedHandlerCount,
+      installedSourceFiles: catalog.inventory?.handlers?.installedSourceFileCount,
+      includedLibraries: catalog.inventory?.handlers?.includedLibraryCount,
+      unknown: catalog.inventory?.handlers?.unknownHandlers?.length ?? 0,
+      deferred: catalog.inventory?.handlers?.deferredHandlerCount,
+      mutationCandidates: catalog.inventory?.handlers?.mutationCandidateCount
+    },
     workerCompatibility: catalog.worker,
     operationSchemaVersion: catalog.worker?.schemaVersion,
     resources: ['projeqtor://attachments/{id}', 'projeqtor://document-versions/{id}', 'projeqtor://jobs/{id}/result'],
@@ -581,6 +598,6 @@ export function createProjeqtorServer({ username, apiRequest }) {
     });
   });
 
-  registerFullControlTools(server, { username, apiRequest });
+  moduleCatalog = registerModulePacks(server, { username, apiRequest });
   return server;
 }

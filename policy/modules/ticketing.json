@@ -1,0 +1,28 @@
+{
+  "module": "ticketing",
+  "version": "4.0.0",
+  "dependsOn": ["core", "configuration", "environment", "products"],
+  "legacyAliases": ["ticketing_scrum"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:ticket|dispatchwork|macroTicket|synchronization)#i"],
+  "classPatterns": ["/(?:Ticket|TicketDelay|MacroTicket|Synchronization|SynchronizedItems)/i"],
+  "ownedClasses": [
+    "InputMailboxTicket", "MacroTicketStatus", "Synchronization", "SynchronizedItems",
+    "Ticket", "TicketDelay", "TicketDelayPerProject", "TicketMain", "TicketSimple",
+    "TicketSimpleMain", "TicketType"
+  ],
+  "handlerMappings": {
+    "tool/saveDisableSynchronizationDefinition.php": {
+      "action": "ticketing.synchronization.disable",
+      "test": "ticketing.synchronization.disable"
+    },
+    "tool/saveSynchronizationDefinition.php": {
+      "action": "ticketing.synchronization.configure",
+      "test": "ticketing.synchronization.configure"
+    }
+  },
+  "handlerHandoffs": {
+    "tool/dynamicDialogDispatchWork.php": "follow_up",
+    "tool/saveDispatchWork.php": "follow_up",
+    "view/dashboardTicketMain.php": "configuration"
+  }
+}

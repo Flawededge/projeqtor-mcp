@@ -1,0 +1,34 @@
+{
+  "module": "follow_up",
+  "version": "4.0.0",
+  "dependsOn": ["core", "planning", "environment"],
+  "legacyAliases": ["planning_followup_environment"],
+  "pathPatterns": ["#(?:^|/)[^/]*(?:imputation|timesheet|workperiod|startstopwork|workdetail|leftwork|plannedworkmanual|followup|submitwork|validatework)#i"],
+  "classPatterns": ["/(?:Imputation|WorkPeriod|WorkDetail|PlannedWorkManual|LockedImputation|^Work$|^WorkElement$|^WorkCategory$)/i"],
+  "ownedHandlers": [
+    "tool:dynamicDialogCommentImputation",
+    "tool:dynamicDialogDispatchWork",
+    "tool:generateImputationAlert",
+    "tool:saveDispatchWork",
+    "tool:saveImputation",
+    "tool:saveImputationValidation",
+    "tool:saveLeftWork",
+    "tool:saveWorkDetailImputation",
+    "tool:startStopWork",
+    "tool:submitWorkPeriod",
+    "tool:timesheetAddResult"
+  ],
+  "contractTests": [
+    "follow-up.work-record",
+    "follow-up.work-delete",
+    "follow-up.dispatch-work",
+    "follow-up.timer",
+    "follow-up.remaining-work",
+    "follow-up.period-submit",
+    "follow-up.period-validation",
+    "follow-up.imputation-alert",
+    "follow-up.comment",
+    "follow-up.timesheet-result"
+  ],
+  "genericCrudHandlers": {"tool:saveWorkCategory": ["WorkCategory"]}
+}

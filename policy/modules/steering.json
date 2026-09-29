@@ -1,0 +1,64 @@
+{
+  "module": "steering",
+  "version": "4.0.0",
+  "dependsOn": ["core", "configuration", "planning", "tools"],
+  "legacyAliases": ["steering_reports"],
+  "pathPatterns": [
+    "#(?:^|/)[^/]*(?:risk|issue|opportunity|decision|question|checklist|approver|approveitem|raci|meeting|testcase|testsession|tcrdata|vot|kpi|indicator|situation|consolidation|acceptance)#i"
+  ],
+  "classPatterns": [
+    "/(?:Risk|Issue|Opportunity|Decision|Question|Checklist|Approver|Raci|Meeting|TestCase|TestSession|Voting|Kpi|Indicator|Situation|Acceptance)/i"
+  ],
+  "ownedHandlers": [
+    "tool:approveItem",
+    "tool:assignTeamForMeeting",
+    "tool:dynamicDialogChecklist",
+    "tool:liveMeetingUpdate",
+    "tool:removeApprover",
+    "tool:removeChecklistDefinitionLine",
+    "tool:removeKpiThreshold",
+    "tool:removeRaciAssignment",
+    "tool:removeTestCaseRun",
+    "tool:saveAddVote",
+    "tool:saveApprover",
+    "tool:saveChecklist",
+    "tool:saveChecklistDefinitionLine",
+    "tool:saveConsolidationValidation",
+    "tool:saveKpiThreshold",
+    "tool:saveNoteStreamVote",
+    "tool:saveRaciAssignment",
+    "tool:saveSituation",
+    "tool:saveTcrData",
+    "tool:saveTestCaseRun",
+    "tool:saveVotingAttributionVote",
+    "view:liveMeetingView",
+    "view:liveMeetingViewBottom"
+  ],
+  "ownedClasses": [
+    "Approver", "Checklist", "ChecklistDefinition", "ChecklistDefinitionLine", "ChecklistLine",
+    "RaciAssignment", "RaciModel", "KpiDefinition", "KpiThreshold", "Situation",
+    "TestCase", "TestCaseRun", "TestSession", "Voting", "VotingAttribution", "VotingAttributionRule",
+    "Meeting", "PeriodicMeeting", "Risk", "Issue", "Opportunity", "Decision", "Question", "Acceptance"
+  ],
+  "contractTests": [
+    "steering.state.query",
+    "steering.business.manage",
+    "steering.approval.decide",
+    "steering.approver.manage",
+    "steering.checklist.update",
+    "steering.checklist-definition.manage",
+    "steering.raci.update",
+    "steering.meeting.assign-team",
+    "steering.meeting.link",
+    "steering.meeting.live-update",
+    "steering.kpi-threshold.manage",
+    "steering.situation.manage",
+    "steering.test-run.execute",
+    "steering.voting.cast",
+    "steering.voting.attribution-manage",
+    "steering.consolidation.validate"
+  ],
+  "handlerMappings": {
+    "tool:saveLiveMeetingAttachment": {"action": "steering.business.manage", "classes": ["Risk", "Issue", "Opportunity", "Decision", "Question", "Acceptance", "TestCase", "TestSession", "Meeting", "PeriodicMeeting"]}
+  }
+}

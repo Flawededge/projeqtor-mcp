@@ -1,6 +1,6 @@
 {
   "name": "projeqtor-mcp-bridge",
-  "version": "2.0.0-beta.3",
+  "version": "2.0.0-beta.4",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,8 +8,19 @@
   },
   "scripts": {
     "start": "node src/main.mjs",
-    "check": "node --check src/main.mjs && node --check src/domain.mjs && node --check src/contracts.mjs && node --check src/full-control.mjs && node --check src/tools.mjs",
-    "test": "node --test"
+    "check": "find src -name '*.mjs' -type f -print0 | sort -z | xargs -0 -n1 node --check",
+    "test": "npm run test:unit && npm run test:contract",
+    "test:unit": "node --test test/*.test.mjs",
+    "test:contract": "node --test ../tests/contract/*.test.mjs",
+    "test:integration": "node ../tests/support/harness.mjs test integration",
+    "test:module": "node ../tests/support/harness.mjs test module",
+    "test:live": "node ../tests/run-suite.mjs live",
+    "test:acceptance": "node ../tests/support/harness.mjs test acceptance",
+    "harness:prepare": "node ../tests/support/harness.mjs prepare",
+    "harness:config": "node ../tests/support/harness.mjs config",
+    "harness:up": "node ../tests/support/harness.mjs up",
+    "harness:sanitize": "node ../tests/support/harness.mjs sanitize",
+    "harness:down": "node ../tests/support/harness.mjs down"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",

@@ -70,3 +70,13 @@ test('canonical operation batches pass the top-level idempotency key unchanged',
   });
   assert.equal(calls[0][3].requestIdempotencyKey, 'migration:562:retry-1');
 });
+
+test('operation table readiness avoids no-op DDL on ordinary job reads', async () => {
+  const source = await readFile(new URL('../../bridge/operations.php', import.meta.url), 'utf8');
+  assert.match(source, /SELECT to_regclass\('mcpoperation'\)/);
+  assert.match(source, /information_schema\.columns/);
+  assert.match(source, /pg_indexes/);
+  assert.match(source, /if\(!isset\(\$existingColumns\[\$column\]\)\)Sql::query/);
+  assert.doesNotMatch(source, /CREATE TABLE IF NOT EXISTS mcpoperation/);
+  assert.doesNotMatch(source, /ADD COLUMN IF NOT EXISTS/);
+});
