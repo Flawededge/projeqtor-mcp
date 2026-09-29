@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const releaseCompose = await readFile(new URL('../../deployment/compose.yaml', import.meta.url), 'utf8');
+const releaseGateway = await readFile(new URL('../../deployment/gateway/nginx.conf', import.meta.url), 'utf8');
 const setupHost = await readFile(new URL('../../scripts/setup-host.sh', import.meta.url), 'utf8');
 const initializer = await readFile(new URL('../../deployment/app/initialize.php', import.meta.url), 'utf8');
 
@@ -19,6 +20,16 @@ test('release tmpfs options remain single Compose mount values', () => {
 test('MCP bridge traffic uses the fixed-address backend network', () => {
   assert.match(releaseCompose, /aliases: \[projeqtor-app-backend\]/);
   assert.match(releaseCompose, /PROJEQTOR_API_URL: http:\/\/projeqtor-app-backend\/mcp-api/);
+});
+
+test('release gateway exposes MCP through an exact same-host ingress path', () => {
+  const firstServer = releaseGateway.indexOf('    server {');
+  const secondServer = releaseGateway.indexOf('    server {', firstServer + 1);
+  const applicationServer = releaseGateway.slice(firstServer, secondServer);
+  assert.ok(applicationServer.includes('location = /mcp_projeqtor {'));
+  assert.ok(applicationServer.includes('proxy_pass http://mcp:3000/mcp;'));
+  assert.ok(applicationServer.indexOf('location = /mcp_projeqtor') < applicationServer.indexOf('location /'));
+  assert.equal(releaseGateway.split('proxy_pass http://mcp:3000').length - 1, 2);
 });
 
 test('generated host secrets are traversable only by root and readable by unprivileged consumers', () => {

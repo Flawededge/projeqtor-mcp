@@ -57,7 +57,8 @@ The default endpoints are:
 
 ```text
 http://127.0.0.1:8080/       ProjeQtOr
-http://127.0.0.1:3000/mcp    MCP Streamable HTTP
+http://127.0.0.1:8080/mcp_projeqtor    MCP through the application ingress (preferred)
+http://127.0.0.1:3000/mcp               MCP direct-port compatibility endpoint
 ```
 
 The Compose bundle binds to loopback by default. Put it behind an authenticated TLS reverse proxy or a private tailnet before changing the bind address. App, MCP, and worker image versions must be upgraded together.

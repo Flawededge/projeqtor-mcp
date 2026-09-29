@@ -2,6 +2,16 @@
 
 All notable changes are documented here. Versions follow Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- Added the exact same-host Nginx ingress path `/mcp_projeqtor`, which rewrites internally to the canonical MCP `/mcp` endpoint while retaining direct-port compatibility.
+
+### Validation
+
+- All 45 contract tests pass, including ordering and upstream-rewrite checks for the new ingress route; Nginx syntax and the release Compose model validate successfully.
+
 ## [2.0.1] - 2026-09-28
 
 ### Fixed
