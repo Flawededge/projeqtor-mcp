@@ -131,6 +131,13 @@ test('capabilities expose deterministic module versions and claims', async () =>
   });
   const response = await handler(server, 'projeqtor_get_capabilities')({});
   assert.equal(response.structuredContent.schemaVersion, 4);
+  assert.equal(response.structuredContent.license.spdx, 'AGPL-3.0-or-later');
+  assert.equal(
+    response.structuredContent.license.correspondingSourceUrl,
+    'https://github.com/Flawededge/projeqtor-mcp'
+  );
+  assert.equal(response.structuredContent.license.upstream.name, 'ProjeQtOr');
+  assert.equal(response.structuredContent.license.upstream.license, 'AGPL-3.0-or-later');
   assert.equal(response.structuredContent.modules.length, 13);
   assert.deepEqual(new Set(response.structuredContent.modules.map(module => module.id)), new Set(MODULE_IDS));
   assert.equal(response.structuredContent.modules.reduce((total, module) => total + module.actionCount, 0), 212);

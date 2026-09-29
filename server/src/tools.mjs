@@ -174,6 +174,17 @@ export function createProjeqtorServer({ username, apiRequest }) {
       return result({
     serverVersion: SERVER_VERSION,
     schemaVersion: 4,
+    license: {
+      spdx: 'AGPL-3.0-or-later',
+      name: 'GNU Affero General Public License v3.0 or later',
+      correspondingSourceUrl: 'https://github.com/Flawededge/projeqtor-mcp',
+      upstream: {
+        name: 'ProjeQtOr',
+        license: 'AGPL-3.0-or-later',
+        url: 'https://www.projeqtor.org/',
+        licenseUrl: 'https://www.projeqtor.com/en/copyright_en/'
+      }
+    },
     modules: moduleCatalog.map(module => ({
       ...module,
       ...(catalog.inventory?.modules?.[module.id] ?? {})

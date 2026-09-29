@@ -8,6 +8,13 @@ RUN apk add --no-cache curl unzip \
 
 FROM php:8.3-apache-bookworm
 
+ARG VERSION=dev
+LABEL org.opencontainers.image.title="ProjeQtOr MCP application" \
+      org.opencontainers.image.description="ProjeQtOr 13.1 with the MCP bridge and worker" \
+      org.opencontainers.image.source="https://github.com/Flawededge/projeqtor-mcp" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
+
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl libc-client-dev libfreetype6-dev libicu-dev libjpeg62-turbo-dev libkrb5-dev libldap2-dev libonig-dev libpng-dev libpq-dev libzip-dev \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
