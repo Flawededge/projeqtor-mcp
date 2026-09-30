@@ -6,6 +6,12 @@ import { createMcpHandler } from '@modelcontextprotocol/server';
 import { DomainError, cleanApiMessage } from './domain.mjs';
 import { SERVER_VERSION, LIMITS } from './contracts.mjs';
 import { createProjeqtorServer } from './tools.mjs';
+import {
+  createOAuthAuthenticator,
+  loadOAuthConfig,
+  oauthChallenge,
+  protectedResourceMetadata
+} from './oauth.mjs';
 
 const port = Number.parseInt(process.env.PORT ?? '3000', 10);
 const apiBase = (process.env.PROJEQTOR_API_URL ?? 'http://app/mcp-api').replace(/\/$/, '');
@@ -13,6 +19,8 @@ const signingKey = readSecret('PROJEQTOR_SIGNING_KEY_FILE');
 const principals = readPrincipals('MCP_USERS_FILE');
 const allowedHosts = readList('MCP_ALLOWED_HOSTS', ['projeqtor', 'mcp', 'localhost', '127.0.0.1']);
 const allowedOrigins = readList('MCP_ALLOWED_ORIGINS', ['projeqtor', 'mcp', 'localhost', '127.0.0.1']);
+const oauthConfig = loadOAuthConfig();
+const authenticateOAuth = createOAuthAuthenticator(oauthConfig);
 
 function readSecret(variable) {
   const path = process.env[variable];
@@ -72,6 +80,17 @@ function unauthorized() {
     }
   });
 }
+function oauthError(status, config, error, description) {
+  return new Response(JSON.stringify({ error, error_description: description }), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'WWW-Authenticate': oauthChallenge(config, error, description),
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
 
 async function apiRequest(path, username, method = 'GET', body, options = {}) {
   const timeoutMs = options.timeoutMs ?? (path === '__mcp/v2/actions/commit' ? 900_000 : (['__mcp/v2/operations/execute', '__mcp/v2/changes/commit'].includes(path) ? 300_000 : 30_000));
@@ -136,6 +155,10 @@ const app = createMcpHonoApp({
 });
 
 app.get('/health', context => context.json({ status: 'ok', mode: 'full-control', version: SERVER_VERSION }));
+app.get('/.well-known/oauth-protected-resource/mcp_projeqtor', context => {
+  if (!oauthConfig.enabled) return context.json({ error: 'OAuth is not configured' }, 404);
+  return context.json(protectedResourceMetadata(oauthConfig), 200, { 'Cache-Control': 'public, max-age=300' });
+});
 app.all('/mcp', context => {
   const principal = authenticate(context.req.header('authorization'));
   if (!principal) return unauthorized();
@@ -146,6 +169,42 @@ app.all('/mcp', context => {
       clientId: principal.username,
       scopes: ['projeqtor:read', 'projeqtor:write'],
       extra: { projeqtorUsername: principal.username }
+    }
+  });
+});
+app.all('/mcp/oauth', async context => {
+  if (!oauthConfig.enabled || !authenticateOAuth) {
+    return new Response(JSON.stringify({ error: 'temporarily_unavailable' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
+    });
+  }
+  let principal;
+  try {
+    principal = await authenticateOAuth(context.req.header('authorization'));
+  } catch {
+    return oauthError(401, oauthConfig, 'invalid_token', 'The OAuth access token is invalid or no longer eligible');
+  }
+  if (!principal) return oauthError(401, oauthConfig, 'invalid_token', 'A Microsoft OAuth access token is required');
+
+  try {
+    await apiRequest('__mcp/v2/oauth/provision', principal.username, 'POST', {
+      username: principal.username,
+      displayName: principal.displayName,
+      email: principal.email,
+      provider: 'microsoft'
+    });
+  } catch (error) {
+    const status = error instanceof DomainError && error.code === 'oauth_user_unavailable' ? 403 : 502;
+    return oauthError(status, oauthConfig, status === 403 ? 'insufficient_scope' : 'temporarily_unavailable',
+      status === 403 ? 'The mapped ProjeQtOr user is unavailable' : 'ProjeQtOr account provisioning failed');
+  }
+
+  return handler.fetch(context.req.raw, {
+    parsedBody: context.get('parsedBody'),
+    authInfo: {
+      token: 'oauth-redacted', clientId: 'microsoft', scopes: principal.scopes,
+      extra: { projeqtorUsername: principal.username, authenticationProvider: 'microsoft' }
     }
   });
 });

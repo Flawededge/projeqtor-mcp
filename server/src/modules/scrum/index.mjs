@@ -53,7 +53,7 @@ const inputSchema = z.object({
 
 export default defineModule({
   id: 'scrum',
-  version: '2.0.1',
+  version: '2.1.0',
   dependencies: ['core', 'planning'],
   enabledStateRequirements: [],
   claims: {

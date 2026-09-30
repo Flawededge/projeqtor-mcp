@@ -21,7 +21,7 @@ const expectedActions = [
 
 test('Configuration pack owns its semantic actions, native handlers, classes, and jobs', () => {
   assert.equal(configuration.id, 'configuration');
-  assert.equal(configuration.version, '2.0.1');
+  assert.equal(configuration.version, '2.1.0');
   assert.deepEqual(configuration.dependencies, ['core']);
   assert.deepEqual(configuration.enabledStateRequirements, ['moduleConfiguration']);
   assert.deepEqual(configuration.claims.actions, expectedActions);

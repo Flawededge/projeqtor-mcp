@@ -60,6 +60,108 @@ $expected = hash_hmac('sha256', $timestamp . "\n" . $username . "\n" . $method .
 if (!hash_equals($expected, $signature)) {
   denyMcpRequest(401, 'Invalid internal authentication');
 }
+if ($method === 'POST' && $bridgeUri === '__mcp/v2/oauth/provision') {
+  $decoded = json_decode($body, true);
+  if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) denyMcpRequest(400, 'A JSON object is required');
+  $requestedUsername = $decoded['username'] ?? '';
+  $displayName = trim((string)($decoded['displayName'] ?? ''));
+  $email = strtolower(trim((string)($decoded['email'] ?? '')));
+  $provider = $decoded['provider'] ?? '';
+  if ($requestedUsername !== $username ||
+      !preg_match('/^entra-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D', $username) ||
+      $provider !== 'microsoft' || $displayName === '' || strlen($displayName) > 100 ||
+      !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100) {
+    denyMcpRequest(400, 'Invalid OAuth provisioning request');
+  }
+
+  $transactionStarted = false;
+  $oauthErrorHandlerInstalled = false;
+  $provisionStage = 'bootstrap';
+  try {
+    $batchMode = true;
+    $apiMode = true;
+    $contextForAttributes = 'global';
+    chdir('/var/www/html/mcp-api');
+    require_once '/var/www/html/tool/projeqtor.php';
+    $provisionStage = 'error-boundary';
+    set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+      if (!(error_reporting() & $severity)) return false;
+      throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+    $oauthErrorHandlerInstalled = true;
+    $provisionStage = 'admin-lookup';
+    $adminProfile = SqlElement::getSingleSqlElementFromCriteria('Profile', array('profileCode' => 'ADM'));
+    $adminProbe = new User();
+    $provisioners = $adminProfile->id ? $adminProbe->getSqlElementsFromCriteria(
+      array('idProfile' => (int)$adminProfile->id, 'idle' => '0', 'locked' => '0'),
+      false, null, 'id asc'
+    ) : array();
+    if (!$provisioners) throw new RuntimeException('OAuth provisioning is unavailable');
+    $provisionStage = 'admin-session';
+    $provisioner = $provisioners[0];
+    $provisioner->_API = true;
+    setSessionUser($provisioner);
+    $batchMode = false;
+    $provisionStage = 'transaction';
+    $connection = Sql::getConnection();
+    if (!$connection || !$connection->beginTransaction()) throw new RuntimeException('Could not start OAuth provisioning transaction');
+    $transactionStarted = true;
+    $provisionStage = 'advisory-lock';
+    $lockResult = Sql::query('SELECT pg_advisory_xact_lock(hashtext('.Sql::str($username).'))');
+    if (!$lockResult) throw new RuntimeException('Could not lock OAuth provisioning identity');
+    $provisionStage = 'user-lookup';
+    $oauthUser = SqlElement::getSingleSqlElementFromCriteria('User', array('name' => $username));
+    $created = false;
+    if (!$oauthUser->id) {
+      $teamMemberProfile = SqlElement::getSingleSqlElementFromCriteria('Profile', array('profileCode' => 'TM'));
+      if (!$teamMemberProfile->id) throw new RuntimeException('Team Member profile is unavailable');
+      $oauthUser = new User();
+      $oauthUser->name = $username;
+      $oauthUser->resourceName = $displayName;
+      $oauthUser->email = $email;
+      $oauthUser->idProfile = (int)$teamMemberProfile->id;
+      $oauthUser->locked = 0;
+      $oauthUser->idle = 0;
+      $oauthUser->isResource = 1;
+      $oauthUser->isEmployee = 1;
+      $oauthUser->description = 'Provisioned by Microsoft OAuth';
+      $provisionStage = 'native-save';
+      $result = $oauthUser->save();
+      if (!in_array(getLastOperationStatus($result), array('OK', 'NO_CHANGE'), true)) throw new RuntimeException('OAuth user save failed');
+      $oauthUser = new User((int)$oauthUser->id);
+      $created = true;
+    }
+    if (!$oauthUser->id || $oauthUser->idle || $oauthUser->locked) {
+      throw new RuntimeException('oauth_user_unavailable');
+    }
+    $provisionStage = 'commit';
+    if (!$connection->commit()) throw new RuntimeException('Could not commit OAuth provisioning transaction');
+    $transactionStarted = false;
+    if ($oauthErrorHandlerInstalled) restore_error_handler();
+  } catch (Throwable $error) {
+    $unavailable = $error instanceof RuntimeException && $error->getMessage() === 'oauth_user_unavailable';
+    if ($oauthErrorHandlerInstalled) restore_error_handler();
+    if (!$unavailable) error_log('ProjeQtOr MCP OAuth provisioning failed at '.$provisionStage.' ('.get_class($error).')');
+    if ($transactionStarted && class_exists('Sql', false)) {
+      $connection = Sql::getConnection();
+      if ($connection && $connection->inTransaction()) $connection->rollBack();
+    }
+    if ($unavailable) {
+      if (ob_get_level() > 0) ob_clean();
+      http_response_code(403);
+      header('Content-Type: application/json; charset=UTF-8');
+      header('Cache-Control: no-store');
+      echo json_encode(array('error'=>array('code'=>'oauth_user_unavailable','message'=>'Mapped ProjeQtOr user is unavailable')));
+      exit;
+    }
+    denyMcpRequest(500, 'Could not provision OAuth user');
+  }
+  if (ob_get_level() > 0) ob_clean();
+  header('Content-Type: application/json; charset=UTF-8');
+  header('Cache-Control: no-store');
+  echo json_encode(array('ok'=>true,'created'=>$created,'username'=>$username,'id'=>(int)$oauthUser->id));
+  exit;
+}
 
 $_SERVER['PHP_AUTH_USER'] = $username;
 $_SERVER['REMOTE_USER'] = $username;

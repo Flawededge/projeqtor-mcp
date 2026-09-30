@@ -389,5 +389,5 @@ function mcpWorkerCompatibility(): array {
   mcpEnsureOperationTable();$required=array('request_hash','idempotency_key','attempts','max_attempts','retry_policy','lease_owner','lease_expires_at','heartbeat_at','error_code','recovery_state','module_id','action_version','effects_json');
   $query=Sql::query("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='mcpoperation'");$present=array();while($row=Sql::fetchLine($query))$present[]=$row['column_name'];$missing=array_values(array_diff($required,$present));
   $path='/var/lib/projeqtor/mcp-worker-heartbeat';$stamp=is_file($path)?(int)trim((string)file_get_contents($path)):0;$age=$stamp?time()-$stamp:null;
-  return array('schemaVersion'=>4,'workerVersion'=>'2.0.1','compatible'=>!count($missing),'missingColumns'=>$missing,'heartbeatAt'=>$stamp?date(DATE_ATOM,$stamp):null,'heartbeatAgeSeconds'=>$age,'heartbeatFresh'=>$age!==null&&$age>=0&&$age<=45);
+  return array('schemaVersion'=>4,'workerVersion'=>'2.1.0','compatible'=>!count($missing),'missingColumns'=>$missing,'heartbeatAt'=>$stamp?date(DATE_ATOM,$stamp):null,'heartbeatAgeSeconds'=>$age,'heartbeatFresh'=>$age!==null&&$age>=0&&$age<=45);
 }

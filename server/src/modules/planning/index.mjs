@@ -45,7 +45,7 @@ const inputSchema = z.object({
 });
 
 export default defineModule({
-  id: 'planning', version: '2.0.1', dependencies: ['core'],
+  id: 'planning', version: '2.1.0', dependencies: ['core'],
   claims: { actions: PLANNING_ACTIONS, jobs: PLANNING_JOBS, tools: ['projeqtor_plan_projects'] },
   register(registrar, context) {
     registerCanonicalActionTool(registrar, context, {

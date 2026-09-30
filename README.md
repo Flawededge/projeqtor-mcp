@@ -19,9 +19,19 @@ ProjeQtOr
 
 The bearer token is stored only as a SHA-256 digest. The MCP server and bridge share a separate signing key through mounted secret files. The bridge also accepts requests from one explicitly configured MCP container address.
 
+Version 2.1 adds an optional Keycloak 26.7.4 OAuth profile for Claude Cloud and ChatGPT. Microsoft Entra remains the upstream identity provider. A user qualifies with one assigned account from either `@hikoterra.com` or `@pcnzl.com`; an identity in both domains is not required.
+
+The authentication paths remain separated:
+
+- Private `/mcp` accepts only locally generated bearer tokens.
+- Internal `/mcp/oauth` accepts only audience-bound Keycloak access tokens.
+- Public `/mcp_projeqtor` must proxy exclusively to `/mcp/oauth`.
+
+See [docs/OAUTH.md](docs/OAUTH.md) for Entra registration, root-only secret handling, Claude and ChatGPT client setup, proxy rules, acceptance, and revocation.
+
 ## Current interface
 
-Version `2.0.1` splits full-control coverage into Core plus twelve independently owned module packs for ProjeQtOr 13.1.
+Version `2.1.0` splits full-control coverage into Core plus twelve independently owned module packs for ProjeQtOr 13.1.
 
 - Discovery: identity, capabilities, module/action ownership, installed class policy, exact schemas, reference values, and native-handler coverage.
 - Query: database-filtered keyset pagination and History-aware changes with tombstones.
@@ -39,8 +49,8 @@ See [docs/TOOLS.md](docs/TOOLS.md) for inputs, limits, units, examples, and pagi
 
 The stable release publishes two public Linux/AMD64 images:
 
-- `ghcr.io/flawededge/projeqtor-mcp-app:2.0.1` — ProjeQtOr 13.1, bridge, initializer, and worker runtime.
-- `ghcr.io/flawededge/projeqtor-mcp:2.0.1` — non-root MCP HTTP server.
+- `ghcr.io/flawededge/projeqtor-mcp-app:2.1.0` — ProjeQtOr 13.1, bridge, initializer, and worker runtime.
+- `ghcr.io/flawededge/projeqtor-mcp:2.1.0` — non-root MCP HTTP server.
 
 The worker reuses the application image. PostgreSQL and the gateway use their official upstream images. For a fresh local deployment:
 
