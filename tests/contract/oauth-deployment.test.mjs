@@ -70,6 +70,26 @@ test('realm uses short tokens, rotating refresh tokens, PKCE, and no implicit or
   }
 });
 
+test('cloud clients support standard OpenID profile and email scopes', () => {
+  const scopes = new Map(realm.clientScopes.map(scope => [scope.name, scope]));
+  for (const name of ['profile', 'email']) {
+    assert.equal(scopes.get(name)?.protocol, 'openid-connect');
+    assert.ok(scopes.get(name).protocolMappers.length > 0);
+    assert.ok(realm.defaultDefaultClientScopes.includes(name));
+  }
+
+  const profileClaims = new Set(scopes.get('profile').protocolMappers.map(mapper => mapper.config['claim.name']).filter(Boolean));
+  const emailClaims = new Set(scopes.get('email').protocolMappers.map(mapper => mapper.config['claim.name']).filter(Boolean));
+  assert.ok(profileClaims.has('preferred_username'));
+  assert.ok(emailClaims.has('email'));
+  assert.ok(emailClaims.has('email_verified'));
+
+  for (const client of realm.clients) {
+    assert.ok(client.defaultClientScopes.includes('profile'));
+    assert.ok(client.defaultClientScopes.includes('email'));
+  }
+});
+
 test('Microsoft federation is single-tenant and maps immutable identity claims', () => {
   const microsoft = realm.identityProviders.find(provider => provider.alias === 'microsoft');
   assert.match(microsoft.config.authorizationUrl, /login\.microsoftonline\.com\/\$\{ENTRA_TENANT_ID\}/);

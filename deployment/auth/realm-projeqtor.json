@@ -21,6 +21,8 @@
   "refreshTokenMaxReuse": 0,
   "browserFlow": "microsoft-browser",
   "defaultDefaultClientScopes": [
+    "profile",
+    "email",
     "projeqtor-identity"
   ],
   "defaultOptionalClientScopes": [
@@ -146,6 +148,81 @@
     }
   ],
   "clientScopes": [
+    {
+      "name": "profile",
+      "description": "OpenID Connect profile claims required by cloud MCP clients",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "description": "OpenID Connect email claims required by cloud MCP clients",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email verified",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "emailVerified",
+            "claim.name": "email_verified",
+            "jsonType.label": "boolean",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
     {
       "name": "projeqtor-identity",
       "description": "Validated Microsoft identity claims for the ProjeQtOr MCP",
@@ -281,6 +358,8 @@
         "standard.token.exchange.enabled": "false"
       },
       "defaultClientScopes": [
+        "profile",
+        "email",
         "projeqtor-identity"
       ],
       "optionalClientScopes": [
@@ -314,6 +393,8 @@
         "standard.token.exchange.enabled": "false"
       },
       "defaultClientScopes": [
+        "profile",
+        "email",
         "projeqtor-identity"
       ],
       "optionalClientScopes": [
