@@ -118,6 +118,13 @@ function exactFilter(filters = {}, extra = []) {
 }
 export function createProjeqtorServer({ username, apiRequest }) {
   const server = new McpServer({ name: 'projeqtor', version: SERVER_VERSION });
+  const registerTool = server.registerTool.bind(server);
+  const securitySchemes = [{ type: 'oauth2', scopes: ['projeqtor:read', 'projeqtor:write'] }];
+  server.registerTool = (name, config, handler) => registerTool(name, {
+    ...config,
+    securitySchemes,
+    _meta: { ...(config?._meta ?? {}), securitySchemes }
+  }, handler);
   const schemaCache = new Map();
   const referenceCache = new Map();
   let moduleCatalog = [];

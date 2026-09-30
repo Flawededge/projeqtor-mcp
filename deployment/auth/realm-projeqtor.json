@@ -1,0 +1,335 @@
+{
+  "realm": "projeqtor",
+  "displayName": "ProjeQtOr MCP",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 0,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 28800,
+  "offlineSessionIdleTimeout": 3600,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "browserFlow": "microsoft-browser",
+  "defaultDefaultClientScopes": [
+    "projeqtor-identity"
+  ],
+  "defaultOptionalClientScopes": [
+    "projeqtor:read",
+    "projeqtor:write"
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "microsoft-redirector",
+      "config": {
+        "defaultProvider": "microsoft"
+      }
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "microsoft-browser",
+      "description": "Use an existing session or redirect to the assigned Microsoft tenant",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "identity-provider-redirector",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "userSetupAllowed": false,
+          "authenticatorConfig": "microsoft-redirector"
+        }
+      ]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "microsoft",
+      "displayName": "Microsoft",
+      "providerId": "oidc",
+      "enabled": true,
+      "updateProfileFirstLoginMode": "off",
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": true,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "authorizationUrl": "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/authorize",
+        "tokenUrl": "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/token",
+        "logoutUrl": "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/logout",
+        "issuer": "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/v2.0",
+        "jwksUrl": "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/discovery/v2.0/keys",
+        "userInfoUrl": "https://graph.microsoft.com/oidc/userinfo",
+        "clientId": "${ENTRA_CLIENT_ID}",
+        "clientSecret": "${ENTRA_CLIENT_SECRET}",
+        "clientAuthMethod": "client_secret_post",
+        "defaultScope": "openid profile email User.Read",
+        "validateSignature": "true",
+        "useJwksUrl": "true",
+        "pkceEnabled": "true",
+        "pkceMethod": "S256",
+        "syncMode": "FORCE"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "entra-object-id",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "FORCE",
+        "claim": "oid",
+        "user.attribute": "entra_oid"
+      }
+    },
+    {
+      "name": "entra-tenant-id",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "FORCE",
+        "claim": "tid",
+        "user.attribute": "entra_tid"
+      }
+    },
+    {
+      "name": "entra-upn",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "FORCE",
+        "claim": "preferred_username",
+        "user.attribute": "entra_upn"
+      }
+    },
+    {
+      "name": "entra-display-name",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "FORCE",
+        "claim": "name",
+        "user.attribute": "entra_display_name"
+      }
+    },
+    {
+      "name": "entra-email",
+      "identityProviderAlias": "microsoft",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "FORCE",
+        "claim": "preferred_username",
+        "user.attribute": "email"
+      }
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "projeqtor-identity",
+      "description": "Validated Microsoft identity claims for the ProjeQtOr MCP",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "entra-object-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "entra_oid",
+            "claim.name": "entra_oid",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "multivalued": "false"
+          }
+        },
+        {
+          "name": "entra-tenant-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "entra_tid",
+            "claim.name": "entra_tid",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "multivalued": "false"
+          }
+        },
+        {
+          "name": "entra-upn",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "entra_upn",
+            "claim.name": "upn",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "false"
+          }
+        },
+        {
+          "name": "entra-display-name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "entra_display_name",
+            "claim.name": "display_name",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "projeqtor:read",
+      "description": "Read ProjeQtOr data using native permissions",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Read ProjeQtOr records"
+      },
+      "protocolMappers": [
+        {
+          "name": "projeqtor-mcp-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "https://conceptpower.ddns.net/mcp_projeqtor",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "projeqtor:write",
+      "description": "Write ProjeQtOr data using native permissions",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Create and update ProjeQtOr records"
+      },
+      "protocolMappers": [
+        {
+          "name": "projeqtor-mcp-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "https://conceptpower.ddns.net/mcp_projeqtor",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "enabled": true,
+      "bearerOnly": false,
+      "consentRequired": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "standard.token.exchange.enabled": "false"
+      },
+      "defaultClientScopes": [
+        "projeqtor-identity"
+      ],
+      "optionalClientScopes": [
+        "projeqtor:read",
+        "projeqtor:write"
+      ],
+      "clientId": "claude-projeqtor",
+      "name": "Claude Cloud - ProjeQtOr MCP",
+      "description": "Dedicated confidential OAuth client for the Claude Cloud connector",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${CLAUDE_OAUTH_CLIENT_SECRET}",
+      "publicClient": false,
+      "redirectUris": [
+        "${CLAUDE_OAUTH_REDIRECT_URI}"
+      ],
+      "webOrigins": []
+    },
+    {
+      "enabled": true,
+      "bearerOnly": false,
+      "consentRequired": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "standard.token.exchange.enabled": "false"
+      },
+      "defaultClientScopes": [
+        "projeqtor-identity"
+      ],
+      "optionalClientScopes": [
+        "projeqtor:read",
+        "projeqtor:write"
+      ],
+      "clientId": "chatgpt-projeqtor",
+      "name": "ChatGPT - ProjeQtOr MCP",
+      "description": "Pre-registered public PKCE client because stock Keycloak 26.7.4 cannot parse ChatGPT CIMD metadata",
+      "publicClient": true,
+      "redirectUris": [
+        "https://chatgpt.com/connector_platform_oauth_redirect"
+      ],
+      "webOrigins": [
+        "https://chatgpt.com"
+      ]
+    }
+  ]
+}

@@ -63,7 +63,7 @@ export const FINANCIAL_HANDLERS = Object.freeze([
 ]);
 
 export default defineModule({
-  id: 'financial', version: '2.0.1',
+  id: 'financial', version: '2.1.0',
   dependencies: ['core', 'configuration', 'environment', 'products', 'follow_up', 'tools'],
   enabledStateRequirements: [],
   claims: {

@@ -30,7 +30,7 @@ const handlers = [
 ];
 
 export default defineModule({
-  id: 'configuration', version: '2.0.1', dependencies: ['core'],
+  id: 'configuration', version: '2.1.0', dependencies: ['core'],
   enabledStateRequirements: ['moduleConfiguration'],
   claims: {
     classes: [

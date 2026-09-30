@@ -25,7 +25,7 @@ function descriptor() {
 
 test('Planning presentation module claims every canonical action and only one convenience tool', () => {
   assert.equal(planningModule.id, 'planning');
-  assert.equal(planningModule.version, '2.0.1');
+  assert.equal(planningModule.version, '2.1.0');
   assert.deepEqual(planningModule.claims.tools, ['projeqtor_plan_projects']);
   assert.deepEqual(planningModule.claims.actions, PLANNING_ACTIONS);
   assert.equal(PLANNING_ACTIONS.length, 21);

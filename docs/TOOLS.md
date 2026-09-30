@@ -1,6 +1,6 @@
 # Tool contract
 
-This document describes the `2.0.1` modular full-control interface for ProjeQtOr 13.1.
+This document describes the `2.1.0` modular full-control interface for ProjeQtOr 13.1.
 
 ## Discovery
 

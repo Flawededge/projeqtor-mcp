@@ -27,6 +27,9 @@ test('generated host secrets are traversable only by root and readable by unpriv
   for (const file of ['db-password', 'admin-password', 'api.htpasswd', 'mcp-signing-key', 'mcp-cursor-key', 'mcp-users.json']) {
     assert.match(setupHost, new RegExp(`chmod 0444 [^\\n]*"\\$secrets/${file.replace('.', '\\.')}`));
   }
+  for (const file of ['keycloak-db-password', 'keycloak-admin-password', 'claude-oauth-client-secret', 'entra-client-secret']) {
+    assert.match(setupHost, new RegExp(`chmod 0444 [^\\n]*"\\$secrets/${file}`));
+  }
   assert.doesNotMatch(setupHost, /chmod 0444[^\n]*admin-mcp-token/);
   assert.doesNotMatch(setupHost, /chmod 0444[^\n]*api-password/);
 });
@@ -34,12 +37,16 @@ test('generated host secrets are traversable only by root and readable by unpriv
 test('release Compose uses portable read-only secret bind mounts', () => {
   assert.doesNotMatch(releaseCompose, /^\s*secrets:/m);
   assert.doesNotMatch(releaseCompose, /mode: 0444/);
-  assert.equal((releaseCompose.match(/db-password:\/run\/secrets\/db_password:ro/g) ?? []).length, 4);
+  assert.equal((releaseCompose.match(/db-password:\/run\/secrets\/db_password:ro/g) ?? []).length, 5);
   assert.equal((releaseCompose.match(/mcp-signing-key:\/run\/secrets\/mcp_signing_key:ro/g) ?? []).length, 4);
   assert.equal((releaseCompose.match(/mcp-cursor-key:\/run\/secrets\/mcp_cursor_key:ro/g) ?? []).length, 3);
   assert.equal((releaseCompose.match(/admin-password:\/run\/secrets\/admin_password:ro/g) ?? []).length, 1);
   assert.equal((releaseCompose.match(/api\.htpasswd:\/run\/secrets\/projeqtor-api-htpasswd:ro/g) ?? []).length, 1);
   assert.equal((releaseCompose.match(/mcp-users\.json:\/run\/secrets\/mcp_users:ro/g) ?? []).length, 1);
+  assert.equal((releaseCompose.match(/keycloak-db-password:\/run\/secrets\/keycloak_db_password:ro/g) ?? []).length, 2);
+  assert.equal((releaseCompose.match(/keycloak-admin-password:\/run\/secrets\/keycloak_admin_password:ro/g) ?? []).length, 1);
+  assert.equal((releaseCompose.match(/entra-client-secret:\/run\/secrets\/entra_client_secret:ro/g) ?? []).length, 1);
+  assert.equal((releaseCompose.match(/claude-oauth-client-secret:\/run\/secrets\/claude_oauth_client_secret:ro/g) ?? []).length, 1);
 });
 
 test('generated MCP digest matches the trimmed bearer token clients send', () => {

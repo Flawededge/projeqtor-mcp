@@ -1,0 +1,191 @@
+{
+  "attributes": [
+    {
+      "name": "username",
+      "displayName": "${username}",
+      "validations": {
+        "length": {
+          "min": 3,
+          "max": 255
+        },
+        "username-prohibited-characters": {},
+        "up-username-not-idn-homograph": {}
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin",
+          "user"
+        ]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "email",
+      "displayName": "${email}",
+      "validations": {
+        "email": {},
+        "length": {
+          "max": 255
+        }
+      },
+      "required": {
+        "roles": [
+          "user"
+        ]
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin",
+          "user"
+        ]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "firstName",
+      "displayName": "${firstName}",
+      "validations": {
+        "length": {
+          "max": 255
+        },
+        "person-name-prohibited-characters": {}
+      },
+      "required": {
+        "roles": [
+          "user"
+        ]
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin",
+          "user"
+        ]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "lastName",
+      "displayName": "${lastName}",
+      "validations": {
+        "length": {
+          "max": 255
+        },
+        "person-name-prohibited-characters": {}
+      },
+      "required": {
+        "roles": [
+          "user"
+        ]
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin",
+          "user"
+        ]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "entra_oid",
+      "displayName": "Microsoft object identifier",
+      "validations": {
+        "length": {
+          "min": 36,
+          "max": 36
+        }
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin"
+        ]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "entra_tid",
+      "displayName": "Microsoft tenant identifier",
+      "validations": {
+        "length": {
+          "min": 36,
+          "max": 36
+        }
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin"
+        ]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "entra_upn",
+      "displayName": "Microsoft user principal name",
+      "validations": {
+        "email": {},
+        "length": {
+          "max": 255
+        }
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin"
+        ]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "entra_display_name",
+      "displayName": "Microsoft display name",
+      "validations": {
+        "length": {
+          "max": 255
+        }
+      },
+      "permissions": {
+        "view": [
+          "admin",
+          "user"
+        ],
+        "edit": [
+          "admin"
+        ]
+      },
+      "multivalued": false
+    }
+  ],
+  "groups": [
+    {
+      "name": "user-metadata",
+      "displayHeader": "User metadata",
+      "displayDescription": "Attributes, which refer to user metadata"
+    }
+  ]
+}

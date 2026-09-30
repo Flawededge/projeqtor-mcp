@@ -2,6 +2,32 @@
 
 All notable changes are documented here. Versions follow Semantic Versioning.
 
+## [2.1.0] - 2026-09-29
+
+### Added
+
+- Optional pinned Keycloak 26.7.4 OAuth profile federated to a single Microsoft Entra tenant for Claude Cloud and ChatGPT.
+- RFC 9728 protected-resource metadata, OAuth-only `/mcp/oauth`, RS256/JWKS verification, issuer/audience/time/scope/tenant checks, and either-domain eligibility for `hikoterra.com` or `pcnzl.com`.
+- Atomic first-login provisioning as a ProjeQtOr Team Member resource using an immutable Microsoft-derived login and native `User::save()`.
+- Separate Keycloak PostgreSQL database/role bootstrap, root-only file-backed secrets, five-minute access tokens, rotating refresh tokens, PKCE, and one-hour idle sessions.
+- OAuth deployment runbook and focused unit/contract coverage.
+
+### Security
+
+- Public `/mcp_projeqtor` is isolated from private static-token `/mcp`; public static administrator tokens are rejected by the OAuth route.
+- Keycloak has no published port, runs non-root without Linux capabilities, and keeps administration, the master realm, and client registration off the public proxy.
+- OAuth responses and `projeqtor_whoami` never expose Microsoft object IDs, tokens, or secrets.
+
+### Compatibility
+
+- Claude uses a dedicated confidential client with its exact configured callback.
+- ChatGPT uses OpenAI's supported pre-registered public PKCE-client path. Stock Keycloak 26.7.4 rejects ChatGPT's plural CIMD authentication-method property, so this release does not enable CIMD or unrestricted DCR and does not ship a custom OAuth extension.
+
+### Validation
+
+- OAuth tests cover independent eligibility of both allowed domains, wrong tenant, guest, other domain, missing scope, weak algorithm, discovery metadata, audience binding, and deployment boundaries.
+- Existing 36-tool and 212-action ProjeQtOr permission semantics remain unchanged.
+
 ## [2.0.1] - 2026-09-28
 
 ### Fixed
