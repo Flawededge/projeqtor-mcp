@@ -43,8 +43,11 @@ test('public Keycloak surface blocks administration, master realm, and DCR', () 
   const publicServer = gateway.slice(gateway.lastIndexOf('    server {'));
   const broad = publicServer.indexOf('location ^~ /projeqtor-auth/ {');
   for (const blocked of [
+    'location = /projeqtor-auth/admin',
     'location ^~ /projeqtor-auth/admin/',
+    'location = /projeqtor-auth/realms/master',
     'location ^~ /projeqtor-auth/realms/master/',
+    'location = /projeqtor-auth/realms/projeqtor/clients-registrations',
     'location ^~ /projeqtor-auth/realms/projeqtor/clients-registrations/'
   ]) {
     const position = publicServer.indexOf(blocked);
