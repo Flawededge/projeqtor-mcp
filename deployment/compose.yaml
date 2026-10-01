@@ -65,12 +65,15 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "false"
       KC_CACHE: local
+      KC_FEATURES: cimd
       ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
       ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
       CLAUDE_OAUTH_REDIRECT_URI: ${CLAUDE_OAUTH_REDIRECT_URI:-}
     volumes:
       - ./auth/realm-projeqtor.json:/opt/keycloak/data/import/realm-projeqtor.json:ro
       - ./auth/user-profile.json:/opt/keycloak/conf/projeqtor-user-profile.json:ro
+      - ./auth/client-profiles.json:/opt/keycloak/conf/projeqtor-client-profiles.json:ro
+      - ./auth/client-policies.json:/opt/keycloak/conf/projeqtor-client-policies.json:ro
       - ./auth/keycloak-entrypoint.sh:/opt/keycloak/bin/oauth-entrypoint.sh:ro
       - ./auth/keycloak-healthcheck.sh:/opt/keycloak/bin/oauth-healthcheck.sh:ro
       - ${PROJEQTOR_SECRETS_DIR:-./secrets}/keycloak-db-password:/run/secrets/keycloak_db_password:ro

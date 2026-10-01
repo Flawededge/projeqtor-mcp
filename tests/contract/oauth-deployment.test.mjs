@@ -8,6 +8,8 @@ const realm = JSON.parse(await readFile(new URL('../../deployment/auth/realm-pro
 const entrypoint = await readFile(new URL('../../deployment/auth/keycloak-entrypoint.sh', import.meta.url), 'utf8');
 const healthcheck = await readFile(new URL('../../deployment/auth/keycloak-healthcheck.sh', import.meta.url), 'utf8');
 const userProfile = JSON.parse(await readFile(new URL('../../deployment/auth/user-profile.json', import.meta.url), 'utf8'));
+const clientProfiles = JSON.parse(await readFile(new URL('../../deployment/auth/client-profiles.json', import.meta.url), 'utf8'));
+const clientPolicies = JSON.parse(await readFile(new URL('../../deployment/auth/client-policies.json', import.meta.url), 'utf8'));
 const bridge = await readFile(new URL('../../bridge/index.php', import.meta.url), 'utf8');
 const router = await readFile(new URL('../../bridge/router.php', import.meta.url), 'utf8');
 const server = await readFile(new URL('../../server/src/main.mjs', import.meta.url), 'utf8');
@@ -20,6 +22,41 @@ test('Keycloak is pinned, profile-gated, non-root, capability-free, and has no h
   assert.match(keycloak, /cap_drop: \[ALL\]/);
   assert.match(keycloak, /no-new-privileges:true/);
   assert.doesNotMatch(keycloak, /^\s+ports:/m);
+});
+
+test('Claude published identity uses a narrow HTTPS-only CIMD policy', () => {
+  assert.match(compose, /KC_FEATURES: cimd/);
+  assert.match(compose, /client-profiles\.json:\/opt\/keycloak\/conf\/projeqtor-client-profiles\.json:ro/);
+  assert.match(compose, /client-policies\.json:\/opt\/keycloak\/conf\/projeqtor-client-policies\.json:ro/);
+  assert.match(entrypoint, /update client-policies\/profiles/);
+  assert.match(entrypoint, /update client-policies\/policies/);
+
+  assert.equal(clientProfiles.profiles.length, 1);
+  const profile = clientProfiles.profiles[0];
+  assert.equal(profile.name, 'claude-published-identity-cimd');
+  assert.equal(profile.executors.length, 1);
+  assert.equal(profile.executors[0].executor, 'client-id-metadata-document');
+  assert.deepEqual(profile.executors[0].configuration, {
+    'cimd-allow-http-scheme': false,
+    'cimd-allow-permitted-domains': ['claude.ai'],
+    'cimd-restrict-same-domain': true,
+    'cimd-required-properties': [],
+    'only-allow-confidential-client': false
+  });
+
+  assert.equal(clientPolicies.policies.length, 1);
+  const policy = clientPolicies.policies[0];
+  assert.equal(policy.name, 'claude-published-identity-cimd');
+  assert.equal(policy.enabled, true);
+  assert.deepEqual(policy.profiles, ['claude-published-identity-cimd']);
+  assert.deepEqual(policy.conditions, [{
+    condition: 'client-id-uri',
+    configuration: {
+      'is-negative-logic': false,
+      'client-id-uri-scheme': ['https'],
+      'client-id-uri-allow-permitted-domains': ['claude.ai']
+    }
+  }]);
 });
 
 test('Keycloak gets a separate database and role without exposing either password', () => {

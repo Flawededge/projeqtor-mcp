@@ -70,6 +70,10 @@ fi
   --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null
 /opt/keycloak/bin/kcadm.sh update users/profile --config /tmp/kcadm.config \
   -r projeqtor -f /opt/keycloak/conf/projeqtor-user-profile.json >/dev/null
+/opt/keycloak/bin/kcadm.sh update client-policies/profiles --config /tmp/kcadm.config \
+  -r projeqtor -f /opt/keycloak/conf/projeqtor-client-profiles.json >/dev/null
+/opt/keycloak/bin/kcadm.sh update client-policies/policies --config /tmp/kcadm.config \
+  -r projeqtor -f /opt/keycloak/conf/projeqtor-client-policies.json >/dev/null
 rm -f /tmp/kcadm.config
 : > /tmp/oauth-profile-ready
 
