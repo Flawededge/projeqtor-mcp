@@ -1,0 +1,26 @@
+{
+  "policies": [
+    {
+      "name": "claude-published-identity-cimd",
+      "description": "Apply the constrained CIMD profile only to HTTPS client IDs hosted by claude.ai",
+      "enabled": true,
+      "conditions": [
+        {
+          "condition": "client-id-uri",
+          "configuration": {
+            "is-negative-logic": false,
+            "client-id-uri-scheme": [
+              "https"
+            ],
+            "client-id-uri-allow-permitted-domains": [
+              "claude.ai"
+            ]
+          }
+        }
+      ],
+      "profiles": [
+        "claude-published-identity-cimd"
+      ]
+    }
+  ]
+}

@@ -55,15 +55,16 @@ Start the stack with the OAuth profile. The one-shot `auth-db-init` service crea
 
 ### Claude Cloud
 
-Use the following values in the Claude connector setup:
+Use Claude's published identity in the connector setup:
 
 - MCP URL: `https://conceptpower.ddns.net/mcp_projeqtor`
-- OAuth client ID: `claude-projeqtor`
-- OAuth client secret: the root-only `claude-oauth-client-secret` value
+- Authentication: `Sign in now`
+- OAuth client: `Use Claude's published identity`
+- Transport: `Streamable HTTP`
 - Authorization server: discovered from the MCP protected-resource metadata
 - Scopes: `projeqtor:read projeqtor:write`
 
-Put Claude's exact callback into `CLAUDE_OAUTH_REDIRECT_URI` before Keycloak first imports the realm.
+Keycloak's experimental CIMD support is enabled and constrained to HTTPS metadata and callbacks on `claude.ai`. Dynamic client registration remains blocked publicly. The pre-registered confidential `claude-projeqtor` client remains available as a private fallback, using the exact Claude callback and the root-only client secret; do not expose that secret to ordinary users.
 
 ### ChatGPT
 

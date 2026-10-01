@@ -1,0 +1,22 @@
+{
+  "profiles": [
+    {
+      "name": "claude-published-identity-cimd",
+      "description": "Allow Claude published OAuth client identity through a constrained Client ID Metadata Document policy",
+      "executors": [
+        {
+          "executor": "client-id-metadata-document",
+          "configuration": {
+            "cimd-allow-http-scheme": false,
+            "cimd-allow-permitted-domains": [
+              "claude.ai"
+            ],
+            "cimd-restrict-same-domain": true,
+            "cimd-required-properties": [],
+            "only-allow-confidential-client": false
+          }
+        }
+      ]
+    }
+  ]
+}
