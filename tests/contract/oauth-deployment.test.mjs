@@ -10,6 +10,9 @@ const healthcheck = await readFile(new URL('../../deployment/auth/keycloak-healt
 const userProfile = JSON.parse(await readFile(new URL('../../deployment/auth/user-profile.json', import.meta.url), 'utf8'));
 const clientProfiles = JSON.parse(await readFile(new URL('../../deployment/auth/client-profiles.json', import.meta.url), 'utf8'));
 const clientPolicies = JSON.parse(await readFile(new URL('../../deployment/auth/client-policies.json', import.meta.url), 'utf8'));
+const keycloakProviderDockerfile = await readFile(new URL('../../deployment/auth/keycloak-provider/Dockerfile', import.meta.url), 'utf8');
+const claudeCimdExecutor = await readFile(new URL('../../deployment/auth/keycloak-provider/src/main/java/com/flawededge/projeqtor/auth/ClaudeClientIdMetadataDocumentExecutor.java', import.meta.url), 'utf8');
+const claudeCimdFactory = await readFile(new URL('../../deployment/auth/keycloak-provider/src/main/java/com/flawededge/projeqtor/auth/ClaudeClientIdMetadataDocumentExecutorFactory.java', import.meta.url), 'utf8');
 const bridge = await readFile(new URL('../../bridge/index.php', import.meta.url), 'utf8');
 const router = await readFile(new URL('../../bridge/router.php', import.meta.url), 'utf8');
 const server = await readFile(new URL('../../server/src/main.mjs', import.meta.url), 'utf8');
@@ -17,7 +20,10 @@ const server = await readFile(new URL('../../server/src/main.mjs', import.meta.u
 test('Keycloak is pinned, profile-gated, non-root, capability-free, and has no host port', () => {
   const keycloak = compose.slice(compose.indexOf('  keycloak:'), compose.indexOf('\n  initialize:'));
   assert.match(keycloak, /profiles: \[oauth\]/);
-  assert.match(keycloak, /keycloak:26\.7\.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c/);
+  assert.match(keycloak, /image: \$\{KEYCLOAK_IMAGE:-projeqtor-keycloak:26\.7\.4-claude-cimd-v1\}/);
+  assert.match(keycloak, /build:\s+context: \.\/auth\/keycloak-provider/);
+  assert.match(keycloakProviderDockerfile, /FROM quay\.io\/keycloak\/keycloak:26\.7\.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c/);
+  assert.match(keycloakProviderDockerfile, /kc\.sh build --features=cimd/);
   assert.match(keycloak, /user: "1000:1000"/);
   assert.match(keycloak, /cap_drop: \[ALL\]/);
   assert.match(keycloak, /no-new-privileges:true/);
@@ -35,7 +41,7 @@ test('Claude published identity uses a narrow HTTPS-only CIMD policy', () => {
   const profile = clientProfiles.profiles[0];
   assert.equal(profile.name, 'claude-published-identity-cimd');
   assert.equal(profile.executors.length, 1);
-  assert.equal(profile.executors[0].executor, 'client-id-metadata-document');
+  assert.equal(profile.executors[0].executor, 'claude-client-id-metadata-document');
   assert.deepEqual(profile.executors[0].configuration, {
     'cimd-allow-http-scheme': false,
     'cimd-allow-permitted-domains': ['claude.ai'],
@@ -57,6 +63,21 @@ test('Claude published identity uses a narrow HTTPS-only CIMD policy', () => {
       'client-id-uri-allow-permitted-domains': ['claude.ai']
     }
   }]);
+  assert.doesNotMatch(JSON.stringify(clientProfiles), /\*/);
+  assert.doesNotMatch(JSON.stringify(clientPolicies), /\*/);
+});
+
+test('Claude CIMD compatibility is exact-match and preserves stock validation', () => {
+  assert.match(claudeCimdFactory, /PROVIDER_ID = "claude-client-id-metadata-document"/);
+  assert.match(claudeCimdExecutor, /CLAUDE_CLIENT_ID = "https:\/\/claude\.ai\/oauth\/mcp-oauth-client-metadata"/);
+  assert.match(claudeCimdExecutor, /CLAUDE_REDIRECT_URI = "https:\/\/claude\.ai\/api\/mcp\/auth_callback"/);
+  assert.match(claudeCimdExecutor, /JWT_AUTHORIZATION_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer"/);
+  assert.match(claudeCimdExecutor, /grants\.remove\(JWT_AUTHORIZATION_GRANT\)/);
+  assert.match(claudeCimdExecutor, /CLAUDE_CLIENT_ID\.equals\(clientIdUri\.toString\(\)\)/);
+  assert.match(claudeCimdExecutor, /CLAUDE_REDIRECT_URI\.equals\(redirectUri\.toString\(\)\)/);
+  assert.match(claudeCimdExecutor, /"none"\.equals\(authenticationMethod\)/);
+  assert.match(claudeCimdExecutor, /super\.validateClientMetadata\(clientIdUri, redirectUri, client\)/);
+  assert.doesNotMatch(claudeCimdExecutor, /setTokenEndpointAuthMethod/);
 });
 
 test('Keycloak gets a separate database and role without exposing either password', () => {
