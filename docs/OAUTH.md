@@ -64,7 +64,9 @@ Use Claude's published identity in the connector setup:
 - Authorization server: discovered from the MCP protected-resource metadata
 - Scopes: `projeqtor:read projeqtor:write`
 
-Keycloak's experimental CIMD support is enabled and constrained to HTTPS metadata and callbacks on `claude.ai`. Dynamic client registration remains blocked publicly. The pre-registered confidential `claude-projeqtor` client remains available as a private fallback, using the exact Claude callback and the root-only client secret; do not expose that secret to ordinary users.
+Keycloak's experimental CIMD support is enabled and constrained to HTTPS metadata and callbacks on `claude.ai`. Dynamic client registration remains blocked publicly. Claude currently publishes the confidential-only `urn:ietf:params:oauth:grant-type:jwt-bearer` grant in otherwise-public PKCE metadata. The pinned Keycloak image therefore includes a narrow compatibility provider that removes only that grant, and only when both Claude's exact metadata URL and exact callback match, before delegating all remaining validation to Keycloak. Revalidate or remove this provider when upgrading Keycloak.
+
+The pre-registered confidential `claude-projeqtor` client remains available as a private fallback, using the exact Claude callback and the root-only client secret; do not expose that secret to ordinary users.
 
 ### ChatGPT
 
