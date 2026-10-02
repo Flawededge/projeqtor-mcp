@@ -19,7 +19,7 @@ const server = await readFile(new URL('../../server/src/main.mjs', import.meta.u
 
 test('Keycloak is pinned, profile-gated, non-root, capability-free, and has no host port', () => {
   const keycloak = compose.slice(compose.indexOf('  keycloak:'), compose.indexOf('\n  initialize:'));
-  assert.match(keycloak, /profiles: \[oauth\]/);
+  assert.match(keycloak, /profiles: \[keycloak-rollback\]/);
   assert.match(keycloak, /image: \$\{KEYCLOAK_IMAGE:-projeqtor-keycloak:26\.7\.4-claude-cimd-v1\}/);
   assert.match(keycloak, /build:\s+context: \.\/auth\/keycloak-provider/);
   assert.match(keycloakProviderDockerfile, /FROM quay\.io\/keycloak\/keycloak:26\.7\.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c/);
@@ -97,20 +97,10 @@ test('public and private MCP authentication routes are distinct', () => {
   assert.doesNotMatch(gateway.slice(gateway.indexOf('location = /mcp_projeqtor')), /proxy_pass http:\/\/mcp:3000\/mcp;/);
 });
 
-test('public Keycloak surface blocks administration, master realm, and DCR', () => {
-  const publicServer = gateway.slice(gateway.lastIndexOf('    server {'));
-  const broad = publicServer.indexOf('location ^~ /projeqtor-auth/ {');
-  for (const blocked of [
-    'location = /projeqtor-auth/admin',
-    'location ^~ /projeqtor-auth/admin/',
-    'location = /projeqtor-auth/realms/master',
-    'location ^~ /projeqtor-auth/realms/master/',
-    'location = /projeqtor-auth/realms/projeqtor/clients-registrations',
-    'location ^~ /projeqtor-auth/realms/projeqtor/clients-registrations/'
-  ]) {
-    const position = publicServer.indexOf(blocked);
-    assert.ok(position >= 0 && position < broad);
-  }
+test('retired Keycloak routes return 404 on both gateway listeners', () => {
+  assert.equal((gateway.match(/location = \/projeqtor-auth \{ return 404; \}/g) ?? []).length, 2);
+  assert.equal((gateway.match(/location \^~ \/projeqtor-auth\/ \{ return 404; \}/g) ?? []).length, 2);
+  assert.doesNotMatch(gateway, /proxy_pass http:\/\/keycloak/);
 });
 
 test('realm uses short tokens, rotating refresh tokens, PKCE, and no implicit or password grants', () => {
@@ -184,10 +174,11 @@ test('first login provisions exactly one Team Member under an advisory lock', ()
   assert.doesNotMatch(bridge, /INSERT INTO .*fullname/);
 });
 
-test('identity output is useful but excludes Microsoft object IDs and tokens', () => {
+test('identity output is useful but excludes subject digests and tokens', () => {
   assert.match(router, /'displayName'/);
   assert.match(router, /'authenticationProvider'/);
-  assert.match(router, /\$publicUsername=\$isMicrosoft && \$user->email/);
+  assert.match(router, /'auth0'/);
+  assert.match(router, /\$publicUsername=\$isAuth0 \? \(\$user->email/);
   assert.match(router, /\$user->resourceName/);
   assert.doesNotMatch(router, /entra_oid|entra_tid|accessToken|refreshToken/);
 });
@@ -212,4 +203,13 @@ test('Microsoft UPN populates both the managed UPN and email attributes', () => 
   const pairs = realm.identityProviderMappers.map(mapper => [mapper.config.claim, mapper.config['user.attribute']]);
   assert.ok(pairs.some(([claim, attribute]) => claim === 'preferred_username' && attribute === 'entra_upn'));
   assert.ok(pairs.some(([claim, attribute]) => claim === 'preferred_username' && attribute === 'email'));
+});
+
+test('active MCP configuration uses Auth0 with no Entra prerequisite', () => {
+  const mcp = compose.slice(compose.indexOf('  mcp:'), compose.indexOf('  gateway:'));
+  assert.match(mcp, /https:\/\/hikoterra\.au\.auth0\.com\//);
+  assert.match(mcp, /MCP_OAUTH_CLIENT_ID/);
+  assert.doesNotMatch(mcp, /ENTRA|keycloak/);
+  assert.match(bridge, /auth0-\[0-9a-f\]\{64\}/);
+  assert.match(server, /provider: principal\.authenticationProvider/);
 });

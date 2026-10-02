@@ -103,7 +103,9 @@ jobs:
           npm run harness:up
       - name: Run disposable integration smoke
         working-directory: server
-        run: npm run test:integration
+        run: |
+          npm run test:integration
+          npm run test:oauth
       - name: Produce sanitized diagnostics
         if: always()
         working-directory: server

@@ -30,7 +30,7 @@ services:
       retries: 20
     security_opt: [no-new-privileges:true]
   auth-db-init:
-    profiles: [oauth]
+    profiles: [keycloak-rollback]
     image: postgres:17-alpine
     restart: "no"
     depends_on:
@@ -44,7 +44,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
   keycloak:
-    profiles: [oauth]
+    profiles: [keycloak-rollback]
     image: ${KEYCLOAK_IMAGE:-projeqtor-keycloak:26.7.4-claude-cimd-v1}
     build:
       context: ./auth/keycloak-provider
@@ -172,10 +172,10 @@ services:
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-localhost,127.0.0.1,mcp,gateway}
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-localhost,127.0.0.1,mcp,gateway}
       MCP_OAUTH_ENABLED: ${MCP_OAUTH_ENABLED:-false}
-      MCP_OAUTH_ISSUER: ${MCP_OAUTH_ISSUER:-https://conceptpower.ddns.net/projeqtor-auth/realms/projeqtor}
+      MCP_OAUTH_ISSUER: ${MCP_OAUTH_ISSUER:-https://hikoterra.au.auth0.com/}
       MCP_OAUTH_RESOURCE: ${MCP_OAUTH_RESOURCE:-https://conceptpower.ddns.net/mcp_projeqtor}
-      MCP_OAUTH_JWKS_URL: ${MCP_OAUTH_JWKS_URL:-http://keycloak:8080/projeqtor-auth/realms/projeqtor/protocol/openid-connect/certs}
-      MCP_OAUTH_ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-00000000-0000-4000-8000-000000000000}
+      MCP_OAUTH_JWKS_URL: ${MCP_OAUTH_JWKS_URL:-https://hikoterra.au.auth0.com/.well-known/jwks.json}
+      MCP_OAUTH_CLIENT_ID: ${MCP_OAUTH_CLIENT_ID:-}
       MCP_OAUTH_ALLOWED_DOMAINS: ${MCP_OAUTH_ALLOWED_DOMAINS:-hikoterra.com,pcnzl.com}
       MCP_OAUTH_REQUIRED_SCOPES: projeqtor:read projeqtor:write
     volumes:
