@@ -44,6 +44,6 @@ chmod 0444 "$secrets/keycloak-db-password" "$secrets/keycloak-admin-password" "$
 printf '%s\n' "Fresh hosting configuration created in $root"
 printf '%s\n' "Administrator password: $secrets/admin-password"
 printf '%s\n' "Administrator MCP token: $secrets/admin-mcp-token"
-printf '%s\n' "OAuth is disabled until the oauth profile is configured."
-printf '%s\n' "Store the Entra client secret with scripts/configure-oauth-secret.sh $root."
+printf '%s\n' "OAuth is disabled until Auth0 is configured; follow docs/OAUTH.md."
+printf '%s\n' "Keycloak secret files are dormant rollback materials; Auth0 uses a public client."
 printf '%s\n' "Keep these files private; their values are intentionally not displayed."

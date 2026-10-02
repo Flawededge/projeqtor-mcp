@@ -68,8 +68,8 @@ if ($method === 'POST' && $bridgeUri === '__mcp/v2/oauth/provision') {
   $email = strtolower(trim((string)($decoded['email'] ?? '')));
   $provider = $decoded['provider'] ?? '';
   if ($requestedUsername !== $username ||
-      !preg_match('/^entra-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D', $username) ||
-      $provider !== 'microsoft' || $displayName === '' || strlen($displayName) > 100 ||
+      !preg_match('/^auth0-[0-9a-f]{64}$/D', $username) ||
+      $provider !== 'auth0' || $displayName === '' || strlen($displayName) > 100 ||
       !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 100) {
     denyMcpRequest(400, 'Invalid OAuth provisioning request');
   }
@@ -124,7 +124,7 @@ if ($method === 'POST' && $bridgeUri === '__mcp/v2/oauth/provision') {
       $oauthUser->idle = 0;
       $oauthUser->isResource = 1;
       $oauthUser->isEmployee = 1;
-      $oauthUser->description = 'Provisioned by Microsoft OAuth';
+      $oauthUser->description = 'Provisioned by Auth0 email OAuth';
       $provisionStage = 'native-save';
       $result = $oauthUser->save();
       if (!in_array(getLastOperationStatus($result), array('OK', 'NO_CHANGE'), true)) throw new RuntimeException('OAuth user save failed');
@@ -133,6 +133,13 @@ if ($method === 'POST' && $bridgeUri === '__mcp/v2/oauth/provision') {
     }
     if (!$oauthUser->id || $oauthUser->idle || $oauthUser->locked) {
       throw new RuntimeException('oauth_user_unavailable');
+    }
+    if (!$created && ($oauthUser->email !== $email || $oauthUser->resourceName !== $displayName)) {
+      $provisionStage = 'native-update';
+      $oauthUser->email = $email;
+      $oauthUser->resourceName = $displayName;
+      $result = $oauthUser->save();
+      if (!in_array(getLastOperationStatus($result), array('OK', 'NO_CHANGE'), true)) throw new RuntimeException('OAuth user update failed');
     }
     $provisionStage = 'commit';
     if (!$connection->commit()) throw new RuntimeException('Could not commit OAuth provisioning transaction');

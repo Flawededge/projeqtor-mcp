@@ -1,123 +1,62 @@
-# Microsoft OAuth for Claude Cloud and ChatGPT
+# Auth0 email OTP for Claude
 
-This guide applies to ProjeQtOr MCP v2.1.0. It authenticates only the remote MCP endpoint. It does not add Microsoft login to the ProjeQtOr web interface or change the private Headscale routes.
+The public MCP accepts Auth0 access tokens only. Private `/mcp` retains static per-user tokens. Native ProjeQtOr rights remain authoritative; the two OAuth API scopes do not grant project rights.
 
-## Trust boundaries
+## Auth0 configuration
 
-- Private MCP: `/mcp` accepts only the existing locally generated bearer tokens.
-- OAuth MCP: `/mcp/oauth` accepts only Keycloak access tokens.
-- Public MCP: `https://conceptpower.ddns.net/mcp_projeqtor` must proxy only to `/mcp/oauth`.
-- Protected-resource metadata: `https://conceptpower.ddns.net/.well-known/oauth-protected-resource/mcp_projeqtor`.
-- Public authorization server: `https://conceptpower.ddns.net/projeqtor-auth/realms/projeqtor`.
-- Keycloak administration, the master realm, and client-registration endpoints must not be exposed by the public proxy.
+Use the existing `hikoterra` tenant (`https://hikoterra.au.auth0.com/`, including the trailing slash).
 
-An eligible user has one Microsoft account whose normalized UPN ends in either `@hikoterra.com` or `@pcnzl.com`. The user does not need an identity in both domains. The MCP repeats this check for every access token even after Entra and Keycloak have authenticated the user.
+1. Create an RS256 API named **ProjeQtOr MCP**, identifier `https://conceptpower.ddns.net/mcp_projeqtor`, scopes `projeqtor:read` and `projeqtor:write`, 300-second access tokens, and offline access enabled. Use the standard Auth0 access-token profile (with `azp`).
+2. Register **ProjeQtOr MCP — Claude** as a First-party public Native application: token authentication `none`, authorization-code and refresh-token grants only, exact callback `https://claude.ai/api/mcp/auth_callback`. Ownership is immutable: choose First-party when creating this user-owned registration so email can be enabled per application without promoting the connection tenant-wide. No wildcards, implicit/password/device-code/client-credentials grants, open DCR, or client secret. Authorize only the two MCP scopes through the API's per-app user-delegated policy; keep machine access disabled and skipping user consent disabled.
+3. Enable only the Passwordless connection named `email` (strategy `email`) for this client, using hosted Universal Login and codes with self-registration. No database, SMS, enterprise or social login. Keep native rate limits and attack protection.
+4. In tenant Settings > Advanced, enable **Resource Parameter Compatibility Profile** and **Include Issuer in Authorization Responses**. Do not set a tenant default audience.
+5. Use rotating, expiring refresh tokens: idle 3,600 seconds, maximum 28,800 seconds, reuse interval 3 seconds. Request `openid email offline_access projeqtor:read projeqtor:write`.
+6. Create a Post Login Action from `deployment/auth/auth0-post-login.cjs`, set its `MCP_CLIENT_ID` secret to the registered client ID, deploy, and bind it to Post Login. This is a configuration value, not a credential. The Action affects this client only, requires email verification and an exact approved domain, enforces S256 authorization, and reapplies admission on refresh.
 
-## Microsoft Entra registration
+Microsoft 365 is email delivery only. The From address is `catchall@hikoterra.com`. Verify an Auth0 test email, delivery logs and mailbox receipt before cutover. Preserve catchall-only sending permissions and never grant tenant-wide mail access as a fallback. Confirm features are available on Free rather than relying on the enterprise trial; do not purchase a subscription.
 
-Create a single-tenant Web registration:
+## Deployment
 
-- Name: `ProjeQtOr MCP Microsoft Login`
-- Supported account type: accounts in this organizational directory only
-- Redirect URI: `https://conceptpower.ddns.net/projeqtor-auth/realms/projeqtor/broker/microsoft/endpoint`
-- Authorization-code flow enabled
-- Implicit grants disabled
-- OIDC scopes `openid`, `profile`, and `email`
-- Delegated `User.Read`
-
-Copy the non-secret tenant and application client IDs into `deployment/.env`. Store the client secret without putting it in a command argument:
-
-```bash
-scripts/configure-oauth-secret.sh deployment
-```
-
-The helper prompts without echo and writes only `deployment/secrets/entra-client-secret`. Do not paste the secret into Compose, Git, chat, or logs.
-
-In the Enterprise Application, enable assignment required. Prefer one `ProjeQtOr Users` security group containing the approved users from either domain. If group assignment is unavailable, assign users individually. Do not assign guests, personal Microsoft accounts, users from other tenants, or users outside both allowed domains.
-
-## Enable the OAuth profile
-
-Set these non-secret values in `deployment/.env`:
+Set these non-secret values in the authoritative environment:
 
 ```dotenv
-COMPOSE_PROFILES=oauth
 MCP_OAUTH_ENABLED=true
-ENTRA_TENANT_ID=00000000-0000-0000-0000-000000000000
-ENTRA_CLIENT_ID=00000000-0000-0000-0000-000000000000
-CLAUDE_OAUTH_REDIRECT_URI=https://callback-shown-by-claude.example/
+MCP_OAUTH_ISSUER=https://hikoterra.au.auth0.com/
+MCP_OAUTH_RESOURCE=https://conceptpower.ddns.net/mcp_projeqtor
+MCP_OAUTH_JWKS_URL=https://hikoterra.au.auth0.com/.well-known/jwks.json
+MCP_OAUTH_CLIENT_ID=REPLACE_WITH_REGISTERED_CLIENT_ID
+MCP_OAUTH_ALLOWED_DOMAINS=hikoterra.com,pcnzl.com
 ```
 
-Replace all example values. The Claude redirect must exactly equal the callback shown by Claude's connector setup.
+No OAuth Compose profile is required. `keycloak-rollback` retains dormant historical services/assets; it is not a working alternative login path for the Auth0 binaries. Recover the previous images and gateway/configuration together to roll back. Retain the historical database and secret files; do not delete persistent state.
 
-Start the stack with the OAuth profile. The one-shot `auth-db-init` service creates a separate `keycloak` database and role inside PostgreSQL. Keycloak has no published port and reads database, administrator, Entra, and Claude credentials from mounted files.
+The MCP verifies signature, exact issuer, resource audience, `azp`, timestamps, scopes and namespaced verified-email claims. It maps `(issuer, sub)` to `auth0-<SHA256 hex>`, never links by email, and atomically provisions a Team Member through native `User::save()` under the existing advisory lock. Email changes update the same account. Locked/idle users stay denied, and native project/action rights remain in force.
 
-## Client configuration
+`projeqtor_whoami` exposes the email, display name and provider `auth0`, never the subject digest or credentials. The protected-resource metadata remains at `/.well-known/oauth-protected-resource/mcp_projeqtor`; the public MCP remains `/mcp_projeqtor` and proxies exclusively to `/mcp/oauth`. Retired `/projeqtor-auth` routes return 404. No additional host ports are needed.
 
-### Claude Cloud
+## Claude and acceptance
 
-Use Claude's published identity in the connector setup:
+Record the existing connector settings before recreating it. Claude currently requires removal/re-addition to change configuration. Use **Sign in now** and **Use your own OAuth client**, entering only the public client ID and the existing MCP URL. Use an individual verified work address, not a shared static credential.
 
-- MCP URL: `https://conceptpower.ddns.net/mcp_projeqtor`
-- Authentication: `Sign in now`
-- OAuth client: `Use Claude's published identity`
-- Transport: `Streamable HTTP`
-- Authorization server: discovered from the MCP protected-resource metadata
-- Scopes: `projeqtor:read projeqtor:write`
+Required gates:
 
-Keycloak's experimental CIMD support is enabled and constrained to HTTPS metadata and callbacks on `claude.ai`. Dynamic client registration remains blocked publicly. The pre-registered confidential `claude-projeqtor` client remains available as a private fallback, using the exact Claude callback and the root-only client secret; do not expose that secret to ordinary users.
+- Existing unit/contract suites, syntax/PHP lint, policy coverage, app/MCP image builds and disposable integration/acceptance pass. Run mutating scenarios only against the disposable harness.
+- Auth0 test-email delivery and actual OTP receipt succeed; no Microsoft sign-in appears.
+- Authenticate through the supplied Claude browser, call `projeqtor_whoami`, and perform a permitted read. A new user is a Team Member, never an administrator.
+- After the original token's 300-second expiry plus clock tolerance, another Claude tool call succeeds without another OTP. Correlate successful refresh issuance and client identity in Auth0 logs without recording tokens.
+- Invalid domains, unverified identities, wrong clients, non-S256 requests and locked/idle users are denied. Native permission restrictions hold. Exactly 36 tools remain available.
+- Public static tokens and private OAuth/static crossover fail; metadata succeeds and retired auth routes return 404.
 
-### ChatGPT
+Take a consistent database/data/config backup and preserve immutable images before deployment. Deploy app and worker together with the bridge, then MCP and gateway. Keep Keycloak until live acceptance; stop it afterward without deleting state. Roll back images/configuration on failure; restore data only if necessary. Update the host runbook with sanitized evidence. Do not publish a release before CI and live Claude acceptance pass.
 
-Use the pre-registered public PKCE client:
+The inspected vaultserver ingress uses Nginx Proxy Manager host 2 and routes `/projeqtor-auth/` directly to `projeqtor-keycloak-ingress`, bypassing this repository's gateway. At cutover, back up that proxy host's persisted settings and generated configuration, replace its Keycloak proxy location with exact/descendant 404 locations, and persist the change in Nginx Proxy Manager as well as its generated file. Preserve its existing MCP and protected-resource metadata locations. Validate Nginx before reload and verify the public URL returns 404; changing only the internal gateway is insufficient.
 
-- MCP URL: `https://conceptpower.ddns.net/mcp_projeqtor`
-- OAuth client ID: `chatgpt-projeqtor`
-- Client authentication: none
-- Redirect URI: `https://chatgpt.com/connector_platform_oauth_redirect`
-- Scopes: `projeqtor:read projeqtor:write`
+For revocation, block/revoke the Auth0 user/session and mark the native ProjeQtOr account locked or idle. The native check prevents further tool use immediately, including already-issued tokens. Refresh admission reevaluates verified-domain eligibility.
 
-Stock Keycloak 26.7.4 cannot parse ChatGPT's CIMD document because it rejects the plural `token_endpoint_auth_methods_supported` property. OpenAI also supports predefined OAuth clients, so v2.1.0 uses that path instead of enabling dynamic registration or shipping a custom Keycloak extension. Re-evaluate CIMD after upgrading Keycloak and passing the same acceptance tests.
+## Implementation checkpoint — 2026-10-02
 
-## First-login provisioning
+The final public client ID is `cpmOrJBLNvSPE2HSmYMOrt54RPLj8Qx6`; the API ID is `6abef70d34ee3c51cd38cec2`. The deployed Post Login Action is `dee18f14-3e66-4a39-ba21-69c74427e1da`. An abandoned Third-party registration (`tpc_g9s6gZefq2dqayHFf9ZZDN`) has no MCP API grant and must not be used.
 
-A valid OAuth request is mapped to the stable login `entra-<Microsoft object ID>`. The object ID and tenant are never returned by MCP tools.
+Disposable run `b4-1790900582829-a082d57d` passed integration, OAuth provisioning and full acceptance across all 12 modules. Eight concurrent provisioning requests created one Team Member; separate subjects with matching email remained separate; email changes preserved identity; locked/idle accounts were denied. JavaScript checks, 145 unit tests, 59 contract tests, both image builds, PHP lint and policy/module checks passed. Coverage remained 944 source files, 899 entrypoints, 337 mutation candidates and 640 classes with zero unknown/deferred surfaces. The OAuth fixture ledger records the native user IDs; harness destruction removes its disposable volumes and credentials.
 
-Under a PostgreSQL advisory lock, the bridge creates one ProjeQtOr `User` through the native save path with:
-
-- Team Member profile code `TM`
-- Resource and employee flags enabled
-- Display name and email from validated Microsoft claims
-- No credential is accepted, returned, or made usable by the connector; any native ProjeQtOr credential fields generated internally remain secret
-
-Existing disabled, locked, idle, or non-user records are rejected. ProjeQtOr's native object permissions remain authoritative for all 36 tools.
-
-## Reverse-proxy requirements
-
-The public TLS proxy must expose only:
-
-- Exact `/mcp_projeqtor` to MCP `/mcp/oauth`
-- Exact `/.well-known/oauth-protected-resource/mcp_projeqtor` to the MCP metadata route
-- `/projeqtor-auth/realms/projeqtor/` and required Keycloak login resources
-
-Explicitly reject public requests to:
-
-- `/projeqtor-auth/admin/`
-- `/projeqtor-auth/realms/master/`
-- `/projeqtor-auth/realms/projeqtor/clients-registrations/`
-
-Preserve `Host`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and client address headers. Do not proxy the public MCP path to private `/mcp`.
-
-## Acceptance and revocation
-
-Before enabling users, verify:
-
-1. OAuth discovery, PKCE, issuer identification, audience, and both required scopes.
-2. One assigned `@hikoterra.com` user succeeds independently.
-3. One assigned `@pcnzl.com` user succeeds independently.
-4. Wrong tenant, guest, unassigned, disallowed domain, missing scope, wrong audience, expired, and tampered tokens fail.
-5. Concurrent first requests create one Team Member and audit actions as that user.
-6. A static administrator token fails on the public URL and still works on private `/mcp`.
-7. Keycloak admin, master realm, and registration endpoints are unavailable publicly.
-8. No host ports or secret-bearing log entries were added.
-
-To remove access, remove the Entra assignment and revoke the user's Keycloak session. Five-minute access-token expiry bounds any already issued token.
+Production cutover and Claude login/read/refresh acceptance remain pending email delivery. The previous Exchange assignment attempt rolled back after its other-mailbox check; no principal, scope or assignment remained in the subsequent read-only audit. Do not treat an Auth0 `sapi` test-email operation as delivery success: require the notification result and mailbox receipt. No release is approved by this checkpoint.
