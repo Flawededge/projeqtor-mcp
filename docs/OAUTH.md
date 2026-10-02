@@ -49,6 +49,8 @@ Required gates:
 
 Take a consistent database/data/config backup and preserve immutable images before deployment. Deploy app and worker together with the bridge, then MCP and gateway. Keep Keycloak until live acceptance; stop it afterward without deleting state. Roll back images/configuration on failure; restore data only if necessary. Update the host runbook with sanitized evidence. Do not publish a release before CI and live Claude acceptance pass.
 
+The inspected vaultserver ingress uses Nginx Proxy Manager host 2 and routes `/projeqtor-auth/` directly to `projeqtor-keycloak-ingress`, bypassing this repository's gateway. At cutover, back up that proxy host's persisted settings and generated configuration, replace its Keycloak proxy location with exact/descendant 404 locations, and persist the change in Nginx Proxy Manager as well as its generated file. Preserve its existing MCP and protected-resource metadata locations. Validate Nginx before reload and verify the public URL returns 404; changing only the internal gateway is insufficient.
+
 For revocation, block/revoke the Auth0 user/session and mark the native ProjeQtOr account locked or idle. The native check prevents further tool use immediately, including already-issued tokens. Refresh admission reevaluates verified-domain eligibility.
 
 ## Implementation checkpoint — 2026-10-02
