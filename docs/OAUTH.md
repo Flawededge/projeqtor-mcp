@@ -8,12 +8,12 @@ Use the existing `hikoterra` tenant (`https://hikoterra.au.auth0.com/`, includin
 
 1. Create an RS256 API named **ProjeQtOr MCP**, identifier `https://conceptpower.ddns.net/mcp_projeqtor`, scopes `projeqtor:read` and `projeqtor:write`, 300-second access tokens, and offline access enabled. Use the standard Auth0 access-token profile (with `azp`).
 2. Register **ProjeQtOr MCP — Claude** as a First-party public Native application: token authentication `none`, authorization-code and refresh-token grants only, exact callback `https://claude.ai/api/mcp/auth_callback`. Ownership is immutable: choose First-party when creating this user-owned registration so email can be enabled per application without promoting the connection tenant-wide. No wildcards, implicit/password/device-code/client-credentials grants, open DCR, or client secret. Authorize only the two MCP scopes through the API's per-app user-delegated policy; keep machine access disabled and skipping user consent disabled.
-3. Enable only the Passwordless connection named `email` (strategy `email`) for this client, using hosted Universal Login and codes with self-registration. No database, SMS, enterprise or social login. Keep native rate limits and attack protection.
+3. Enable only the Passwordless connection named `email` (strategy `email`) for this client, using hosted Universal Login and codes with self-registration. In Authentication > Authentication Profile, select **Identifier First**; Auth0 otherwise rejects this email-only client with `no connections enabled for the client`. No database, SMS, enterprise or social login. Keep native rate limits and attack protection.
 4. In tenant Settings > Advanced, enable **Resource Parameter Compatibility Profile** and **Include Issuer in Authorization Responses**. Do not set a tenant default audience.
 5. Use rotating, expiring refresh tokens: idle 3,600 seconds, maximum 28,800 seconds, reuse interval 3 seconds. Request `openid email offline_access projeqtor:read projeqtor:write`.
 6. Create a Post Login Action from `deployment/auth/auth0-post-login.cjs`, set its `MCP_CLIENT_ID` secret to the registered client ID, deploy, and bind it to Post Login. This is a configuration value, not a credential. The Action affects this client only, requires email verification and an exact approved domain, enforces S256 authorization, and reapplies admission on refresh.
 
-Microsoft 365 is email delivery only. The From address is `catchall@hikoterra.com`. Verify an Auth0 test email, delivery logs and mailbox receipt before cutover. Preserve catchall-only sending permissions and never grant tenant-wide mail access as a fallback. Confirm features are available on Free rather than relying on the enterprise trial; do not purchase a subscription.
+Microsoft 365 is email delivery only. Set both the provider and Passwordless email connection From fields to the bare address `catchall@hikoterra.com`. The native Microsoft 365 provider treats a display-name form such as `ProjeQtOr MCP <catchall@hikoterra.com>` as a mailbox identifier and rejects it as an invalid user. Verify an Auth0 test email, delivery logs and mailbox receipt before cutover. Preserve catchall-only sending permissions and never grant tenant-wide mail access as a fallback. Confirm features are available on Free rather than relying on the enterprise trial; do not purchase a subscription.
 
 ## Deployment
 
@@ -53,10 +53,14 @@ The inspected vaultserver ingress uses Nginx Proxy Manager host 2 and routes `/p
 
 For revocation, block/revoke the Auth0 user/session and mark the native ProjeQtOr account locked or idle. The native check prevents further tool use immediately, including already-issued tokens. Refresh admission reevaluates verified-domain eligibility.
 
-## Implementation checkpoint — 2026-10-02
+## Production acceptance — 2026-10-05
+
+Auth0 email OTP is live and verified through Claude, including a permitted Ticket read and token refresh without another OTP. Keycloak is stopped and its public routes return 404. See [the sanitized acceptance record](AUTH0-ACCEPTANCE.md) for image IDs, mail-scope denial, native permissions, backup and test evidence. The team remains on Free; no paid subscription was enabled.
+
+## Historical implementation checkpoint — 2026-10-02
 
 The final public client ID is `cpmOrJBLNvSPE2HSmYMOrt54RPLj8Qx6`; the API ID is `6abef70d34ee3c51cd38cec2`. The deployed Post Login Action is `dee18f14-3e66-4a39-ba21-69c74427e1da`. An abandoned Third-party registration (`tpc_g9s6gZefq2dqayHFf9ZZDN`) has no MCP API grant and must not be used.
 
 Disposable run `b4-1790900582829-a082d57d` passed integration, OAuth provisioning and full acceptance across all 12 modules. Eight concurrent provisioning requests created one Team Member; separate subjects with matching email remained separate; email changes preserved identity; locked/idle accounts were denied. JavaScript checks, 145 unit tests, 59 contract tests, both image builds, PHP lint and policy/module checks passed. Coverage remained 944 source files, 899 entrypoints, 337 mutation candidates and 640 classes with zero unknown/deferred surfaces. The OAuth fixture ledger records the native user IDs; harness destruction removes its disposable volumes and credentials.
 
-Production cutover and Claude login/read/refresh acceptance remain pending email delivery. The previous Exchange assignment attempt rolled back after its other-mailbox check; no principal, scope or assignment remained in the subsequent read-only audit. Do not treat an Auth0 `sapi` test-email operation as delivery success: require the notification result and mailbox receipt. No release is approved by this checkpoint.
+At this earlier checkpoint, production cutover and Claude login/read/refresh acceptance were pending email delivery. The subsequent bounded Exchange retry and October 5 live acceptance supersede that state. Do not treat an Auth0 `sapi` test-email operation as delivery success: require the notification result and mailbox receipt. No release was approved by this historical checkpoint.
