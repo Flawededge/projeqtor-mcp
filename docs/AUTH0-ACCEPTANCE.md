@@ -1,5 +1,24 @@
 # Auth0 production acceptance — 2026-10-05
 
+## Existing-account admission update — 2026-10-05
+
+Code commit `98888dc1ed3dd3ce4298c57be12f5d836ad6635f` supersedes the initial automatic Team Member provisioning described below. MCP admission now requires exactly one existing native account with the normalized verified email. It stores the immutable identity key separately in `mcpoauthidentity`, linked to the native user ID. Unknown/ambiguous email matches, locked/idle users and a second identity trying to claim a linked account are denied. Later email or username changes never remap the identity. Login does not create accounts or alter their native profile/details.
+
+The existing Chris account remains user3 with its explicitly approved Administrator/profile1 access. Its native username is now `ChrisD`; its Auth0 identity is stored in the link table. Existing operation ownership was migrated to the native username. Whoami retains the user-facing email and excludes the identity key.
+
+Matching deployed images:
+
+- App/worker `projeqtor-app:existing-users-20261005`: `sha256:4117d1c745d6f25c76b52951f494240e0dc727e1631a5711331f930a001a979e`.
+- MCP `projeqtor-mcp:existing-users-20261005`: `sha256:92210a7f588b3e0e4603393c38487779b9111c09d51fafcb1967939cc45e6589`.
+
+All three services are healthy. Direct signed admission returned existing user3/profileADM with no account creation; an unknown native email returned403. Private static access still discovers36tools; public static access and private OAuth/static crossover return401. Public metadata200 and retired auth404 passed. Recreated upstream addresses briefly caused public502; reloading both Nginx Proxy Manager and the internal gateway restored access. Future MCP recreation must include those reloads.
+
+Actual Claude whoami and Project list calls then succeeded, without a reconnect or another OTP. They returned providerAuth0, the same user3, Administrator/profile1 and a permitted Project read. Sanitized screenshot `claude-existing-user-20261005.jpg` is retained in the operator workspace. No production fixture records were created.
+
+Validation passed:145unit/59contract tests, JavaScript/PHP checks, both images, unchanged policy coverage, disposable OAuth existing-account/concurrency/ambiguity/identity-conflict/locked-idle checks, integration and full acceptance. All code-head CI checks passed. Disposable run: `b4-1791176278212-61e5edb9`.
+
+Rollback checkpoint `/mnt/user/appdata/projeqtor/backups/existing-users-20261005/` contains a consistent DB dump/catalog, application/cache/secrets/gateway archive, prior Compose/environment/images and root-only previous native username. Checksums passed. Restore prior binaries/configuration together with user3's previous native username and operation ownership; retain the new link table dormant. A whole production database restore is not needed merely to undo this authentication change.
+
 The public ProjeQtOr MCP is deployed on vaultserver with Auth0 email OTP. Microsoft 365 is used only to deliver email. The public URL and all 36 tools are preserved.
 
 ## Live Claude evidence
