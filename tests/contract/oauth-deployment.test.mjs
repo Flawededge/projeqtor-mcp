@@ -14,6 +14,7 @@ const keycloakProviderDockerfile = await readFile(new URL('../../deployment/auth
 const claudeCimdExecutor = await readFile(new URL('../../deployment/auth/keycloak-provider/src/main/java/com/flawededge/projeqtor/auth/ClaudeClientIdMetadataDocumentExecutor.java', import.meta.url), 'utf8');
 const claudeCimdFactory = await readFile(new URL('../../deployment/auth/keycloak-provider/src/main/java/com/flawededge/projeqtor/auth/ClaudeClientIdMetadataDocumentExecutorFactory.java', import.meta.url), 'utf8');
 const bridge = await readFile(new URL('../../bridge/index.php', import.meta.url), 'utf8');
+const identity = await readFile(new URL('../../bridge/oauth-identity.php', import.meta.url), 'utf8');
 const router = await readFile(new URL('../../bridge/router.php', import.meta.url), 'utf8');
 const server = await readFile(new URL('../../server/src/main.mjs', import.meta.url), 'utf8');
 
@@ -161,17 +162,15 @@ test('Claude is dedicated and ChatGPT is a restricted pre-registered PKCE client
   assert.deepEqual(chatgpt.webOrigins, ['https://chatgpt.com']);
 });
 
-test('first login provisions exactly one Team Member under an advisory lock', () => {
-  assert.match(bridge, /pg_advisory_xact_lock/);
-  assert.match(bridge, /profileCode' => 'ADM'/);
-  assert.match(bridge, /setSessionUser\(\$provisioner\)/);
-  assert.match(bridge, /profileCode' => 'TM'/);
-  assert.match(bridge, /\$oauthUser->isResource = 1/);
-  assert.match(bridge, /\$oauthUser->isEmployee = 1/);
-  assert.match(bridge, /\$oauthUser->save\(\)/);
-  assert.match(bridge, /oauth_user_unavailable/);
-  assert.doesNotMatch(bridge, /\$oauthUser->isUser\s*=/);
-  assert.doesNotMatch(bridge, /INSERT INTO .*fullname/);
+test('first login links exactly one existing native account without provisioning', () => {
+  assert.match(identity, /pg_advisory_xact_lock/);
+  assert.match(identity, /identity varchar\(70\) NOT NULL UNIQUE/);
+  assert.match(identity, /iduser integer NOT NULL UNIQUE REFERENCES resource\(id\)/);
+  assert.match(identity, /count\(\$users\)!==1/);
+  assert.match(identity, /oauth_user_unavailable/);
+  assert.match(bridge, /mcpLinkOAuthUser\(\$username, \$email\)/);
+  assert.match(bridge, /mcpOAuthLinkedUser\(\$username\)/);
+  assert.doesNotMatch(bridge + identity, /\$oauthUser->save\(|\$user->save\(|\$oauthUser->name\s*=/);
 });
 
 test('identity output is useful but excludes subject digests and tokens', () => {

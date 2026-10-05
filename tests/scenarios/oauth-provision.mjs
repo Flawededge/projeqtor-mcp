@@ -25,21 +25,31 @@ if (process.env.OAUTH_TEST_DENIED === '1') {
   }
   process.stdout.write(JSON.stringify({ ok: true }));
 } else {
-  const concurrent = await Promise.all(Array.from({ length: 8 }, () => provision(users[0], 'one@hikoterra.com')));
-  for (const result of concurrent) assert.equal(result.status, 200, 'Concurrent native provisioning must succeed');
+  const address = name => `${name}-${process.env.OAUTH_TEST_ID}@hikoterra.com`;
+  const unknown = await provision(users[0], address('missing'));
+  assert.equal(unknown.status, 403, 'Unknown email must not create an account');
+  const ambiguous = await provision(users[0], address('duplicate'));
+  assert.equal(ambiguous.status, 403, 'Ambiguous native email must be denied');
+  const concurrent = await Promise.all(Array.from({ length: 8 }, () => provision(users[0], address('one'))));
+  for (const result of concurrent) {
+    assert.equal(result.status, 200, 'Concurrent links to the existing account must succeed');
+    assert.equal(result.data.created, false);
+  }
   assert.equal(new Set(concurrent.map(result => result.data.id)).size, 1);
-  assert.equal(concurrent.filter(result => result.data.created).length, 1);
-  const second = await provision(users[1], 'one@hikoterra.com');
+  const stolen = await provision(users[1], address('one'));
+  assert.equal(stolen.status, 403, 'Another subject cannot take a linked account');
+  const second = await provision(users[1], address('two'));
   assert.equal(second.status, 200);
+  assert.equal(second.data.created, false);
   assert.notEqual(second.data.id, concurrent[0].data.id);
-  const renamed = await provision(users[0], 'renamed@pcnzl.com');
-  assert.equal(renamed.data.id, concurrent[0].data.id);
+  const renamed = await provision(users[0], address('two'));
+  assert.equal(renamed.data.id, concurrent[0].data.id, 'Email changes must not remap identity');
   const whoami = await request(users[0], '__mcp/v2/whoami');
   assert.equal(whoami.status, 200);
-  assert.equal(whoami.data.username, 'renamed@pcnzl.com');
+  assert.equal(whoami.data.username, address('one'), 'Native account fields are preserved');
   assert.equal(whoami.data.authenticationProvider, 'auth0');
   assert.equal(whoami.data.profileCode, 'TM');
   assert.equal(whoami.data.credentialsExposed, false);
   assert.ok(!JSON.stringify(whoami.data).includes(users[0]));
-  process.stdout.write(JSON.stringify({ ok: true, ids: [renamed.data.id, second.data.id], concurrency: 8, nativeTeamMember: true, stableEmailChange: true }));
+  process.stdout.write(JSON.stringify({ ok: true, ids: [renamed.data.id, second.data.id], concurrency: 8, existingUsersOnly: true, stableIdentityLink: true }));
 }

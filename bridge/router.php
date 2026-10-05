@@ -37,7 +37,7 @@ function mcpHandleV2(string $uri, string $method, string $body, string $username
   $input=mcpDecodeBody($body);
   if($method==='GET'&&$uri==='__mcp/v2/whoami'){
     $user=getSessionUser(); $profile=new Profile($user->idProfile);
-    $isAuth0=(bool)preg_match('/^auth0-[0-9a-f]{64}$/D',(string)$user->name);
+    $isAuth0=($GLOBALS['mcpAuthenticationProvider']??'local')==='auth0';
     $publicUsername=$isAuth0 ? ($user->email?:'Auth0 user') : $user->name;
     mcpJsonResponse(array('username'=>$publicUsername,'displayName'=>$user->resourceName?:$publicUsername,'authenticationProvider'=>$isAuth0?'auth0':'local','id'=>(int)$user->id,'idProfile'=>(int)$user->idProfile,'profile'=>$profile->name,'profileCode'=>$profile->profileCode??null,'isResource'=>(bool)$user->isResource,'isContact'=>(bool)$user->isContact,'scopes'=>array('projeqtor:read','projeqtor:write','projeqtor:actions'),'credentialsExposed'=>false));
   }

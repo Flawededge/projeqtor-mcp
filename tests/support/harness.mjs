@@ -193,10 +193,14 @@ async function main() {
   if (command === 'oauth') {
     const source = await readFile(resolve(testRoot, 'scenarios/oauth-provision.mjs'), 'utf8');
     const fixtureId = randomUUID();
-    const result = JSON.parse(compose(run, ['exec', '-T', '-e', `OAUTH_TEST_ID=${fixtureId}`, 'mcp', 'node', '--input-type=module'], { capture: true, input: source }));
-    if (!result.ids.every(id => Number.isSafeInteger(id) && id > 0)) throw new Error('Invalid disposable OAuth fixture IDs');
+    const seedSource = await readFile(resolve(testRoot, 'support/oauth-users.php'), 'utf8');
+    const seed = JSON.parse(compose(run, ['exec', '-T', '--user', 'www-data', '-e', `OAUTH_TEST_ID=${fixtureId}`, 'app', 'php'], { capture: true, input: seedSource }));
+    if (!seed.ids.every(id => Number.isSafeInteger(id) && id > 0)) throw new Error('Invalid disposable OAuth fixture IDs');
     const ledger = await new FixtureLedger(resolve(run.environment.BETA4_ARTIFACT_DIR, `fixtures-${run.runId}.jsonl`), run.runId).initialize();
-    for (const id of result.ids) await ledger.record({ module: 'core', kind: 'oauth-user', objectClass: 'User', id, cleanupAction: 'close' });
+    if (typeof process.getuid === 'function' && process.getuid() === 0) await chown(ledger.path, Number(run.environment.BETA4_TEST_UID), Number(run.environment.BETA4_TEST_GID));
+    for (const id of seed.ids) await ledger.record({ module: 'core', kind: 'oauth-user', objectClass: 'User', id, cleanupAction: 'close' });
+    const result = JSON.parse(compose(run, ['exec', '-T', '-e', `OAUTH_TEST_ID=${fixtureId}`, 'mcp', 'node', '--input-type=module'], { capture: true, input: source }));
+    if (JSON.stringify(result.ids) !== JSON.stringify(seed.ids.slice(0, 2))) throw new Error('OAuth must use exactly the existing fixture accounts');
     compose(run, ['exec', '-T', 'db', 'psql', '-U', 'projeqtor', '-d', 'projeqtor', '-v', 'ON_ERROR_STOP=1', '-c',
       `UPDATE resource SET locked=1 WHERE id=${result.ids[0]}; UPDATE resource SET idle=1 WHERE id=${result.ids[1]};`], { capture: true });
     compose(run, ['exec', '-T', '-e', `OAUTH_TEST_ID=${fixtureId}`, '-e', 'OAUTH_TEST_DENIED=1', 'mcp', 'node', '--input-type=module'], { capture: true, input: source });

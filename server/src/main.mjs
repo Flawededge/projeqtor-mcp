@@ -197,7 +197,7 @@ app.all('/mcp/oauth', async context => {
   } catch (error) {
     const status = error instanceof DomainError && error.code === 'oauth_user_unavailable' ? 403 : 502;
     return oauthError(status, oauthConfig, status === 403 ? 'insufficient_scope' : 'temporarily_unavailable',
-      status === 403 ? 'The mapped ProjeQtOr user is unavailable' : 'ProjeQtOr account provisioning failed');
+      status === 403 ? 'The mapped ProjeQtOr user is unavailable' : 'ProjeQtOr account resolution failed');
   }
 
   return handler.fetch(context.req.raw, {
