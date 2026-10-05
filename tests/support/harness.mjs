@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { writeSanitizedArtifact } from './artifacts.mjs';
+import { FixtureLedger } from './ledger.mjs';
 
 const testRoot = resolve(new URL('..', import.meta.url).pathname);
 const workspaceKey = createHash('sha256').update(testRoot).digest('hex').slice(0, 16);
@@ -133,7 +134,7 @@ function compose(run, args, options = {}) {
   const command = ['compose', '--env-file', run.envPath, '-f', resolve(testRoot, 'compose.yaml')];
   if (run.environment.BETA4_SEED_MODE === 'restore') command.push('--profile', 'restore');
   command.push(...args);
-  const outcome = spawnSync('docker', command, { cwd: testRoot, env: { ...process.env, ...run.environment }, stdio: options.capture ? 'pipe' : 'inherit', encoding: 'utf8' });
+  const outcome = spawnSync('docker', command, { cwd: testRoot, env: { ...process.env, ...run.environment }, stdio: options.capture || options.input ? 'pipe' : 'inherit', input: options.input, encoding: 'utf8' });
   if (outcome.status !== 0) {
     const message = options.capture ? `${outcome.stderr ?? ''}\n${outcome.stdout ?? ''}`.trim() : 'Docker Compose command failed';
     throw new Error(message);
@@ -170,6 +171,7 @@ async function main() {
     return;
   }
   if (command === 'down') {
+    // Only the generated disposable project is addressed by compose().
     const initialized = compose(run, ['ps', '-a', '-q', 'db-bootstrap'], { capture: true }).trim();
     if (initialized) {
       compose(run, ['stop', 'test-runner', 'gateway', 'mcp', 'worker', 'app', 'mail']);
@@ -188,7 +190,26 @@ async function main() {
     await writeSanitizedArtifact(`harness-${run.runId}.json`, { runId: run.runId, services: services.split('\n').filter(Boolean).map(line => JSON.parse(line)) });
     return;
   }
-  process.stdout.write('Usage: harness.mjs prepare|config|up|test [suite]|sanitize|down\n');
+  if (command === 'oauth') {
+    const source = await readFile(resolve(testRoot, 'scenarios/oauth-provision.mjs'), 'utf8');
+    const fixtureId = randomUUID();
+    const seedSource = await readFile(resolve(testRoot, 'support/oauth-users.php'), 'utf8');
+    const seed = JSON.parse(compose(run, ['exec', '-T', '--user', 'www-data', '-e', `OAUTH_TEST_ID=${fixtureId}`, 'app', 'php'], { capture: true, input: seedSource }));
+    if (!seed.ids.every(id => Number.isSafeInteger(id) && id > 0)) throw new Error('Invalid disposable OAuth fixture IDs');
+    const ledger = await new FixtureLedger(resolve(run.environment.BETA4_ARTIFACT_DIR, `fixtures-${run.runId}.jsonl`), run.runId).initialize();
+    if (typeof process.getuid === 'function' && process.getuid() === 0) await chown(ledger.path, Number(run.environment.BETA4_TEST_UID), Number(run.environment.BETA4_TEST_GID));
+    for (const id of seed.ids) await ledger.record({ module: 'core', kind: 'oauth-user', objectClass: 'User', id, cleanupAction: 'close' });
+    const result = JSON.parse(compose(run, ['exec', '-T', '-e', `OAUTH_TEST_ID=${fixtureId}`, 'mcp', 'node', '--input-type=module'], { capture: true, input: source }));
+    if (JSON.stringify(result.ids) !== JSON.stringify(seed.ids.slice(0, 2))) throw new Error('OAuth must use exactly the existing fixture accounts');
+    compose(run, ['exec', '-T', 'db', 'psql', '-U', 'projeqtor', '-d', 'projeqtor', '-v', 'ON_ERROR_STOP=1', '-c',
+      `UPDATE resource SET locked=1 WHERE id=${result.ids[0]}; UPDATE resource SET idle=1 WHERE id=${result.ids[1]};`], { capture: true });
+    compose(run, ['exec', '-T', '-e', `OAUTH_TEST_ID=${fixtureId}`, '-e', 'OAUTH_TEST_DENIED=1', 'mcp', 'node', '--input-type=module'], { capture: true, input: source });
+    process.env.PROJEQTOR_TEST_ARTIFACT_DIR = run.environment.BETA4_ARTIFACT_DIR;
+    await writeSanitizedArtifact(`oauth-${run.runId}.json`, { ...result, lockedAndIdleDenied: true });
+    process.stdout.write(`${JSON.stringify({ ...result, lockedAndIdleDenied: true })}\n`);
+    return;
+  }
+  process.stdout.write('Usage: harness.mjs prepare|config|up|test [suite]|oauth|sanitize|down\n');
 }
 
 main().catch(error => {

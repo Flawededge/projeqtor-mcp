@@ -2,6 +2,8 @@
 
 Last verified: 2026-09-28
 
+The subsequent Auth0 email migration, its 2026-10-02 disposable verification and outstanding production acceptance gates are recorded in [OAUTH.md](OAUTH.md). The Beta 4 evidence below is historical.
+
 ## Accepted source
 
 - Branch: `feature/v2-beta4-integration`

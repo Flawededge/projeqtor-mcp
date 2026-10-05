@@ -37,9 +37,9 @@ function mcpHandleV2(string $uri, string $method, string $body, string $username
   $input=mcpDecodeBody($body);
   if($method==='GET'&&$uri==='__mcp/v2/whoami'){
     $user=getSessionUser(); $profile=new Profile($user->idProfile);
-    $isMicrosoft=str_starts_with((string)$user->name,'entra-');
-    $publicUsername=$isMicrosoft && $user->email ? $user->email : $user->name;
-    mcpJsonResponse(array('username'=>$publicUsername,'displayName'=>$user->resourceName?:$publicUsername,'authenticationProvider'=>$isMicrosoft?'microsoft':'local','id'=>(int)$user->id,'idProfile'=>(int)$user->idProfile,'profile'=>$profile->name,'profileCode'=>$profile->profileCode??null,'isResource'=>(bool)$user->isResource,'isContact'=>(bool)$user->isContact,'scopes'=>array('projeqtor:read','projeqtor:write','projeqtor:actions'),'credentialsExposed'=>false));
+    $isAuth0=($GLOBALS['mcpAuthenticationProvider']??'local')==='auth0';
+    $publicUsername=$isAuth0 ? ($user->email?:'Auth0 user') : $user->name;
+    mcpJsonResponse(array('username'=>$publicUsername,'displayName'=>$user->resourceName?:$publicUsername,'authenticationProvider'=>$isAuth0?'auth0':'local','id'=>(int)$user->id,'idProfile'=>(int)$user->idProfile,'profile'=>$profile->name,'profileCode'=>$profile->profileCode??null,'isResource'=>(bool)$user->isResource,'isContact'=>(bool)$user->isContact,'scopes'=>array('projeqtor:read','projeqtor:write','projeqtor:actions'),'credentialsExposed'=>false));
   }
   if($method==='POST'&&$uri==='__mcp/v2/classes')mcpHandleClassCatalog($input);
   if($method==='POST'&&$uri==='__mcp/v2/item')mcpHandleGetItem($input);

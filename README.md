@@ -19,15 +19,15 @@ ProjeQtOr
 
 The bearer token is stored only as a SHA-256 digest. The MCP server and bridge share a separate signing key through mounted secret files. The bridge also accepts requests from one explicitly configured MCP container address.
 
-Version 2.1 adds an optional Keycloak 26.7.4 OAuth profile for Claude Cloud and ChatGPT. Microsoft Entra remains the upstream identity provider. A user qualifies with one assigned account from either `@hikoterra.com` or `@pcnzl.com`; an identity in both domains is not required.
+Cloud login uses Auth0 email one-time codes. Verified users at either @hikoterra.com or @pcnzl.com receive individual Team Member accounts; native ProjeQtOr permissions remain authoritative.
 
 The authentication paths remain separated:
 
 - Private `/mcp` accepts only locally generated bearer tokens.
-- Internal `/mcp/oauth` accepts only audience-bound Keycloak access tokens.
+- Internal `/mcp/oauth` accepts only audience- and client-bound Auth0 access tokens.
 - Public `/mcp_projeqtor` must proxy exclusively to `/mcp/oauth`.
 
-See [docs/OAUTH.md](docs/OAUTH.md) for Entra registration, root-only secret handling, Claude and ChatGPT client setup, proxy rules, acceptance, and revocation.
+See [docs/OAUTH.md](docs/OAUTH.md) for Auth0 setup, the admission Action, Claude configuration, acceptance, and revocation.
 
 ## Current interface
 

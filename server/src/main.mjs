@@ -185,26 +185,26 @@ app.all('/mcp/oauth', async context => {
   } catch {
     return oauthError(401, oauthConfig, 'invalid_token', 'The OAuth access token is invalid or no longer eligible');
   }
-  if (!principal) return oauthError(401, oauthConfig, 'invalid_token', 'A Microsoft OAuth access token is required');
+  if (!principal) return oauthError(401, oauthConfig, 'invalid_token', 'An Auth0 OAuth access token is required');
 
   try {
     await apiRequest('__mcp/v2/oauth/provision', principal.username, 'POST', {
       username: principal.username,
       displayName: principal.displayName,
       email: principal.email,
-      provider: 'microsoft'
+      provider: principal.authenticationProvider
     });
   } catch (error) {
     const status = error instanceof DomainError && error.code === 'oauth_user_unavailable' ? 403 : 502;
     return oauthError(status, oauthConfig, status === 403 ? 'insufficient_scope' : 'temporarily_unavailable',
-      status === 403 ? 'The mapped ProjeQtOr user is unavailable' : 'ProjeQtOr account provisioning failed');
+      status === 403 ? 'The mapped ProjeQtOr user is unavailable' : 'ProjeQtOr account resolution failed');
   }
 
   return handler.fetch(context.req.raw, {
     parsedBody: context.get('parsedBody'),
     authInfo: {
-      token: 'oauth-redacted', clientId: 'microsoft', scopes: principal.scopes,
-      extra: { projeqtorUsername: principal.username, authenticationProvider: 'microsoft' }
+      token: 'oauth-redacted', clientId: oauthConfig.clientId, scopes: principal.scopes,
+      extra: { projeqtorUsername: principal.username, authenticationProvider: principal.authenticationProvider }
     }
   });
 });
