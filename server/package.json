@@ -24,7 +24,7 @@
     "harness:down": "node ../tests/support/harness.mjs down"
   },
   "dependencies": {
-    "@hono/node-server": "2.1.1",
+    "@hono/node-server": "2.1.6",
     "@modelcontextprotocol/hono": "2.0.1",
     "@modelcontextprotocol/server": "2.1.0",
     "hono": "4.13.8",
